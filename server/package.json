@@ -85,7 +85,7 @@
     "@types/react-dom": "^19.2.0",
     "@types/sqlstring": "2.3.2",
     "drizzle-kit": "0.31.9",
-    "esbuild": "^0.25.5",
+    "esbuild": "^0.28.2",
     "ioredis-mock": "^8.13.1",
     "jsdom": "^26.1.0",
     "knip": "^5.60.2",
