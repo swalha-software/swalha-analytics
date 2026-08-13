@@ -43,7 +43,7 @@
     "@react-email/components": "1.0.1",
     "@react-email/tailwind": "2.0.1",
     "@rybbit/shared": "file:../shared",
-    "better-auth": "1.6.25",
+    "better-auth": "1.6.26",
     "bullmq": "^5.56.5",
     "dotenv": "16.5.0",
     "drizzle-orm": "0.45.2",
