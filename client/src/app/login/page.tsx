@@ -142,7 +142,7 @@ export default function Page() {
                 {t("Don't have an account?")}{" "}
                 <Link
                   href="/signup"
-                  className="underline underline-offset-4 hover:text-emerald-400 transition-colors duration-300"
+                  className="underline underline-offset-4 hover:text-accent-400 transition-colors duration-300"
                 >
                   {t("Sign up")}
                 </Link>

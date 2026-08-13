@@ -60,7 +60,7 @@ export function PlanStep({
             {t("Annual")}
           </button>
           {isAnnual && (
-            <span className="absolute -top-3 -right-12 text-[10px] text-white bg-emerald-500 px-1.5 py-0.5 rounded-full whitespace-nowrap">
+            <span className="absolute -top-3 -right-12 text-[10px] text-accent-950 bg-accent-500 px-1.5 py-0.5 rounded-full whitespace-nowrap">
               {t("4 months free")}
             </span>
           )}
@@ -125,7 +125,7 @@ export function PlanStep({
             </p>
             <a
               href="mailto:hello@rybbit.com"
-              className="text-sm text-emerald-500 hover:text-emerald-400 font-medium"
+              className="text-sm text-accent-500 hover:text-accent-400 font-medium"
             >
               hello@rybbit.com
             </a>
@@ -136,7 +136,7 @@ export function PlanStep({
           {/* Subscribe button */}
           {eventLimit !== "Custom" && (
             <Button
-              className="w-full transition-all duration-300 h-11 bg-emerald-600 hover:bg-emerald-500 text-white"
+              className="w-full transition-all duration-300 h-11 bg-accent-600 hover:bg-accent-500 text-accent-950"
               onClick={onSubscribe}
               disabled={isLoading}
               variant="success"

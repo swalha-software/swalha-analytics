@@ -124,7 +124,7 @@ export function StandardSection({
                 <Link
                   href="https://www.maxmind.com/"
                   target="_blank"
-                  className="text-emerald-400 hover:text-emerald-300"
+                  className="text-accent-400 hover:text-accent-300"
                 >
                   Maxmind
                 </Link>

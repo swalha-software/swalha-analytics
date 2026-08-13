@@ -45,7 +45,7 @@ export function PlanRow({
           ? "opacity-50 cursor-not-allowed"
           : "cursor-pointer",
         !disabled && selectedPlan === plan
-          ? "bg-emerald-500/10 border border-emerald-500/30"
+          ? "bg-accent-500/10 border border-accent-500/30"
           : "bg-neutral-200/20 dark:bg-neutral-900/40 border border-neutral-200 dark:border-neutral-800"
       )}
     >
@@ -53,7 +53,7 @@ export function PlanRow({
         className={cn(
           "flex items-center justify-between p-3 rounded-xl border",
           !disabled && selectedPlan === plan
-            ? "border-emerald-500 bg-neutral-50 dark:bg-neutral-800/60"
+            ? "border-accent-500 bg-neutral-50 dark:bg-neutral-800/60"
             : "border-neutral-200 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-900",
           !disabled && selectedPlan !== plan && "hover:border-neutral-300 dark:hover:border-neutral-700"
         )}
@@ -63,19 +63,19 @@ export function PlanRow({
             className={cn(
               "w-4 h-4 rounded-full border-2 flex items-center justify-center",
               !disabled && selectedPlan === plan
-                ? "border-emerald-500"
+                ? "border-accent-500"
                 : "border-neutral-300 dark:border-neutral-600"
             )}
           >
             {!disabled && selectedPlan === plan && (
-              <div className="w-2 h-2 rounded-full bg-emerald-500" />
+              <div className="w-2 h-2 rounded-full bg-accent-500" />
             )}
           </div>
           <div>
             <div className="flex items-center gap-2">
               <span className="font-medium">{label}</span>
               {isCurrent && (
-                <span className="text-[10px] text-emerald-500 bg-emerald-500/10 px-1.5 py-0.5 rounded">
+                <span className="text-[10px] text-accent-500 bg-accent-500/10 px-1.5 py-0.5 rounded">
                   Current
                 </span>
               )}

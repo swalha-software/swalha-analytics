@@ -113,7 +113,7 @@ export function ReplayCard({ replay, onSelect }: { replay: SessionReplayListItem
         }
       }}
     >
-      {/* Current-selection indicator: a single emerald dot (the action/current accent) */}
+      {/* Current-selection indicator: a single gold dot (the action/current accent) */}
       {isSelected && (
         <span className="absolute left-1 top-1/2 -translate-y-1/2 h-1.5 w-1.5 rounded-full bg-accent-500" />
       )}

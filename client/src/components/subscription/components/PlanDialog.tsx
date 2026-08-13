@@ -200,7 +200,7 @@ export function PlanDialog({ open, onOpenChange, currentPlanName, hasActiveSubsc
                   Annual
                 </button>
                 {isAnnual && (
-                  <span className="absolute -top-3 -right-12 text-[10px] text-white bg-emerald-500 px-1.5 py-0.5 rounded-full whitespace-nowrap">
+                  <span className="absolute -top-3 -right-12 text-[10px] text-accent-950 bg-accent-500 px-1.5 py-0.5 rounded-full whitespace-nowrap">
                     4 months free
                   </span>
                 )}
@@ -275,7 +275,7 @@ export function PlanDialog({ open, onOpenChange, currentPlanName, hasActiveSubsc
                 </p>
                 <a
                   href="mailto:hello@rybbit.com"
-                  className="text-sm text-emerald-500 hover:text-emerald-400 font-medium"
+                  className="text-sm text-accent-500 hover:text-accent-400 font-medium"
                 >
                   hello@rybbit.com
                 </a>

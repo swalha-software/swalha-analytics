@@ -18,7 +18,7 @@ interface RetentionChartProps {
 
 // Vibrant color palette for different cohorts using Tailwind CSS HSL variables
 const cohortColors = [
-  "hsl(var(--accent-500))", // Primary accent color
+  "hsl(var(--dataviz))", // Primary data hue (gold would collide with amber below)
   "hsl(var(--green-500))", // Green
   "hsl(var(--red-500))", // Red
   "hsl(var(--blue-500))", // Blue

@@ -278,7 +278,7 @@ export function SpinningGlobe() {
         source: SOURCE_ID,
         filter: ["all", ["has", "point_count"], [">=", ["get", "point_count"], MIN_CLUSTER_SIZE]],
         paint: {
-          "circle-color": ["step", ["get", "point_count"], "#059669", 10, "#059669", 30, "#10b981", 100, "#34d399"],
+          "circle-color": ["step", ["get", "point_count"], "#1447e6", 10, "#1447e6", 30, "#2b7fff", 100, "#8ec5ff"],
           "circle-radius": ["step", ["get", "point_count"], 15, 10, 20, 30, 25],
         },
       });

@@ -309,7 +309,7 @@ export async function GET(
   const countries = sp.get("countries") === "true";
   const theme: "dark" | "light" = sp.get("theme") === "light" ? "light" : "dark";
   const accentRaw = sp.get("accent");
-  const accent = accentRaw && /^[0-9a-fA-F]{6}$/.test(accentRaw) ? `#${accentRaw}` : "#10b981";
+  const accent = accentRaw && /^[0-9a-fA-F]{6}$/.test(accentRaw) ? `#${accentRaw}` : "#d1a84b";
   const variant: "card" | "inline" = sp.get("variant") === "inline" ? "inline" : "card";
 
   const html = renderHTML({

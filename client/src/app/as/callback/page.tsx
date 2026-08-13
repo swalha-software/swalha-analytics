@@ -341,7 +341,7 @@ export default function AppSumoSignupPage() {
                 Already have an account?{" "}
                 <Link
                   href="/login"
-                  className="underline underline-offset-4 hover:text-emerald-400 transition-colors duration-300"
+                  className="underline underline-offset-4 hover:text-accent-400 transition-colors duration-300"
                 >
                   Log in
                 </Link>
@@ -375,7 +375,7 @@ export default function AppSumoSignupPage() {
               </div>
 
               <Button
-                className="w-full transition-all duration-300 h-11 bg-emerald-600 hover:bg-emerald-500 text-white"
+                className="w-full transition-all duration-300 h-11 bg-accent-600 hover:bg-accent-500 text-accent-950"
                 onClick={handleOrganizationSubmit}
                 disabled={isLoading || !orgName || !orgSlug}
                 variant="success"
@@ -407,7 +407,7 @@ export default function AppSumoSignupPage() {
 
               <div className="flex flex-col gap-3">
                 <Button
-                  className="w-full transition-all duration-300 h-11 bg-emerald-600 hover:bg-emerald-500 text-white"
+                  className="w-full transition-all duration-300 h-11 bg-accent-600 hover:bg-accent-500 text-accent-950"
                   onClick={handleWebsiteSubmit}
                   disabled={isLoading || !domain || !isValidDomain(domain)}
                   variant="success"
@@ -437,7 +437,7 @@ export default function AppSumoSignupPage() {
     return (
       <div className="flex justify-center items-center h-dvh w-full p-4 bg-background">
         <div className="flex flex-col items-center gap-4">
-          <Loader2 className="h-8 w-8 animate-spin text-emerald-600 dark:text-emerald-500" />
+          <Loader2 className="h-8 w-8 animate-spin text-accent-600 dark:text-accent-500" />
           <p className="text-muted-foreground">Loading&hellip;</p>
         </div>
       </div>
@@ -453,8 +453,8 @@ export default function AppSumoSignupPage() {
         </Suspense>
 
         {/* Background gradients similar to docs page */}
-        <div className="absolute top-0 left-0 w-[550px] h-[550px] bg-emerald-500/40 rounded-full blur-[80px] opacity-20 dark:opacity-40"></div>
-        <div className="absolute top-20 left-20 w-[400px] h-[400px] bg-emerald-600/30 rounded-full blur-[70px] opacity-15 dark:opacity-30"></div>
+        <div className="absolute top-0 left-0 w-[550px] h-[550px] bg-accent-500/40 rounded-full blur-[80px] opacity-20 dark:opacity-40"></div>
+        <div className="absolute top-20 left-20 w-[400px] h-[400px] bg-accent-600/30 rounded-full blur-[70px] opacity-15 dark:opacity-30"></div>
 
         <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-blue-500/40 rounded-full blur-[80px] opacity-15 dark:opacity-30"></div>
         <div className="absolute bottom-40 right-20 w-[350px] h-[350px] bg-indigo-500/30 rounded-full blur-[75px] opacity-15 dark:opacity-30"></div>
@@ -478,9 +478,9 @@ export default function AppSumoSignupPage() {
                   className={cn(
                     "flex items-center justify-center w-10 h-10 rounded-full text-sm font-semibold transition-all duration-300",
                     currentStep === step
-                      ? "bg-emerald-600 text-white shadow-lg shadow-emerald-600/30"
+                      ? "bg-accent-600 text-accent-950 shadow-lg shadow-accent-600/30"
                       : currentStep > step
-                        ? "bg-emerald-600 text-white"
+                        ? "bg-accent-600 text-accent-950"
                         : "bg-neutral-200 dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400"
                   )}
                 >
@@ -490,7 +490,7 @@ export default function AppSumoSignupPage() {
                   <div
                     className={cn(
                       "flex-1 h-0.5 transition-all duration-300",
-                      currentStep > step ? "bg-emerald-600" : "bg-neutral-200 dark:bg-neutral-800"
+                      currentStep > step ? "bg-accent-600" : "bg-neutral-200 dark:bg-neutral-800"
                     )}
                   />
                 )}

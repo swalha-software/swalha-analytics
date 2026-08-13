@@ -6,7 +6,7 @@ import { cn } from "../lib/utils";
 import "./globals.css";
 import { Providers } from "./Providers";
 
-const inter = Inter({ subsets: ["latin"] });
+const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
 const DESCRIPTION =
   "Privacy-friendly, cookieless web and product analytics. Understand your traffic without tracking your visitors.";
@@ -38,7 +38,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 
   return (
     <html lang={locale} suppressHydrationWarning>
-      <body className={cn("bg-background text-foreground h-full", inter.className)} suppressHydrationWarning>
+      <body className={cn("bg-background text-foreground h-full", inter.variable, inter.className)} suppressHydrationWarning>
         <NextIntlClientProvider locale={locale} messages={messages}>
           <Providers>{children}</Providers>
         </NextIntlClientProvider>

@@ -335,9 +335,9 @@ function SignupPageContent() {
                     className={cn(
                       "flex items-center justify-center w-8 h-8 rounded-full text-xs font-medium transition-all duration-300",
                       currentStep === step
-                        ? "bg-emerald-600 text-white shadow-lg shadow-emerald-600/30"
+                        ? "bg-accent-600 text-accent-950 shadow-lg shadow-accent-600/30"
                         : currentStep > step
-                          ? "bg-emerald-600 text-white"
+                          ? "bg-accent-600 text-accent-950"
                           : "bg-neutral-200 dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400"
                     )}
                   >
@@ -358,7 +358,7 @@ function SignupPageContent() {
                   <div
                     className={cn(
                       "flex-1 h-0.5 mx-3 mb-6 transition-all duration-300 rounded-full",
-                      currentStep > step ? "bg-emerald-600" : "bg-neutral-200 dark:bg-neutral-800"
+                      currentStep > step ? "bg-accent-600" : "bg-neutral-200 dark:bg-neutral-800"
                     )}
                   />
                 )}

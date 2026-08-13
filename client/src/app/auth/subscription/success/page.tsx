@@ -22,7 +22,7 @@ export default function StripeSuccessPage() {
       <div className="text-center">
         <h1 className="text-2xl font-bold mb-4">Payment Successful!</h1>
         <div className="mb-4">
-          <div className="inline-block w-12 h-12 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+          <div className="inline-block w-12 h-12 border-4 border-accent-500 border-t-transparent rounded-full animate-spin"></div>
         </div>
         <p className="text-lg text-neutral-600 dark:text-neutral-400">
           Your subscription has been processed successfully.
