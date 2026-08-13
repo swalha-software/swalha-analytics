@@ -129,7 +129,7 @@ export function RegionsTab() {
                                     }
                                   }}
                                   disabled={isDisabled}
-                                  className="data-[state=checked]:bg-emerald-500 data-[state=checked]:border-emerald-500 dark:data-[state=checked]:bg-emerald-500"
+                                  className="data-[state=checked]:bg-accent-500 data-[state=checked]:border-accent-500 dark:data-[state=checked]:bg-accent-500"
                                 />
                               </FormControl>
                               <div className="flex items-center gap-2 flex-1">

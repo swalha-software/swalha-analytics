@@ -17,7 +17,7 @@ interface EmbedTabProps {
   embedEnabled: boolean;
 }
 
-const DEFAULT_ACCENT = "#10b981";
+const DEFAULT_ACCENT = "#d1a84b";
 type OutputTab = "preview" | "code";
 
 function useTimeWindows() {

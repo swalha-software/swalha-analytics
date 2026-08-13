@@ -57,7 +57,7 @@ export function PricingCard({
           className={cn(
             "rounded-2xl border overflow-hidden backdrop-blur-sm shadow-xl h-full",
             recommended
-              ? "bg-neutral-50 dark:bg-neutral-800/60 border-emerald-500 border-2"
+              ? "bg-neutral-50 dark:bg-neutral-800/60 border-accent-500 border-2"
               : isFree
                 ? "bg-neutral-50/80 dark:bg-neutral-800/15 border-neutral-200/60 dark:border-neutral-800/60 text-neutral-600 dark:text-neutral-300"
                 : "bg-neutral-50/50 dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800"
@@ -68,7 +68,7 @@ export function PricingCard({
               <div className="flex items-center gap-2 mb-2">
                 <h3 className="text-xl font-bold">{title}</h3>
                 {recommended && (
-                  <span className="px-2 py-0.5 text-xs font-semibold bg-emerald-500/30 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded-full border border-emerald-500/40 dark:border-emerald-500/30">
+                  <span className="px-2 py-0.5 text-xs font-semibold bg-accent-500/30 dark:bg-accent-500/20 text-accent-600 dark:text-accent-400 rounded-full border border-accent-500/40 dark:border-accent-500/30">
                     {t("Most Popular")}
                   </span>
                 )}
@@ -99,7 +99,7 @@ export function PricingCard({
                 className={cn(
                   "w-full font-medium px-5 py-3 rounded-lg transform hover:-translate-y-0.5 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-opacity-50 cursor-pointer",
                   isPrimary
-                    ? "bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-900/20 focus:ring-emerald-500 disabled:opacity-50 disabled:pointer-events-none"
+                    ? "bg-accent-600 hover:bg-accent-500 text-accent-950 shadow-lg shadow-accent-900/20 focus:ring-accent-500 disabled:opacity-50 disabled:pointer-events-none"
                     : "bg-neutral-200 dark:bg-neutral-850 hover:bg-neutral-150 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-300 border border-neutral-250 dark:border-neutral-800 shadow-lg focus:ring-neutral-400"
                 )}
               >

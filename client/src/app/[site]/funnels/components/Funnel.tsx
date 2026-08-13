@@ -163,7 +163,7 @@ function FunnelStepComponent({ step, index, steps, chartData, firstStep, siteId 
             ></div>
           )}
           {/* Absolute conversion bar (from first step) */}
-          <div className="h-full bg-emerald-500/70 rounded-md relative z-10" style={{ width: `${barWidth}%` }}></div>
+          <div className="h-full bg-dataviz/70 rounded-md relative z-10" style={{ width: `${barWidth}%` }}></div>
           <div className="absolute top-2 right-2 z-20">
             <div className="text-base font-semibold">{round(step.conversionRate, 2)}%</div>
           </div>
@@ -264,7 +264,7 @@ export function Funnel({ data, steps, isError, error, isPending }: FunnelProps) 
       <div className="flex justify-between items-center gap-2 ml-4">
         <div className="flex items-center gap-4 mt-3 text-xs text-neutral-500 dark:text-neutral-400">
           <div className="flex items-center">
-            <div className="w-3 h-3 bg-emerald-500/70 rounded-sm mr-1"></div>
+            <div className="w-3 h-3 bg-dataviz/70 rounded-sm mr-1"></div>
             <span>{t("Overall conversion")}</span>
           </div>
           <div className="flex items-center">

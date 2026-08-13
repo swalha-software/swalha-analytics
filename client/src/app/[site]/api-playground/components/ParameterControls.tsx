@@ -149,7 +149,7 @@ export function ParameterControls() {
         return (
           <span
             key={index}
-            className="px-1.5 py-0.5 mx-0.5 rounded border border-emerald-500/50 bg-emerald-500/10 text-emerald-400 font-mono"
+            className="px-1.5 py-0.5 mx-0.5 rounded border border-accent-500/50 bg-accent-500/10 text-accent-400 font-mono"
           >
             {value || `{${paramName}}`}
           </span>
@@ -190,7 +190,7 @@ export function ParameterControls() {
           <button
             onClick={handleExecute}
             disabled={isLoading}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 disabled:bg-emerald-400 text-white text-sm font-medium rounded-lg transition-colors shrink-0"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-accent-500 hover:bg-accent-600 disabled:bg-accent-400 text-accent-950 text-sm font-medium rounded-lg transition-colors shrink-0"
           >
             {isLoading ? (
               <Loader2 className="h-4 w-4 animate-spin" />

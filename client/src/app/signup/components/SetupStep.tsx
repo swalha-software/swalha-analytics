@@ -93,7 +93,7 @@ export function SetupStep({
         )}
 
         <Button
-          className="w-full transition-all duration-300 h-11 bg-emerald-600 hover:bg-emerald-500 text-white"
+          className="w-full transition-all duration-300 h-11 bg-accent-600 hover:bg-accent-500 text-accent-950"
           onClick={onSubmit}
           disabled={
             isLoading ||

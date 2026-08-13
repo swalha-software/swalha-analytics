@@ -79,7 +79,7 @@ export function AccountStep({
           {t("Already have an account?")}{" "}
           <Link
             href="/login"
-            className="underline underline-offset-4 hover:text-emerald-400 transition-colors duration-300"
+            className="underline underline-offset-4 hover:text-accent-400 transition-colors duration-300"
           >
             {t("Log in")}
           </Link>

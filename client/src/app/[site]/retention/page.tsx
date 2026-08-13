@@ -36,9 +36,6 @@ const getRetentionColor = (
     };
   }
 
-  // The base emerald-500 color in RGB
-  const emerald = "rgb(16, 185, 129)"; // emerald-500
-
   // Calculate both linear and logarithmic scales
   const linearScale = percentage / 100;
   const logScale = Math.log(percentage + 1) / Math.log(101);
@@ -52,7 +49,8 @@ const getRetentionColor = (
 
   // Use the scaled opacity for the background color
   return {
-    backgroundColor: `rgba(16, 185, 129, ${scaledOpacity.toFixed(2)})`,
+    // The dataviz hue (#2b7fff), ramped by opacity — retention is data, not chrome.
+    backgroundColor: `rgba(43, 127, 255, ${scaledOpacity.toFixed(2)})`,
     textColor: isDark ? "white" : "black",
   };
 };

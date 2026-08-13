@@ -273,7 +273,7 @@ await rybbit.init({
                   rel="noopener noreferrer"
                   className={`group inline-flex h-7 items-center gap-1.5 rounded-md border border-neutral-150 bg-white px-2.5 text-xs font-medium text-neutral-700 transition-colors hover:border-neutral-300 hover:text-neutral-900 dark:border-neutral-800 dark:bg-neutral-850 dark:text-neutral-300 dark:hover:border-neutral-600 dark:hover:text-neutral-50 ${FOCUS_RING}`}
                 >
-                  <span className="text-neutral-500 transition-colors group-hover:text-emerald-500 dark:text-neutral-400 dark:group-hover:text-emerald-400">
+                  <span className="text-neutral-500 transition-colors group-hover:text-accent-500 dark:text-neutral-400 dark:group-hover:text-accent-400">
                     {guide.icon}
                   </span>
                   {guide.title}

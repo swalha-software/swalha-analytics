@@ -58,7 +58,7 @@ function SiteRow({ site, isSelected }: { site: SiteOption; isSelected: boolean }
           </div>
         )}
       </div>
-      {isSelected && <Check className="h-4 w-4 shrink-0 text-emerald-500" />}
+      {isSelected && <Check className="h-4 w-4 shrink-0 text-accent-500" />}
     </>
   );
 }

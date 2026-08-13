@@ -185,7 +185,7 @@ export function PricingCards({ isLoggedIn }: { isLoggedIn: boolean }) {
           <div className="flex justify-between mb-6 items-center">
             <div>
               <h3 className="font-semibold mb-2">{t("Monthly pageviews")}</h3>
-              <div className="text-3xl font-bold text-emerald-400">
+              <div className="text-3xl font-bold text-accent-400">
                 {typeof eventLimit === "number" ? eventLimit.toLocaleString() : eventLimit}
               </div>
             </div>
@@ -216,7 +216,7 @@ export function PricingCards({ isLoggedIn }: { isLoggedIn: boolean }) {
                     {t("Annual")}
                   </button>
                 </div>
-                <span className="absolute -top-3 -right-12 text-xs text-white bg-emerald-500 border border-emerald-500 rounded-full px-2 py-0.5 whitespace-nowrap">
+                <span className="absolute -top-3 -right-12 text-xs text-accent-950 bg-accent-500 border border-accent-500 rounded-full px-2 py-0.5 whitespace-nowrap">
                   {t("4 months free")}
                 </span>
               </div>
@@ -237,7 +237,7 @@ export function PricingCards({ isLoggedIn }: { isLoggedIn: boolean }) {
             {EVENT_TIERS.map((tier, index) => (
               <span
                 key={index}
-                className={cn(eventLimitIndex === index && "font-bold text-emerald-600 dark:text-emerald-400")}
+                className={cn(eventLimitIndex === index && "font-bold text-accent-600 dark:text-accent-400")}
               >
                 {index === EVENT_TIERS.length - 1 && typeof tier !== "number"
                   ? "50M+"
@@ -294,7 +294,7 @@ export function PricingCards({ isLoggedIn }: { isLoggedIn: boolean }) {
             isCustomTier={true}
             customButton={
               <a href="https://www.rybbit.com/contact" className="w-full block">
-                <button className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-medium px-5 py-3 rounded-lg shadow-lg shadow-emerald-900/20 transform hover:-translate-y-0.5 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-opacity-50 cursor-pointer">
+                <button className="w-full bg-accent-600 hover:bg-accent-500 text-accent-950 font-medium px-5 py-3 rounded-lg shadow-lg shadow-accent-900/20 transform hover:-translate-y-0.5 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-accent-500 focus:ring-opacity-50 cursor-pointer">
                   {t("Contact us")}
                 </button>
               </a>

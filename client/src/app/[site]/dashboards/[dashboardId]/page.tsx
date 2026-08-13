@@ -440,7 +440,7 @@ export default function DashboardDetailPage() {
                 id={`dash-card-${card.id}`}
                 className={cn(
                   "rounded-lg transition-shadow duration-300 motion-reduce:transition-none",
-                  highlightId === card.id && "ring-2 ring-emerald-500 ring-offset-2 ring-offset-background"
+                  highlightId === card.id && "ring-2 ring-accent-500 ring-offset-2 ring-offset-background"
                 )}
               >
                 <DashboardCardView

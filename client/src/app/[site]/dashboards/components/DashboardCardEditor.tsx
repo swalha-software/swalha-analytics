@@ -410,7 +410,7 @@ export function DashboardCardEditor({ siteId, card, open, onClose, onSave }: Das
                   <span className="flex items-center gap-1.5">
                     {example.title}
                     {example.beyondPrebuilt && (
-                      <span className="rounded bg-emerald-100 px-1 py-0.5 text-[9px] font-medium uppercase tracking-wide text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400">
+                      <span className="rounded bg-accent-100 px-1 py-0.5 text-[9px] font-medium uppercase tracking-wide text-accent-700 dark:bg-accent-950 dark:text-accent-400">
                         advanced
                       </span>
                     )}

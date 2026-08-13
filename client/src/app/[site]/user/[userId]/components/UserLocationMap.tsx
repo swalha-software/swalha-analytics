@@ -63,7 +63,7 @@ export function UserLocationMap({ country, region, city, className }: UserLocati
 
     mapRef.current = map;
 
-    markerRef.current = new mapboxgl.Marker({ color: "#10b981" }).setLngLat(coordinates).addTo(map);
+    markerRef.current = new mapboxgl.Marker({ color: "#2b7fff" }).setLngLat(coordinates).addTo(map);
 
     return () => {
       markerRef.current?.remove();
