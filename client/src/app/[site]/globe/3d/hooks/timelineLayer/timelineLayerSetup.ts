@@ -26,7 +26,7 @@ export function addClusterLayers(mapInstance: mapboxgl.Map): void {
     source: SOURCE_ID,
     filter: ["all", ["has", "point_count"], [">=", ["get", "point_count"], MIN_CLUSTER_SIZE]],
     paint: {
-      "circle-color": ["step", ["get", "point_count"], "#1447e6", 10, "#1447e6", 30, "#2b7fff", 100, "#8ec5ff"],
+      "circle-color": ["step", ["get", "point_count"], "#95752a", 10, "#95752a", 30, "#d1a84b", 100, "#e9c67d"],
       "circle-radius": ["step", ["get", "point_count"], 15, 10, 20, 30, 25],
     },
   });

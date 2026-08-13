@@ -189,11 +189,11 @@ export function useOpenLayersTimelineLayer({ mapInstanceRef, mapViewRef, mapView
           // Determine color based on cluster size (matching Mapbox steps)
           let color: string;
           if (size >= 100) {
-            color = "#8ec5ff"; // dataviz light
+            color = "#e9c67d"; // dataviz light
           } else if (size >= 30) {
-            color = "#2b7fff"; // dataviz
+            color = "#d1a84b"; // dataviz
           } else {
-            color = "#1447e6"; // dataviz deep
+            color = "#95752a"; // dataviz deep
           }
 
           // Determine radius based on cluster size (matching Mapbox steps)

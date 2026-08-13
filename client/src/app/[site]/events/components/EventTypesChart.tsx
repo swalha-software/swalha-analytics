@@ -16,8 +16,8 @@ import { formatter } from "@/lib/utils";
 import { CardLoader } from "../../../../components/ui/card";
 
 const EVENT_TYPE_CONFIG = [
-  { key: "pageview_count", label: "Pageviews", color: "#60a5fa" },
-  { key: "custom_event_count", label: "Custom Events", color: "#fbbf24" },
+  { key: "pageview_count", label: "Pageviews", color: "#dcb55e" },
+  { key: "custom_event_count", label: "Custom Events", color: "#2dd4bf" },
   { key: "performance_count", label: "Performance", color: "#a78bfa" },
   { key: "outbound_count", label: "Outbound", color: "#a3e635" },
   { key: "error_count", label: "Errors", color: "#f87171" },

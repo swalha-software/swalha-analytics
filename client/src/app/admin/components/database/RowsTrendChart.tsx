@@ -12,10 +12,10 @@ import { formatter } from "@/lib/utils";
 import { useState } from "react";
 
 const CHART_COLORS = [
-  "#60a5fa", // blue-400
-  "#818cf8", // indigo-400
+  "#dcb55e", // gold-400 / dataviz
+  "#2dd4bf", // teal-400
   "#a78bfa", // violet-400
-  "#8ec5ff", // dataviz (chart-1)
+  "#fb7185", // rose-400
 ];
 
 interface RowsTrendChartProps {
