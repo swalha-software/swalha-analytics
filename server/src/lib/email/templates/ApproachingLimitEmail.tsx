@@ -12,6 +12,7 @@ import {
   pixelBasedPreset,
 } from "@react-email/components";
 import * as React from "react";
+import { BrandHeader } from "./BrandHeader.js";
 
 interface ApproachingLimitEmailProps {
   organizationName: string;
@@ -26,7 +27,6 @@ export const ApproachingLimitEmail = ({
   eventLimit,
   upgradeLink,
 }: ApproachingLimitEmailProps) => {
-  const currentYear = new Date().getFullYear();
   const usagePercent = Math.min(100, Math.round((eventCount / eventLimit) * 100));
 
   return (
@@ -50,13 +50,7 @@ export const ApproachingLimitEmail = ({
       >
         <Body className="bg-white font-sans">
           <Container className="mx-auto py-8 px-6 max-w-[600px]">
-            <Img
-              src="https://app.rybbit.io/rybbit/horizontal_black.svg"
-              alt="Rybbit"
-              width="120"
-              height="28"
-              className="mb-8"
-            />
+            <BrandHeader />
 
             <Text className="text-darkText text-base leading-relaxed mb-4">Hi there,</Text>
 
@@ -89,7 +83,7 @@ export const ApproachingLimitEmail = ({
 
             <Hr className="border-borderColor my-8" />
 
-            <Text className="text-mutedText text-xs">© {currentYear} Rybbit Analytics</Text>
+            <Text className="text-mutedText text-xs">SWALHA Analytics</Text>
           </Container>
         </Body>
       </Tailwind>

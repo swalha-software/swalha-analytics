@@ -12,6 +12,7 @@ import {
   pixelBasedPreset,
 } from "@react-email/components";
 import * as React from "react";
+import { BrandHeader } from "./BrandHeader.js";
 
 interface InvitationEmailProps {
   email: string;
@@ -21,12 +22,11 @@ interface InvitationEmailProps {
 }
 
 export const InvitationEmail = ({ email, invitedBy, organizationName, inviteLink }: InvitationEmailProps) => {
-  const currentYear = new Date().getFullYear();
 
   return (
     <Html>
       <Head />
-      <Preview>You're invited to join {organizationName} on Rybbit</Preview>
+      <Preview>You're invited to join {organizationName} on SWALHA Analytics</Preview>
       <Tailwind
         config={{
           presets: [pixelBasedPreset],
@@ -44,23 +44,17 @@ export const InvitationEmail = ({ email, invitedBy, organizationName, inviteLink
       >
         <Body className="bg-white font-sans">
           <Container className="mx-auto py-8 px-6 max-w-[600px]">
-            <Img
-              src="https://app.rybbit.io/rybbit/horizontal_black.svg"
-              alt="Rybbit"
-              width="120"
-              height="28"
-              className="mb-8"
-            />
+            <BrandHeader />
 
             <Text className="text-darkText text-base leading-relaxed mb-4">Hi there,</Text>
 
             <Text className="text-darkText text-base leading-relaxed mb-4">
-              {invitedBy} has invited you to join <span className="font-semibold">{organizationName}</span> on Rybbit
+              {invitedBy} has invited you to join <span className="font-semibold">{organizationName}</span> on SWALHA
               Analytics.
             </Text>
 
             <Text className="text-darkText text-base leading-relaxed mb-4">
-              Rybbit is an open-source analytics platform that helps you understand your website traffic while
+              SWALHA Analytics is an open-source analytics platform that helps you understand your website traffic while
               respecting user privacy.
             </Text>
 
@@ -74,7 +68,7 @@ export const InvitationEmail = ({ email, invitedBy, organizationName, inviteLink
 
             <Hr className="border-borderColor my-8" />
 
-            <Text className="text-mutedText text-xs">© {currentYear} Rybbit Analytics</Text>
+            <Text className="text-mutedText text-xs">SWALHA Analytics</Text>
           </Container>
         </Body>
       </Tailwind>

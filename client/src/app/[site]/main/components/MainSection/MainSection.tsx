@@ -7,7 +7,7 @@ import Link from "next/link";
 import { useGetOverview } from "../../../../../api/analytics/hooks/useGetOverview";
 import { useGetOverviewBucketed } from "../../../../../api/analytics/hooks/useGetOverviewBucketed";
 import { BucketSelection } from "../../../../../components/BucketSelection";
-import { RybbitTextLogo } from "../../../../../components/RybbitLogo";
+import { SwalhaTextLogo } from "../../../../../components/SwalhaLogo";
 import { useWhiteLabel } from "../../../../../hooks/useIsWhiteLabel";
 import { authClient } from "../../../../../lib/auth";
 import { getTimezone, useStore } from "../../../../../lib/store";
@@ -102,10 +102,10 @@ export function MainSection() {
             <div className="flex items-center space-x-4">
               {!isWhiteLabel && (
                 <Link
-                  href={session.data ? "/" : "https://rybbit.com"}
+                  href={session.data ? "/" : "https://analytics.swalha.com"}
                   className="opacity-75"
                 >
-                  <RybbitTextLogo width={80} />
+                  <SwalhaTextLogo height={16} />
                 </Link>
               )}
             </div>

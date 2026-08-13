@@ -12,6 +12,7 @@ import {
   pixelBasedPreset,
 } from "@react-email/components";
 import * as React from "react";
+import { BrandHeader } from "./BrandHeader.js";
 
 export type OtpEmailType = "sign-in" | "email-verification" | "forget-password" | "change-email";
 
@@ -24,29 +25,28 @@ const getContent = (type: OtpEmailType) => {
   switch (type) {
     case "sign-in":
       return {
-        preview: "Your Rybbit sign-in code",
-        description: "Here is your one-time password to sign in to Rybbit:",
+        preview: "Your SWALHA Analytics sign-in code",
+        description: "Here is your one-time password to sign in to SWALHA Analytics:",
       };
     case "email-verification":
       return {
         preview: "Verify your email address",
-        description: "Here is your verification code for Rybbit:",
+        description: "Here is your verification code for SWALHA Analytics:",
       };
     case "forget-password":
       return {
         preview: "Reset your password",
-        description: "You requested to reset your password for Rybbit. Here is your one-time password:",
+        description: "You requested to reset your password for SWALHA Analytics. Here is your one-time password:",
       };
     case "change-email":
       return {
         preview: "Change your email address",
-        description: "Here is your verification code for Rybbit:",
+        description: "Here is your verification code for SWALHA Analytics:",
       };
   }
 };
 
 export const OtpEmail = ({ otp, type }: OtpEmailProps) => {
-  const currentYear = new Date().getFullYear();
   const content = getContent(type);
 
   return (
@@ -71,13 +71,7 @@ export const OtpEmail = ({ otp, type }: OtpEmailProps) => {
       >
         <Body className="bg-white font-sans">
           <Container className="mx-auto py-8 px-6 max-w-[600px]">
-            <Img
-              src="https://app.rybbit.io/rybbit/horizontal_black.svg"
-              alt="Rybbit"
-              width="120"
-              height="28"
-              className="mb-8"
-            />
+            <BrandHeader />
 
             <Text className="text-darkText text-base leading-relaxed mb-4">Hi there,</Text>
 
@@ -96,7 +90,7 @@ export const OtpEmail = ({ otp, type }: OtpEmailProps) => {
 
             <Hr className="border-borderColor my-8" />
 
-            <Text className="text-mutedText text-xs">© {currentYear} Rybbit Analytics</Text>
+            <Text className="text-mutedText text-xs">SWALHA Analytics</Text>
           </Container>
         </Body>
       </Tailwind>

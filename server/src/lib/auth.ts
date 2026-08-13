@@ -255,7 +255,7 @@ const pluginList = [
 
 export const auth = betterAuth({
   basePath: "/api/auth",
-  appName: "Rybbit",
+  appName: "SWALHA Analytics",
   logger: {
     log: (level, message, ...args) => {
       // Route better-auth's internal logs (e.g. API key rate-limit errors)

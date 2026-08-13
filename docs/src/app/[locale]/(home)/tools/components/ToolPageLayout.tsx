@@ -4,7 +4,7 @@ import { ChevronRight } from "lucide-react";
 import { GridCrosses } from "@/components/GridCrosses";
 import { RelatedTools } from "@/components/RelatedTools";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { BuiltByRybbit } from "./BuiltByRybbit";
+import { BuiltBySwalha } from "./BuiltBySwalha";
 import { ToolCTA } from "./ToolCTA";
 import styles from "./ToolPageLayout.module.css";
 
@@ -114,7 +114,7 @@ export function ToolPageLayout({
               <div className={styles.workspace}>{toolComponent}</div>
             </div>
             <aside className="min-w-0 border-t border-neutral-200 px-5 py-8 dark:border-neutral-800 sm:px-8 lg:col-span-3 lg:border-t-0 lg:px-6 lg:py-10">
-              <BuiltByRybbit />
+              <BuiltBySwalha />
             </aside>
           </div>
         </div>

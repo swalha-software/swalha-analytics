@@ -12,8 +12,8 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: {
-    default: "Rybbit - Privacy-First Web Analytics Platform",
-    template: "%s | Rybbit",
+    default: "SWALHA Analytics - Privacy-First Web Analytics Platform",
+    template: "%s | SWALHA Analytics",
   },
   description:
     "Open-source, privacy-focused web analytics platform. Track your website performance without compromising user privacy. Self-hostable alternative to Google Analytics.",
@@ -33,8 +33,8 @@ export const metadata: Metadata = {
     type: "website",
     locale: "en_US",
     url: "https://rybbit.com",
-    siteName: "Rybbit",
-    title: "Rybbit - Privacy-First Web Analytics Platform",
+    siteName: "SWALHA Analytics",
+    title: "SWALHA Analytics - Privacy-First Web Analytics Platform",
     description:
       "Open-source, privacy-focused web analytics platform. Track your website performance without compromising user privacy.",
     images: [
@@ -42,13 +42,13 @@ export const metadata: Metadata = {
         url: "/opengraph-image.png",
         width: 1200,
         height: 630,
-        alt: "Rybbit Analytics Dashboard",
+        alt: "SWALHA Analytics social card",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Rybbit - Privacy-First Web Analytics Platform",
+    title: "SWALHA Analytics - Privacy-First Web Analytics Platform",
     description:
       "Open-source, privacy-focused web analytics platform. Track your website performance without compromising user privacy.",
     images: ["/opengraph-image.png"],

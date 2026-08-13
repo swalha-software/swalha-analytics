@@ -10,24 +10,22 @@ export const ONBOARDING_TIPS: OnboardingTipContent[] = [
   {
     day: 1,
     subject: "You made the right choice",
-    body: `Thanks for signing up for Rybbit. You've joined thousands of developers who care about respecting their users' privacy.
+    body: `Thanks for signing up for SWALHA Analytics. Your account is set up with analytics that respect your visitors' privacy.
 
-Unlike traditional analytics tools, Rybbit doesn't use cookies, doesn't track users across websites, and doesn't sell your data to advertisers. Your visitors stay anonymous, and you still get the insights you need.
+Unlike traditional analytics tools, SWALHA Analytics doesn't use cookies, doesn't track users across websites, and doesn't sell your data to advertisers. Your visitors stay anonymous, and you still get the insights you need.
 
-We built Rybbit because we were tired of tools that treat users as products. Privacy shouldn't mean giving up on understanding your audience.
+Privacy shouldn't mean giving up on understanding your audience.
 
-If you're curious how we compare to other tools, check out our comparison page.`,
+If you're curious how it compares to other tools, the docs have a side-by-side comparison.`,
     linkText: "View comparison",
     linkUrl: "https://rybbit.com/docs/comparison",
   },
   {
     day: 2,
     subject: "Why your metrics might look different than GA",
-    body: `If you've been using Google Analytics before, you might notice your Rybbit numbers look different. That's actually a good thing.
+    body: `If you've been using Google Analytics before, you might notice your SWALHA Analytics numbers look different. That's actually a good thing.
 
-Adblockers block Google Analytics. They rarely block Rybbit. So for the first time, you're probably seeing your real traffic - and it's likely higher than GA ever showed you.
-
-We're also lightweight and privacy-focused, which means browsers and privacy tools treat us differently than traditional trackers.
+Adblockers commonly block Google Analytics. Lightweight, privacy-focused analytics is blocked far less often, so you're probably seeing closer to your real traffic - and it's likely higher than GA ever showed you.
 
 Those missing visitors in GA? They were always there. You just couldn't see them.`,
   },
@@ -62,7 +60,7 @@ Funnels go deeper. Define a multi-step process (view product -> add to cart -> c
   {
     day: 5,
     subject: "Build with your data",
-    body: `Everything in your Rybbit dashboard is available through our API.
+    body: `Everything in your SWALHA Analytics dashboard is available through our API.
 
 Build custom dashboards, set up alerts when traffic spikes, pipe data into your own tools, create reports for clients - the data is yours to use however you want.
 

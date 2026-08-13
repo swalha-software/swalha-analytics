@@ -119,7 +119,7 @@ ${dataAttributes.map(([key, value]) => `    el.setAttribute("${key}", ${JSON.str
 
   const inlineScript = `<script src="${scriptUrl}" ${dataAttributes.map(formatAttr).join(" ")} defer></script>`;
 
-  const aiPrompt = `Install Rybbit analytics on this website.
+  const aiPrompt = `Install SWALHA Analytics on this website.
 
 Add this script tag to the <head> of every page, using the root layout or base template if there is one:
 

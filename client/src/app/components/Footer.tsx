@@ -1,11 +1,9 @@
-import Image from "next/image";
 import Link from "next/link";
 import { useExtracted } from "next-intl";
 import { IS_CLOUD } from "../../lib/const";
 import { useWhiteLabel } from "../../hooks/useIsWhiteLabel";
-import { HeartIcon } from "lucide-react";
-import { Button } from "../../components/ui/button";
 import { LanguageSwitcher } from "../../components/LanguageSwitcher";
+import { SwalhaTextLogo } from "../../components/SwalhaLogo";
 
 interface FooterProps {
   disabled?: boolean;
@@ -26,27 +24,8 @@ export function Footer({ disabled = false }: FooterProps) {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-8">
           {/* Company Info */}
           <div className="space-y-4">
-            <Image
-              src="/rybbit/horizontal_white.svg"
-              alt="Rybbit"
-              width={140}
-              height={28}
-              style={{ width: 140, height: 28, objectFit: "contain" }}
-              className="dark:invert-0 invert"
-            />
-            {!IS_CLOUD && (
-              <div className="space-y-3">
-                <div className="text-sm text-neutral-600 dark:text-neutral-200">
-                  {t("Liking Rybbit? Consider sponsoring the project!")}
-                </div>
-                <a href="https://github.com/sponsors/goldflag" target="_blank" rel="noopener noreferrer">
-                  <Button>
-                    <HeartIcon className="w-5 h-5 text-red-500" strokeWidth={3} />
-                    {t("Sponsor us")}
-                  </Button>
-                </a>
-              </div>
-            )}
+            <SwalhaTextLogo height={28} />
+
             {/* Social Media Links */}
             <div className="flex gap-4">
               <a
@@ -133,14 +112,6 @@ export function Footer({ disabled = false }: FooterProps) {
                   {t("API Reference")}
                 </a>
               </li>
-              <li>
-                <a
-                  href="https://rybbit.com/affiliate"
-                  className="text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white transition-colors"
-                >
-                  {t("50% Affiliate Program")}
-                </a>
-              </li>
             </ul>
           </div>
 
@@ -196,9 +167,17 @@ export function Footer({ disabled = false }: FooterProps) {
 
         {/* Bottom Bar */}
         <div className="pt-8 border-t border-neutral-200 dark:border-neutral-800">
+          {/* The documentation and policy links above are published by the
+              upstream Rybbit project, not by SWALHA — say so rather than let
+              the SWALHA mark imply we own them. */}
+          <p className="mb-4 text-sm text-neutral-500 dark:text-neutral-400">
+            {t(
+              "SWALHA Analytics is built on the open-source Rybbit project. The documentation and policy pages linked above are published by Rybbit."
+            )}
+          </p>
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-4 text-sm text-neutral-500 dark:text-neutral-400">
-              <span>{t("© {year} Rybbit. All rights reserved.", { year: String(new Date().getFullYear()) })}</span>
+              <span>SWALHA Analytics — a branded fork of the open-source Rybbit project.</span>
               <Link
                 href={`https://github.com/rybbit-io/rybbit/releases/tag/v${APP_VERSION}`}
                 className="hover:text-neutral-700 dark:hover:text-neutral-300"

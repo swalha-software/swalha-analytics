@@ -3,11 +3,11 @@
 import { AppLink } from "@/components/AppLink";
 import { DesktopNav } from "@/components/header/DesktopNav";
 import { MobileNav } from "@/components/header/MobileNav";
+import { SwalhaTextLogo } from "@/components/SwalhaLogo";
 import { ThemeSwitcher } from "@/components/ThemeSwitcher";
 import { trackAdEvent } from "@/lib/trackAdEvent";
 import { Menu, X } from "lucide-react";
 import { useExtracted } from "next-intl";
-import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 
@@ -24,17 +24,9 @@ export function CustomHeader() {
         <Link
           href="/"
           className="flex items-center rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500"
-          aria-label="Rybbit home"
+          aria-label="SWALHA Analytics home"
         >
-          <Image
-            src="/rybbit/horizontal_white.svg"
-            alt="Rybbit"
-            width={104}
-            height={0}
-            priority
-            style={{ height: "auto" }}
-            className="invert dark:invert-0"
-          />
+          <SwalhaTextLogo height={22} priority />
         </Link>
 
         <DesktopNav />

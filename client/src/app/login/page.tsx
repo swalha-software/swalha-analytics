@@ -9,7 +9,7 @@ import { useExtracted } from "next-intl";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { RybbitTextLogo } from "../../components/RybbitLogo";
+import { SwalhaTextLogo } from "../../components/SwalhaLogo";
 import { SpinningGlobe } from "../../components/SpinningGlobe";
 import { useSetPageTitle } from "../../hooks/useSetPageTitle";
 import { authClient } from "../../lib/auth";
@@ -79,8 +79,8 @@ export default function Page() {
       <div className="w-full lg:w-[550px] flex flex-col p-6 lg:p-10">
         {/* Logo at top left */}
         <div className="mb-8">
-          <a href="https://rybbit.com" target="_blank" className="inline-block">
-            <RybbitTextLogo />
+          <a href="https://analytics.swalha.com" target="_blank" className="inline-block">
+            <SwalhaTextLogo />
           </a>
         </div>
         <div className="flex-1 flex flex-col justify-center w-full max-w-[550px] mx-auto">
@@ -154,12 +154,12 @@ export default function Page() {
         {!IS_CLOUD && (
           <div className="text-xs text-muted-foreground mt-8">
             <a
-              href="https://rybbit.com"
+              href="https://analytics.swalha.com"
               target="_blank"
               rel="noopener"
-              title="Rybbit - Open Source Privacy-Focused Web Analytics"
+              title="SWALHA Analytics - Open Source Privacy-Focused Web Analytics"
             >
-              {t("Open source web analytics powered by Rybbit")}
+              {t("Open source web analytics powered by SWALHA Analytics")}
             </a>
           </div>
         )}

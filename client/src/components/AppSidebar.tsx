@@ -13,7 +13,7 @@ import { authClient } from "../lib/auth";
 import { DEPLOYMENT, IS_CLOUD } from "../lib/const";
 import { useStripeSubscription } from "../lib/subscription/useStripeSubscription";
 import { cn } from "../lib/utils";
-import { RybbitLogo } from "./RybbitLogo";
+import { SwalhaLogo } from "./SwalhaLogo";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
 
@@ -47,10 +47,10 @@ function AppSidebarContent() {
       <div className="flex flex-col items-center gap-2">
         <Link
           href="/"
-          aria-label="Rybbit"
+          aria-label="SWALHA Analytics"
           className="mb-2 mt-1 flex items-center justify-center rounded-md focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-neutral-950 dark:focus-visible:ring-neutral-300"
         >
-          <RybbitLogo width={24} height={18} />
+          <SwalhaLogo width={24} height={18} />
         </Link>
         <RailLink
           href="https://rybbit.com/docs"

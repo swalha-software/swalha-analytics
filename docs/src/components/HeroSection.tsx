@@ -1,7 +1,7 @@
 import { GitHubStarButton } from "@/components/GitHubStarButton";
 import { GridCrosses } from "@/components/GridCrosses";
 import { HeroDataLine } from "@/components/HeroDataLine";
-import { WatchfulFrog } from "@/components/deco/WatchfulFrog";
+import { BrandWatermark } from "@/components/deco/BrandWatermark";
 import { TrackedButton } from "@/components/TrackedButton";
 import { ArrowRight, ExternalLink } from "lucide-react";
 import { useExtracted } from "next-intl";
@@ -104,7 +104,7 @@ export function HeroSection({ title, subtitle, showEUFlag = true, showGitHubStar
           {/* Peeking over the demo window; the browser card below is
               `relative`, so DOM order lets it occlude the frog's body. */}
           <div className="pointer-events-none absolute -top-12 right-10 hidden w-24 -rotate-2 text-neutral-950 opacity-[0.12] dark:text-white dark:opacity-[0.09] md:block lg:right-16 lg:w-28">
-            <WatchfulFrog />
+            <BrandWatermark />
           </div>
           <div className="relative min-w-0 max-w-full overflow-hidden rounded-lg border border-neutral-300 bg-white dark:border-neutral-700 dark:bg-neutral-950">
             <div className="grid h-10 grid-cols-[1fr_auto_1fr] items-center gap-2 border-b border-neutral-200 px-3 dark:border-neutral-800 sm:px-4">
