@@ -14,8 +14,8 @@ colors:
   accent-strong: "#b99239"     # gold-600 (border / pressed fill)
   accent-deep: "#74591b"       # gold-800 (deep tint)
   # Data visualization
-  dataviz: "#8ec5ff"           # hsl(210.7 100% 77.8%) — primary chart series (dark)
-  dataviz-2: "#2b7fff"         # hsl(216.3 100% 58.5%) — secondary chart series
+  dataviz: "#dcb55e"           # gold-400 — primary chart series (dark)
+  dataviz-2: "#f2d8a2"         # gold-200 — hover lift on the same series (dark)
   # Semantic state
   destructive: "#ef4444"       # red-500
   warning: "#eab308"           # yellow-500
@@ -101,7 +101,7 @@ components:
 
 **Creative North Star: "The Instrument Panel"**
 
-SWALHA Analytics is a precise, legible cockpit for understanding a website. Every surface is flat; depth comes from tonal layering of a pure-grayscale ramp, not from shadows. The canvas recedes (near-black `#0a0a0a` in the default dark theme, matching swalha.com), panels lift one notch (`#1b1b1b`), interactive chrome lifts one more (`#242424`), and hairline 1px borders draw the seams. Onto that calm gray instrument, three signals are painted with intent: the **SWALHA gold** (`#d1a84b`) for action and selection, a **blue** (`#8ec5ff`) for the data lines themselves, and **green** reserved strictly for success and healthy state. The data is the instrument; the chrome stays out of the way.
+SWALHA Analytics is a precise, legible cockpit for understanding a website. Every surface is flat; depth comes from tonal layering of a pure-grayscale ramp, not from shadows. The canvas recedes (near-black `#0a0a0a` in the default dark theme, matching swalha.com), panels lift one notch (`#1b1b1b`), interactive chrome lifts one more (`#242424`), and hairline 1px borders draw the seams. Onto that calm gray instrument, three signals are painted with intent: the **SWALHA gold** (`#d1a84b`) for action and selection, a lighter **gold** (`#dcb55e`) for the data lines themselves, and **green** reserved strictly for success and healthy state. The data is the instrument; the chrome stays out of the way.
 
 The gold, the neutral chassis, the `0.625rem` radius, and Inter are all inherited directly from swalha.com, so the product and the marketing site read as one company.
 
@@ -112,7 +112,7 @@ This system explicitly rejects the **generic SaaS template** (purple gradients, 
 **Key Characteristics:**
 - Dark-mode-default; a full light theme mirrors every token.
 - Flat by default: depth via a 21-step grayscale ramp + 1px borders, never shadows.
-- One accent (gold) for action/selection, one data hue (blue) for charts, green for success only.
+- One accent (gold) for action/selection, a lighter/darker gold for charts, green for success only.
 - Geometry shared with swalha.com: 10px radius, Inter throughout, compact 36px controls.
 - Density with legibility: dense data, but body text stays ≥4.5:1 contrast.
 
@@ -124,7 +124,11 @@ A pure-neutral grayscale chassis carrying exactly two chromatic signals; semanti
 - **SWALHA Gold** (`#d1a84b`, `--accent-500`; border/pressed `#b99239`, `--accent-600`): The single brand accent, taken from swalha.com's `--gold: oklch(0.75 0.12 85)` and expanded into an 11-step ramp (`--gold-50` … `--gold-950`) that `--accent-*` aliases. Primary buttons, current selection, selected rows and tabs, focus emphasis, brand marks. This is the only color allowed to mean "act here."
 
 ### Secondary
-- **Blue Data Line** (`#8ec5ff` dark / `#2b7fff` light, `--dataviz`; second series `#2b7fff`, `--dataviz-2`): Reserved exclusively for data visualization (line/bar/area series, the weekday heatmap, the retention grid, the activity globe). It is a *data* color, never a UI color: it must not appear on buttons, links, or chrome. Keeping data blue and action gold is what stops charts from competing with buttons.
+- **Gold Data Line** (`#dcb55e` / gold-400 dark, `#95752a` / gold-700 light, `--dataviz`; `--dataviz-2` is the hover lift on the same series, gold-200 dark / gold-800 light): Reserved exclusively for data visualization (line/bar/area series, the weekday heatmap, the retention grid, the activity globe).
+
+  Data and action share the gold hue, separated only by lightness: charts sit at gold-400 (dark) / gold-700 (light) while actions sit at gold-500. This is a deliberate trade for brand saturation, and it has a cost — a selected row or a primary button no longer reads as a different *colour* from a chart line, only a different *shade*. Where a selection must be unambiguous on top of a chart, lean on the border, ring, or weight rather than the fill.
+
+  Chart steps are chosen for legibility on their canvas, not for brand fidelity: gold-600 fails the 3:1 graphical minimum on the light canvas (2.71:1), which is why light mode drops to gold-700 (4.04:1). Dark mode runs gold-400 at 10.2:1.
 
 ### Neutral
 The workhorse. A 21-step pure-grayscale ramp (`--neutral-0` at 97% L through `--neutral-1000` at 4% L, chroma 0).
@@ -139,7 +143,7 @@ The workhorse. A 21-step pure-grayscale ramp (`--neutral-0` at 97% L through `--
 - **Success Green** (`#10b981`, `--emerald-500` / `--green-500`): Success badges, positive deltas, live/realtime pulses, uptime-OK, copy-confirm checks. Green no longer carries the brand — it carries *only* the meaning "this went well" — but it stays green so the green/red delta pairing survives.
 - **Destructive Red** (`#ef4444`, `--red-500`): Errors, delete actions, negative deltas.
 - **Warning Yellow** (`#eab308`, `--yellow-500`): Warnings, caution thresholds.
-- **Info Blue** (`#3b82f6`, `--blue-500`): Informational badges only. It now sits close to the `--dataviz` hue, so keep it off anything adjacent to a chart — prefer a neutral badge there.
+- **Info Blue** (`#3b82f6`, `--blue-500`): Informational badges only.
 
 A full Tailwind-style ramp (red, orange, amber, yellow, lime, green, emerald, teal, cyan, sky, blue, indigo, violet, purple, fuchsia, pink, rose) is defined in `globals.css` for chart palettes and category coloring. Outside data viz and state, do not reach into it.
 
@@ -210,7 +214,7 @@ This system is **flat by default**. There is no resting shadow vocabulary; depth
 ### Do:
 - **Do** keep surfaces flat: convey depth with the neutral ramp (`#0a0a0a` → `#1b1b1b` → `#242424`) and 1px borders.
 - **Do** reserve gold for action and current selection (The Signal-Not-Decoration Rule).
-- **Do** keep data viz in blue (`--dataviz`) and the broader ramp; never use the data hue on chrome.
+- **Do** keep data viz on `--dataviz` and the broader ramp; never hardcode a gold hex in a chart.
 - **Do** keep green for success, health, and positive deltas only — never for brand or action.
 - **Do** reach for the `--accent-*` token, never a literal `gold-*`/hex, so a future accent change is one edit.
 - **Do** use Inter at fixed rem sizes with weight contrast (400/500/600) for all hierarchy.
@@ -226,5 +230,5 @@ This system is **flat by default**. There is no resting shadow vocabulary; depth
 - **Don't** use `border-left`/`border-right` > 1px as a colored accent stripe; use full hairline borders or a tint.
 - **Don't** use gradient text (`background-clip: text`) or decorative glassmorphism.
 - **Don't** introduce a second UI typeface or fluid `clamp()` headings.
-- **Don't** tint surfaces or backgrounds with gold, or paint chrome in the blue data hue.
+- **Don't** tint surfaces or backgrounds with gold, or paint chrome in the `--dataviz` gold steps.
 - **Don't** put white text on a gold fill — gold is a light accent and needs near-black text.

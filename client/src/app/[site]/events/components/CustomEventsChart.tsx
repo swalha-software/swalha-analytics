@@ -18,13 +18,13 @@ import { formatter } from "@/lib/utils";
 const COLOR_PALETTE = [
   "hsl(var(--dataviz))",
   "hsl(var(--green-400))",
-  "hsl(var(--amber-400))",
+  "hsl(var(--rose-400))", // was amber-400: too close to the gold data hue
   "hsl(var(--red-400))",
   "hsl(var(--teal-400))",
   "hsl(var(--cyan-400))",
   "hsl(var(--orange-400))",
   "hsl(var(--blue-400))",
-  "hsl(var(--indigo-400))",
+  "hsl(var(--fuchsia-400))", // was indigo-400: thins out the blues
   "hsl(var(--violet-400))",
 ];
 

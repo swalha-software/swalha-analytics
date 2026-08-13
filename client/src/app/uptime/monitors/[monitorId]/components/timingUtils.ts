@@ -6,12 +6,14 @@ export interface TimingSegment {
   color: string;
 }
 
+// Sequential gold ramp: the phases are ordered stages of one request, so they
+// read as one scale rather than five unrelated hues.
 export const TIMING_COLORS = {
-  dns: "bg-emerald-500", // Green - similar to hsl(160, 70%, 50%)
-  tcp: "bg-teal-500", // Turquoise - similar to hsl(180, 70%, 45%)
-  tls: "bg-sky-500", // Light Blue - similar to hsl(200, 70%, 45%)
-  ttfb: "bg-blue-500", // Blue - for TTFB (not in chart but fits the gradient)
-  transfer: "bg-indigo-500", // Deeper Blue - similar to hsl(220, 70%, 50%)
+  dns: "bg-accent-200",
+  tcp: "bg-accent-300",
+  tls: "bg-accent-400",
+  ttfb: "bg-accent-500",
+  transfer: "bg-accent-700",
 } as const;
 
 export function getTimingSegments(event: MonitorEvent): TimingSegment[] {

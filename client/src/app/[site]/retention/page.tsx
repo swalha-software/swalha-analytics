@@ -49,8 +49,8 @@ const getRetentionColor = (
 
   // Use the scaled opacity for the background color
   return {
-    // The dataviz hue (#2b7fff), ramped by opacity — retention is data, not chrome.
-    backgroundColor: `rgba(43, 127, 255, ${scaledOpacity.toFixed(2)})`,
+    // The dataviz hue (#d1a84b), ramped by opacity — retention is data, not chrome.
+    backgroundColor: `rgba(209, 168, 75, ${scaledOpacity.toFixed(2)})`,
     textColor: isDark ? "white" : "black",
   };
 };

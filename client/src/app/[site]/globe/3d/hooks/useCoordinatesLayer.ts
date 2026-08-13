@@ -162,10 +162,10 @@ export function useCoordinatesLayer({
             //   15,
             //   ["interpolate", ["linear"], ["get", "count"], 1, 8 * sizeMultiplier, highest, 20 * sizeMultiplier],
             // ],
-            "circle-color": ["case", ["get", "isFiltered"], "#3b82f6", "#fff4d6"],
+            "circle-color": ["case", ["get", "isFiltered"], "#d1a84b", "#fff4d6"],
             "circle-opacity": ["case", ["get", "isFiltered"], 0.9, 0.7],
             "circle-stroke-width": ["case", ["get", "isFiltered"], 2, 1],
-            "circle-stroke-color": ["case", ["get", "isFiltered"], "#60a5fa", "#fff"],
+            "circle-stroke-color": ["case", ["get", "isFiltered"], "#e9c67d", "#fff"],
             "circle-stroke-opacity": ["case", ["get", "isFiltered"], 1, 0.3],
           },
           layout: {
@@ -192,7 +192,7 @@ export function useCoordinatesLayer({
         mapInstance.setPaintProperty("realtime-coordinates-layer", "circle-color", [
           "case",
           ["get", "isFiltered"],
-          "#3b82f6",
+          "#d1a84b",
           "#fff4d6",
         ]);
         mapInstance.setPaintProperty("realtime-coordinates-layer", "circle-opacity", [
@@ -210,7 +210,7 @@ export function useCoordinatesLayer({
         mapInstance.setPaintProperty("realtime-coordinates-layer", "circle-stroke-color", [
           "case",
           ["get", "isFiltered"],
-          "#60a5fa",
+          "#e9c67d",
           "#fff",
         ]);
         mapInstance.setPaintProperty("realtime-coordinates-layer", "circle-stroke-opacity", [

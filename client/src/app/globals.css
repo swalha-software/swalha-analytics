@@ -149,8 +149,8 @@
     --ring: 0 0% 10%;
     --radius: 0.625rem;
 
-    --dataviz: 210.7 100% 63%;
-    --dataviz-2: 216.3 100% 58.5%;
+    --dataviz: 42 56.1% 37.5%;
+    --dataviz-2: 42.2 61.8% 28%;
 
     /* Gold — the SWALHA brand accent (swalha.com `--gold`, oklch(0.75 0.12 85)),
        expressed as an 11-step ramp in this app's HSL-triplet dialect. */
@@ -499,8 +499,8 @@
     --input: 0 0% 14.9%;
     --ring: 0 0% 56%;
 
-    --dataviz: 210.7 100% 77.8%;
-    --dataviz-2: 216.3 100% 58.5%;
+    --dataviz: 41.2 64.6% 61.6%;
+    --dataviz-2: 40.4 74.9% 79.1%;
   }
 
   /* Light mode scrollbar styles */
@@ -636,11 +636,11 @@
   ---break---
 */
 :root {
-  --chart-1: oklch(0.809 0.105 251.813);
-  --chart-2: oklch(0.623 0.214 259.815);
-  --chart-3: oklch(0.546 0.245 262.881);
-  --chart-4: oklch(0.488 0.243 264.376);
-  --chart-5: oklch(0.424 0.199 265.638);
+  --chart-1: oklch(0.84 0.10 85);
+  --chart-2: oklch(0.75 0.12 85);
+  --chart-3: oklch(0.66 0.115 85);
+  --chart-4: oklch(0.55 0.10 85);
+  --chart-5: oklch(0.44 0.08 85);
   --chart-background: oklch(1 0 0);
   --chart-foreground: oklch(0.145 0.004 285);
   --chart-foreground-muted: oklch(0.55 0.014 260);
@@ -661,11 +661,11 @@
   ---break---
 */
 .dark {
-  --chart-1: oklch(0.809 0.105 251.813);
-  --chart-2: oklch(0.623 0.214 259.815);
-  --chart-3: oklch(0.546 0.245 262.881);
-  --chart-4: oklch(0.488 0.243 264.376);
-  --chart-5: oklch(0.424 0.199 265.638);
+  --chart-1: oklch(0.84 0.10 85);
+  --chart-2: oklch(0.75 0.12 85);
+  --chart-3: oklch(0.66 0.115 85);
+  --chart-4: oklch(0.55 0.10 85);
+  --chart-5: oklch(0.44 0.08 85);
   --chart-background: oklch(0.145 0 0);
   --chart-foreground: oklch(0.45 0 0);
   --chart-foreground-muted: oklch(0.65 0.01 260);

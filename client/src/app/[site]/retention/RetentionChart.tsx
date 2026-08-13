@@ -18,14 +18,14 @@ interface RetentionChartProps {
 
 // Vibrant color palette for different cohorts using Tailwind CSS HSL variables
 const cohortColors = [
-  "hsl(var(--dataviz))", // Primary data hue (gold would collide with amber below)
+  "hsl(var(--dataviz))", // Primary data hue (gold)
   "hsl(var(--green-500))", // Green
   "hsl(var(--red-500))", // Red
   "hsl(var(--blue-500))", // Blue
   "hsl(var(--orange-500))", // Orange
   "hsl(var(--purple-500))", // Purple
   "hsl(var(--teal-500))", // Teal
-  "hsl(var(--amber-500))", // Amber
+  "hsl(var(--fuchsia-500))", // Fuchsia (amber dropped: too close to the gold data hue)
   "hsl(var(--slate-600))", // Slate
   "hsl(var(--red-600))", // Darker red
   "hsl(var(--green-600))", // Darker green

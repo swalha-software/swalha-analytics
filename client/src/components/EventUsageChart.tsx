@@ -12,8 +12,8 @@ import { useExtracted } from "next-intl";
 import { useState } from "react";
 
 const CHART_COLORS = [
-  "#60a5fa", // blue-400 (pageviews)
-  "#fbbf24", // amber-400 (custom events)
+  "#dcb55e", // gold-400 / dataviz (pageviews)
+  "#2dd4bf", // teal-400 (custom events)
   "#a78bfa", // violet-400 (performance)
   "#a3e635", // lime-400 (outbound)
   "#f87171", // red-400 (error)
