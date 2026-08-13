@@ -101,7 +101,7 @@ services:
       - noeviction
 
   backend:
-    image: ghcr.io/rybbit-io/rybbit-backend:${IMAGE_TAG:-latest}
+    image: ghcr.io/swalha-software/swalha-analytics-backend:${IMAGE_TAG:-latest}
     container_name: backend
     build:
       context: .
@@ -147,7 +147,7 @@ services:
     restart: unless-stopped
 
   client:
-    image: ghcr.io/rybbit-io/rybbit-client:${IMAGE_TAG:-latest}
+    image: ghcr.io/swalha-software/swalha-analytics-client:${IMAGE_TAG:-latest}
     container_name: client
     build:
       context: .
