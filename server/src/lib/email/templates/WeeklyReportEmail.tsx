@@ -13,6 +13,7 @@ import {
   pixelBasedPreset,
 } from "@react-email/components";
 import * as React from "react";
+import { BrandHeader } from "./BrandHeader.js";
 import type { SiteReport, MetricData } from "../../../services/weekyReports/weeklyReportTypes.js";
 
 interface WeeklyReportEmailProps {
@@ -244,7 +245,6 @@ const TopListSection = ({ title, items, renderLabel, showFavicon, labelClassName
 };
 
 export const WeeklyReportEmail = ({ userName, organizationName, site }: WeeklyReportEmailProps) => {
-  const currentYear = new Date().getFullYear();
 
   return (
     <Html>
@@ -270,13 +270,7 @@ export const WeeklyReportEmail = ({ userName, organizationName, site }: WeeklyRe
       >
         <Body className="bg-white font-sans">
           <Container className="mx-auto py-8 px-6 max-w-[600px]">
-            <Img
-              src="https://app.rybbit.io/rybbit/horizontal_black.svg"
-              alt="Rybbit"
-              width="120"
-              height="28"
-              className="mb-8"
-            />
+            <BrandHeader />
 
             <Text className="text-darkText text-base leading-relaxed mb-4">Hi {userName},</Text>
 
@@ -401,7 +395,7 @@ export const WeeklyReportEmail = ({ userName, organizationName, site }: WeeklyRe
                 Unsubscribe from weekly reports
               </Link>
             </Text>
-            <Text className="text-mutedText text-xs">© {currentYear} Rybbit Analytics</Text>
+            <Text className="text-mutedText text-xs">SWALHA Analytics</Text>
           </Container>
         </Body>
       </Tailwind>

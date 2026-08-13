@@ -1078,7 +1078,7 @@ window.rybbit.onReady((rybbit) => {
         ) : implementationState.goalType === "path" ? (
           <p className="rounded-md border border-neutral-150 bg-neutral-50 p-3 text-sm text-neutral-600 dark:border-neutral-800 dark:bg-neutral-900/40 dark:text-neutral-300">
             {t(
-              "No conversion event code is needed for this path goal. Rybbit will count sessions that reach {goalLabel}.",
+              "No conversion event code is needed for this path goal. SWALHA Analytics will count sessions that reach {goalLabel}.",
               {
                 goalLabel: implementationState.goalLabel || "",
               }
@@ -1086,7 +1086,7 @@ window.rybbit.onReady((rybbit) => {
           </p>
         ) : implementationState.goalType && implementationState.goalType !== "event" ? (
           <p className="rounded-md border border-neutral-150 bg-neutral-50 p-3 text-sm text-neutral-600 dark:border-neutral-800 dark:bg-neutral-900/40 dark:text-neutral-300">
-            {t("No conversion event code is needed for this goal. Rybbit tracks it automatically based on user behavior.")}
+            {t("No conversion event code is needed for this goal. SWALHA Analytics tracks it automatically based on user behavior.")}
           </p>
         ) : (
           <p className="rounded-md border border-neutral-150 bg-neutral-50 p-3 text-sm text-neutral-600 dark:border-neutral-800 dark:bg-neutral-900/40 dark:text-neutral-300">

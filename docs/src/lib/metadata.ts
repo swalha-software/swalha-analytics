@@ -24,7 +24,7 @@ export function createMetadata(override: Metadata): Metadata {
   return {
     ...override,
     openGraph: {
-      siteName: 'Rybbit',
+      siteName: 'SWALHA Analytics',
       type: 'article',
       ...override.openGraph,
     },

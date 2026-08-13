@@ -33,7 +33,7 @@ function colors(theme: "dark" | "light") {
 
 function renderCardHTML(c: Config) {
   const col = colors(c.theme);
-  const logo = c.theme === "dark" ? "/rybbit/horizontal_white.svg" : "/rybbit/horizontal_black.svg";
+  const logo = "/swalha/mark-64.png";
   return `
 <div class="w card">
   <div class="header">
@@ -43,8 +43,8 @@ function renderCardHTML(c: Config) {
   ${c.chart ? `<div class="chart" id="chart"></div>` : ""}
   <div class="window-label">${c.windowLabel}</div>
   ${c.countries ? `<div class="countries" id="countries"></div>` : ""}
-  <a class="footer" href="https://rybbit.com" target="_blank" rel="noopener noreferrer">
-    Powered by <img src="${logo}" alt="Rybbit web analytics" width="60" height="12" />
+  <a class="footer" href="https://analytics.swalha.com" target="_blank" rel="noopener noreferrer">
+    Powered by <img src="${logo}" alt="" aria-hidden="true" style="height:12px;width:auto" /> SWALHA Analytics
   </a>
 </div>
 <style>
@@ -113,15 +113,15 @@ function renderCardHTML(c: Config) {
 
 function renderInlineHTML(c: Config) {
   const col = colors(c.theme);
-  const logo = c.theme === "dark" ? "/rybbit/frog_white.svg" : "/rybbit/frog_black.svg";
+  const logo = "/swalha/mark-64.png";
   return `
 <div class="w inline">
   <span class="pulse pulse-sm"></span>
   <span class="count" id="count">—</span>
   <span class="muted">online</span>
   <span class="sep">·</span>
-  <a href="https://rybbit.com" target="_blank" rel="noopener noreferrer">
-    <img src="${logo}" alt="Rybbit web analytics" width="50" height="10" />
+  <a href="https://analytics.swalha.com" target="_blank" rel="noopener noreferrer">
+    <img src="${logo}" alt="SWALHA Analytics" style="height:10px;width:auto" />
   </a>
 </div>
 <style>
@@ -163,7 +163,7 @@ function renderHTML(c: Config) {
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Rybbit live visitors</title>
+<title>SWALHA Analytics live visitors</title>
 <style>
   html { color-scheme: ${c.theme}; }
   html, body { background: transparent; margin: 0; padding: 0; }

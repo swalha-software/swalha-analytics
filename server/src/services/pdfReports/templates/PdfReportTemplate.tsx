@@ -172,8 +172,8 @@ export const PdfReportTemplate = ({ reportData }: PdfReportTemplateProps): React
               fontSize: "12px",
             }}
           >
-            <div>Powered by Rybbit</div>
-            <div style={{ marginTop: "4px" }}>https://rybbit.com</div>
+            <div>Powered by SWALHA Analytics</div>
+            <div style={{ marginTop: "4px" }}>https://analytics.swalha.com</div>
           </div>
         </Page>
 

@@ -1,5 +1,5 @@
 import type { BaseLayoutProps } from "fumadocs-ui/layouts/shared";
-import Image from "next/image";
+import { SwalhaTextLogo } from "@/components/SwalhaLogo";
 
 /**
  * Shared layout configurations
@@ -12,18 +12,7 @@ export function baseOptions(lang: string): BaseLayoutProps {
   return {
     nav: {
       transparentMode: "top",
-      title: (
-        <>
-          <Image
-            src="/rybbit/horizontal_white.svg"
-            alt="Rybbit"
-            width={120}
-            height={0}
-            style={{ height: "auto" }}
-            className="mr-2 invert dark:invert-0"
-          />
-        </>
-      ),
+      title: <SwalhaTextLogo height={24} className="mr-2" />,
     },
     // see https://fumadocs.dev/docs/ui/navigation/links
     links: [

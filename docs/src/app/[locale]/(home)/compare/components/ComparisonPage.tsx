@@ -1,5 +1,6 @@
 import { CTASection } from "@/components/CTASection";
 import { InteriorPageHero } from "@/components/InteriorPageHero";
+import { SwalhaTextLogo } from "@/components/SwalhaLogo";
 import {
   Accordion,
   AccordionContent,
@@ -8,7 +9,6 @@ import {
 } from "@/components/ui/accordion";
 import { ArrowRight, CheckCircle, CircleMinus } from "lucide-react";
 import { useExtracted } from "next-intl";
-import Image from "next/image";
 import Link from "next/link";
 import React from "react";
 
@@ -181,13 +181,7 @@ export function ComparisonPage({
                 <tr className="border-b border-neutral-200 dark:border-neutral-800">
                   <th className="w-2/5 px-6 py-5 text-left font-medium text-neutral-500 lg:px-10">{t("Capability")}</th>
                   <th className="border-l border-neutral-200 px-6 py-5 text-center dark:border-neutral-800">
-                    <Image
-                      src="/rybbit/horizontal_white.svg"
-                      alt="Rybbit"
-                      width={92}
-                      height={25}
-                      className="mx-auto invert dark:invert-0"
-                    />
+                    <SwalhaTextLogo height={20} className="mx-auto" />
                   </th>
                   <th className="border-l border-neutral-200 px-6 py-5 text-center font-semibold dark:border-neutral-800">
                     {competitorName}

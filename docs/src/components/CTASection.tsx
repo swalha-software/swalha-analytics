@@ -1,5 +1,5 @@
 import { CtaDataLine } from "@/components/deco/CtaDataLine";
-import { WatchfulFrog } from "@/components/deco/WatchfulFrog";
+import { BrandWatermark } from "@/components/deco/BrandWatermark";
 import { GridCrosses } from "@/components/GridCrosses";
 import { TrackedButton } from "@/components/TrackedButton";
 import { ArrowRight, ExternalLink } from "lucide-react";
@@ -43,7 +43,7 @@ export function CTASection({
         {/* The watermark frog, awake: it perks up when you hover the section,
             and its eye follows the cursor (WatchfulFrog). */}
         <div className="pointer-events-none absolute -bottom-12 -right-8 hidden w-64 -rotate-6 text-white opacity-[0.07] transition-[transform,opacity] duration-500 ease-out group-hover:-translate-y-2 group-hover:opacity-[0.12] motion-reduce:transition-none motion-reduce:group-hover:translate-y-0 md:block lg:w-80">
-          <WatchfulFrog />
+          <BrandWatermark />
         </div>
 
         <div className="relative z-10 border-b border-white/10 px-5 py-16 sm:px-8 md:py-24 lg:col-span-8 lg:border-b-0 lg:border-r lg:px-10">

@@ -99,8 +99,13 @@ export function generateOGImage({
           width: '100%',
         }}
       >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={logoSrc} height="44" style={{ height: '44px' }} alt="" />
+        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={logoSrc} height="44" style={{ height: '44px' }} alt="" />
+          <div style={{ display: 'flex', fontSize: 30, fontWeight: 700, letterSpacing: '-0.01em' }}>
+            SWALHA Analytics
+          </div>
+        </div>
         {label ? (
           <div
             style={{

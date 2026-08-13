@@ -12,6 +12,7 @@ import {
   pixelBasedPreset,
 } from "@react-email/components";
 import * as React from "react";
+import { BrandHeader } from "./BrandHeader.js";
 
 interface OnboardingTipEmailProps {
   userName: string;
@@ -31,7 +32,7 @@ export const OnboardingTipEmail = ({ userName, body, linkText, linkUrl, unsubscr
   return (
     <Html>
       <Head />
-      <Preview>{paragraphs[0]?.substring(0, 100) || "A message from Rybbit"}</Preview>
+      <Preview>{paragraphs[0]?.substring(0, 100) || "A message from SWALHA Analytics"}</Preview>
       <Tailwind
         config={{
           presets: [pixelBasedPreset],
@@ -49,13 +50,7 @@ export const OnboardingTipEmail = ({ userName, body, linkText, linkUrl, unsubscr
       >
         <Body className="bg-white font-sans">
           <Container className="mx-auto py-8 px-6 max-w-[600px]">
-            <Img
-              src="https://app.rybbit.io/rybbit/horizontal_black.svg"
-              alt="Rybbit"
-              width="120"
-              height="28"
-              className="mb-8"
-            />
+            <BrandHeader />
 
             <Text className="text-darkText text-base leading-relaxed mb-4">{greeting},</Text>
 
@@ -76,7 +71,7 @@ export const OnboardingTipEmail = ({ userName, body, linkText, linkUrl, unsubscr
             <Text className="text-darkText text-base leading-relaxed mt-8">
               You can reply to this email,
               <br />
-              Bill – Founder of Rybbit
+              The SWALHA Analytics team
             </Text>
 
             <Hr className="border-borderColor my-8" />

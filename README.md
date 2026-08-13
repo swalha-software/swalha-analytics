@@ -1,9 +1,6 @@
 <p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/public/rybbit/horizontal_white.svg">
-    <source media="(prefers-color-scheme: light)" srcset="docs/public/rybbit/horizontal_black.svg">
-    <img src="docs/public/rybbit/horizontal_black.svg" height="70" alt="Rybbit">
-  </picture>
+  <img src="brand/swalha-logo.png" height="70" alt="SWALHA Analytics">
+  <h1 align="center">SWALHA Analytics</h1>
     <p align="center">Open Source Web & Product Analytics</p>
 
 <p align="center">

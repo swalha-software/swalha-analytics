@@ -147,7 +147,7 @@ export function NoData() {
   })();
 </script>`;
 
-  const aiPrompt = `Install Rybbit analytics on this website.\n\nAdd this script tag to the <head> of every page, using the root layout or base template if there is one:\n\n<script src="${scriptUrl}" data-site-id="${siteId}" defer></script>\n`;
+  const aiPrompt = `Install SWALHA Analytics on this website.\n\nAdd this script tag to the <head> of every page, using the root layout or base template if there is one:\n\n<script src="${scriptUrl}" data-site-id="${siteId}" defer></script>\n`;
 
   const rnInstallSnippet = "npm install @rybbit/react-native @react-native-async-storage/async-storage";
 
@@ -162,7 +162,7 @@ await rybbit.init({
   initialScreenName: "Home",
 });`;
 
-  const rnAiPrompt = `Install Rybbit analytics in this React Native app.\n\n1. Install the SDK:\n\nnpm install @rybbit/react-native @react-native-async-storage/async-storage\n\n2. Initialize it once in the app entry point:\n\n${rnInitSnippet}\n\n3. If the app uses React Navigation, track screens automatically:\n\nconst navigationTracker = rybbit.createNavigationTracker();\n\n<NavigationContainer\n  ref={navigationRef}\n  onReady={() => navigationTracker.onReady(navigationRef)}\n  onStateChange={() => navigationTracker.onStateChange(navigationRef)}\n>\n\nDocs: https://rybbit.com/docs/sdks/react-native\n`;
+  const rnAiPrompt = `Install SWALHA Analytics in this React Native app.\n\n1. Install the SDK:\n\nnpm install @rybbit/react-native @react-native-async-storage/async-storage\n\n2. Initialize it once in the app entry point:\n\n${rnInitSnippet}\n\n3. If the app uses React Navigation, track screens automatically:\n\nconst navigationTracker = rybbit.createNavigationTracker();\n\n<NavigationContainer\n  ref={navigationRef}\n  onReady={() => navigationTracker.onReady(navigationRef)}\n  onStateChange={() => navigationTracker.onStateChange(navigationRef)}\n>\n\nDocs: https://rybbit.com/docs/sdks/react-native\n`;
 
   return (
     <section className="mt-4 rounded-lg border border-neutral-100 bg-white p-4 dark:border-neutral-850 dark:bg-neutral-900">

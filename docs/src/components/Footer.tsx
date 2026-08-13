@@ -1,9 +1,9 @@
 import { GridCrosses } from "@/components/GridCrosses";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { SwalhaTextLogo } from "@/components/SwalhaLogo";
 import { ThemeSwitcher } from "@/components/ThemeSwitcher";
 import { SiDiscord, SiGithub, SiX } from "@icons-pack/react-simple-icons";
 import { useExtracted } from "next-intl";
-import Image from "next/image";
 import Link from "next/link";
 
 const footerLinkClassName =
@@ -65,7 +65,6 @@ export function Footer() {
         { href: "https://github.com/rybbit-io/rybbit", label: "GitHub", external: true },
         { href: "/docs/api/getting-started", label: t("API Reference") },
         { href: "/oss-friends", label: t("OSS Friends") },
-        { href: "/affiliate", label: t("50% Affiliate Program") },
       ],
     },
     {
@@ -92,17 +91,10 @@ export function Footer() {
               <div>
                 <Link
                   href="/"
-                  aria-label="Rybbit home"
+                  aria-label="SWALHA Analytics home"
                   className="inline-flex rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500"
                 >
-                  <Image
-                    src="/rybbit/horizontal_white.svg"
-                    alt="Rybbit"
-                    width={120}
-                    height={0}
-                    style={{ height: "auto" }}
-                    className="invert dark:invert-0"
-                  />
+                  <SwalhaTextLogo height={26} />
                 </Link>
 
                 <a
@@ -120,6 +112,12 @@ export function Footer() {
                     className="h-auto max-w-full"
                   />
                 </a>
+
+                <p className="mt-6 text-sm text-neutral-500 dark:text-neutral-400">
+                  {t(
+                    "SWALHA Analytics is built on the open-source Rybbit project. The product, pricing, and policy pages on this site are published by Rybbit."
+                  )}
+                </p>
               </div>
 
               <div className="mt-8 flex items-center lg:mt-auto lg:pt-12">
