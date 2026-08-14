@@ -9,6 +9,8 @@ interface SwalhaSSOButtonProps {
   onError: (error: string) => void;
   callbackURL?: string;
   className?: string;
+  /** Render the "Or" separator under the button (for pages that keep other methods). */
+  divider?: boolean;
 }
 
 /**
@@ -18,7 +20,7 @@ interface SwalhaSSOButtonProps {
  * Existing analytics accounts with the same verified email are linked on the
  * first SSO sign-in.
  */
-export function SwalhaSSOButton({ onError, callbackURL, className = "" }: SwalhaSSOButtonProps) {
+export function SwalhaSSOButton({ onError, callbackURL, className = "", divider = true }: SwalhaSSOButtonProps) {
   const t = useExtracted();
 
   const handleSSO = async () => {
@@ -40,11 +42,13 @@ export function SwalhaSSOButton({ onError, callbackURL, className = "" }: Swalha
           {t("Continue with SWALHA account")}
         </Button>
       </div>
-      <div className="relative flex items-center text-xs uppercase">
-        <div className="flex-1 border-t border-neutral-200 dark:border-neutral-800" />
-        <span className="px-3 text-muted-foreground">{t("Or")}</span>
-        <div className="flex-1 border-t border-neutral-200 dark:border-neutral-800" />
-      </div>
+      {divider && (
+        <div className="relative flex items-center text-xs uppercase">
+          <div className="flex-1 border-t border-neutral-200 dark:border-neutral-800" />
+          <span className="px-3 text-muted-foreground">{t("Or")}</span>
+          <div className="flex-1 border-t border-neutral-200 dark:border-neutral-800" />
+        </div>
+      )}
     </>
   );
 }
