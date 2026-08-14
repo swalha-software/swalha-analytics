@@ -1,82 +1,22 @@
-import { AuthButton } from "@/components/auth/AuthButton";
-import { AuthInput } from "@/components/auth/AuthInput";
-import { SocialButtons } from "@/components/auth/SocialButtons";
 import { SwalhaSSOButton } from "@/components/auth/SwalhaSSOButton";
-import { Turnstile } from "@/components/auth/Turnstile";
-import { ArrowRight } from "lucide-react";
 import { useExtracted } from "next-intl";
 import Link from "next/link";
 
-import { IS_CLOUD } from "../../../lib/const";
-
 interface AccountStepProps {
-  email: string;
-  setEmail: (v: string) => void;
-  password: string;
-  setPassword: (v: string) => void;
-  turnstileToken: string;
-  setTurnstileToken: (v: string) => void;
-  isLoading: boolean;
-  onSubmit: () => void;
   setError: (v: string) => void;
 }
 
-export function AccountStep({
-  email,
-  setEmail,
-  password,
-  setPassword,
-  turnstileToken,
-  setTurnstileToken,
-  isLoading,
-  onSubmit,
-  setError,
-}: AccountStepProps) {
+// Account creation is SSO-only: identity lives at auth.swalha.com. The SSO
+// callback returns to step 2 to continue onboarding. Whether a new local
+// account may be created at all is controlled server-side by DISABLE_SIGNUP.
+export function AccountStep({ setError }: AccountStepProps) {
   const t = useExtracted();
 
   return (
     <div>
       <h2 className="text-2xl font-semibold mb-4">{t("Signup")}</h2>
       <div className="space-y-4">
-        <SwalhaSSOButton onError={setError} callbackURL="/signup?step=2" />
-        <SocialButtons onError={setError} callbackURL="/signup?step=2" mode="signup" />
-        <AuthInput
-          id="email"
-          label={t("Email")}
-          type="email"
-          placeholder="email@example.com"
-          required
-          value={email}
-          onChange={e => setEmail(e.target.value)}
-        />
-        <AuthInput
-          id="password"
-          label={t("Password")}
-          type="password"
-          placeholder="••••••••"
-          required
-          value={password}
-          onChange={e => setPassword(e.target.value)}
-        />
-        {IS_CLOUD && (
-          <Turnstile
-            onSuccess={token => setTurnstileToken(token)}
-            onError={() => setTurnstileToken("")}
-            onExpire={() => setTurnstileToken("")}
-            className="flex justify-center"
-          />
-        )}
-        <AuthButton
-          isLoading={isLoading}
-          loadingText={t("Creating account...")}
-          onClick={onSubmit}
-          type="button"
-          className="mt-6 transition-all duration-300 h-11"
-          disabled={IS_CLOUD ? !turnstileToken || isLoading : isLoading}
-        >
-          {t("Continue")}
-          <ArrowRight className="ml-2 h-4 w-4" />
-        </AuthButton>
+        <SwalhaSSOButton onError={setError} callbackURL="/signup?step=2" divider={false} />
         <div className="text-center text-sm">
           {t("Already have an account?")}{" "}
           <Link

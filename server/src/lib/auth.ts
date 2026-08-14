@@ -269,6 +269,10 @@ const pluginList = [
               "https://auth.swalha.com/.well-known/openid-configuration",
             scopes: ["openid", "email", "profile"],
             pkce: true,
+            // With DISABLE_SIGNUP=true, SSO only signs in users that already
+            // exist locally (or link by email) — it never provisions new
+            // analytics accounts. Flip the env to onboard someone new.
+            disableSignUp: DISABLE_SIGNUP,
           },
         ],
       }),
@@ -294,10 +298,10 @@ export const auth = betterAuth({
     password: process.env.POSTGRES_PASSWORD,
   }),
   emailAndPassword: {
-    enabled: true,
-    // Disable email verification for now
-    requireEmailVerification: false,
-    disableSignUp: DISABLE_SIGNUP,
+    // Sign-in is SSO-only through the central SWALHA identity provider —
+    // email/password sign-up and sign-in are fully disabled. Pre-SSO password
+    // accounts keep working via their linked SWALHA account.
+    enabled: false,
   },
   emailVerification: {
     sendVerificationEmail: async ({

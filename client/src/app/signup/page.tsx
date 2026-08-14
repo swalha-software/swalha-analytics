@@ -42,10 +42,7 @@ function SignupPageContent() {
   const [error, setError] = useState<string>("");
   const router = useRouter();
 
-  // Step 1: Account creation
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [turnstileToken, setTurnstileToken] = useState<string>("");
+  // Step 1 (account creation) is SSO-only — see AccountStep.
 
   // Plan selection (cloud step 2)
   const [eventLimitIndex, setEventLimitIndex] = useState(0);
@@ -67,48 +64,6 @@ function SignupPageContent() {
         .replace(/\s+/g, "-")
         .replace(/[^a-z0-9-]/g, "");
       setOrgSlug(generatedSlug);
-    }
-  };
-
-  // Step 1: Account creation submission
-  const handleAccountSubmit = async () => {
-    setIsLoading(true);
-    setError("");
-
-    try {
-      if (IS_CLOUD && !turnstileToken) {
-        setError(t("Please complete the captcha verification"));
-        setIsLoading(false);
-        return;
-      }
-
-      const { data, error } = await authClient.signUp.email(
-        {
-          email,
-          name: email.split("@")[0],
-          password,
-        },
-        {
-          onRequest: context => {
-            if (IS_CLOUD && turnstileToken) {
-              context.headers.set("x-captcha-response", turnstileToken);
-            }
-          },
-        }
-      );
-
-      if (data?.user) {
-        userStore.setState({ user: data.user });
-        setCurrentStep(2);
-      }
-
-      if (error) {
-        setError(error.message ?? "");
-      }
-    } catch (error) {
-      setError(String(error));
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -232,17 +187,7 @@ function SignupPageContent() {
     switch (currentStep) {
       case 1:
         return (
-          <AccountStep
-            email={email}
-            setEmail={setEmail}
-            password={password}
-            setPassword={setPassword}
-            turnstileToken={turnstileToken}
-            setTurnstileToken={setTurnstileToken}
-            isLoading={isLoading}
-            onSubmit={handleAccountSubmit}
-            setError={setError}
-          />
+          <AccountStep setError={setError} />
         );
       case 2:
         return (

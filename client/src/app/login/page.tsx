@@ -37,7 +37,7 @@ export default function Page() {
 
             <AuthError error={error} title={t("Error Logging In")} />
 
-            {(!configs?.disableSignup || !isLoadingConfigs) && (
+            {!isLoadingConfigs && !configs?.disableSignup && (
               <div className="text-center text-sm">
                 {t("Don't have an account?")}{" "}
                 <Link
