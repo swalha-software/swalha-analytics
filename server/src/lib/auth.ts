@@ -1,6 +1,6 @@
 import { betterAuth } from "better-auth";
 import { APIError, createAuthMiddleware, getSessionFromCtx } from "better-auth/api";
-import { admin, captcha, emailOTP, mcp, organization } from "better-auth/plugins";
+import { admin, captcha, emailOTP, genericOAuth, mcp, organization } from "better-auth/plugins";
 import { createAccessControl } from "better-auth/plugins/access";
 import { adminAc, defaultStatements, memberAc, ownerAc } from "better-auth/plugins/organization/access";
 import { ALL_SCOPE_STRINGS, OIDC_STANDARD_SCOPES } from "./scopes.js";
@@ -251,6 +251,29 @@ const pluginList = [
       }),
     ]
     : []),
+  // Single sign-on against the central SWALHA identity provider
+  // (auth.swalha.com). Plain OIDC over the genericOAuth client — analytics
+  // keeps its own user table and links by verified email on first SSO login
+  // (see account.accountLinking below). Registered there as a trusted client,
+  // so the consent screen is skipped.
+  ...(process.env.SWALHA_SSO_CLIENT_ID && process.env.SWALHA_SSO_CLIENT_SECRET
+    ? [
+      genericOAuth({
+        config: [
+          {
+            providerId: "swalha",
+            clientId: process.env.SWALHA_SSO_CLIENT_ID,
+            clientSecret: process.env.SWALHA_SSO_CLIENT_SECRET,
+            discoveryUrl:
+              process.env.SWALHA_SSO_DISCOVERY_URL ??
+              "https://auth.swalha.com/.well-known/openid-configuration",
+            scopes: ["openid", "email", "profile"],
+            pkce: true,
+          },
+        ],
+      }),
+    ]
+    : []),
 ];
 
 export const auth = betterAuth({
@@ -296,6 +319,16 @@ export const auth = betterAuth({
     github: {
       clientId: process.env.GITHUB_CLIENT_ID!,
       clientSecret: process.env.GITHUB_CLIENT_SECRET!,
+    },
+  },
+  account: {
+    accountLinking: {
+      enabled: true,
+      // "swalha" is the central SWALHA identity provider. Trusting it lets an
+      // SSO sign-in whose verified email matches an existing analytics user
+      // link to that user instead of creating a duplicate — this is how
+      // pre-SSO accounts migrate without losing their organizations or sites.
+      trustedProviders: ["swalha"],
     },
   },
   user: {

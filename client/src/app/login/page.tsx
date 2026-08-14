@@ -4,6 +4,7 @@ import { AuthButton } from "@/components/auth/AuthButton";
 import { AuthError } from "@/components/auth/AuthError";
 import { AuthInput } from "@/components/auth/AuthInput";
 import { SocialButtons } from "@/components/auth/SocialButtons";
+import { SwalhaSSOButton } from "@/components/auth/SwalhaSSOButton";
 import { Turnstile } from "@/components/auth/Turnstile";
 import { useExtracted } from "next-intl";
 import Link from "next/link";
@@ -86,6 +87,7 @@ export default function Page() {
         <div className="flex-1 flex flex-col justify-center w-full max-w-[550px] mx-auto">
           <h1 className="text-lg text-neutral-600 dark:text-neutral-300 mb-6">{t("Welcome back")}</h1>
           <div className="flex flex-col gap-4">
+            <SwalhaSSOButton onError={setError} />
             <SocialButtons onError={setError} />
             <form onSubmit={handleSubmit}>
               <div className="flex flex-col gap-4">

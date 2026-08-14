@@ -1,6 +1,7 @@
 import { AuthButton } from "@/components/auth/AuthButton";
 import { AuthInput } from "@/components/auth/AuthInput";
 import { SocialButtons } from "@/components/auth/SocialButtons";
+import { SwalhaSSOButton } from "@/components/auth/SwalhaSSOButton";
 import { Turnstile } from "@/components/auth/Turnstile";
 import { ArrowRight } from "lucide-react";
 import { useExtracted } from "next-intl";
@@ -37,6 +38,7 @@ export function AccountStep({
     <div>
       <h2 className="text-2xl font-semibold mb-4">{t("Signup")}</h2>
       <div className="space-y-4">
+        <SwalhaSSOButton onError={setError} callbackURL="/signup?step=2" />
         <SocialButtons onError={setError} callbackURL="/signup?step=2" mode="signup" />
         <AuthInput
           id="email"
