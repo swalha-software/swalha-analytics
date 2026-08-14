@@ -14,7 +14,7 @@ interface SwalhaSSOButtonProps {
 }
 
 /**
- * Single sign-on with the central SWALHA account (auth.swalha.com). Available
+ * Single sign-on with the central Swalha account (auth.swalha.com). Available
  * on every deployment — unlike SocialButtons, which are cloud-only — because
  * the OAuth credentials live server-side and the flow is a plain redirect.
  * Existing analytics accounts with the same verified email are linked on the
@@ -39,7 +39,7 @@ export function SwalhaSSOButton({ onError, callbackURL, className = "", divider 
       <div className={`flex flex-col ${className}`}>
         <Button type="button" onClick={handleSSO} className="h-11">
           <Image src="/swalha/mark-32.png" alt="" width={16} height={16} />
-          {t("Continue with SWALHA account")}
+          {t("Continue with Swalha account")}
         </Button>
       </div>
       {divider && (

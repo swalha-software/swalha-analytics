@@ -57,9 +57,9 @@ export default function Page() {
               href="https://analytics.swalha.com"
               target="_blank"
               rel="noopener"
-              title="SWALHA Analytics - Open Source Privacy-Focused Web Analytics"
+              title="Swalha Analytics - Open Source Privacy-Focused Web Analytics"
             >
-              {t("Open source web analytics powered by SWALHA Analytics")}
+              {t("Open source web analytics powered by Swalha Analytics")}
             </a>
           </div>
         )}

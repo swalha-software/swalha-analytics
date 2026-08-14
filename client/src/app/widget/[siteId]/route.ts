@@ -44,7 +44,7 @@ function renderCardHTML(c: Config) {
   <div class="window-label">${c.windowLabel}</div>
   ${c.countries ? `<div class="countries" id="countries"></div>` : ""}
   <a class="footer" href="https://analytics.swalha.com" target="_blank" rel="noopener noreferrer">
-    Powered by <img src="${logo}" alt="" aria-hidden="true" style="height:12px;width:auto" /> SWALHA Analytics
+    Powered by <img src="${logo}" alt="" aria-hidden="true" style="height:12px;width:auto" /> Swalha Analytics
   </a>
 </div>
 <style>
@@ -121,7 +121,7 @@ function renderInlineHTML(c: Config) {
   <span class="muted">online</span>
   <span class="sep">·</span>
   <a href="https://analytics.swalha.com" target="_blank" rel="noopener noreferrer">
-    <img src="${logo}" alt="SWALHA Analytics" style="height:10px;width:auto" />
+    <img src="${logo}" alt="Swalha Analytics" style="height:10px;width:auto" />
   </a>
 </div>
 <style>
@@ -163,7 +163,7 @@ function renderHTML(c: Config) {
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>SWALHA Analytics live visitors</title>
+<title>Swalha Analytics live visitors</title>
 <style>
   html { color-scheme: ${c.theme}; }
   html, body { background: transparent; margin: 0; padding: 0; }

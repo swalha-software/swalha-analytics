@@ -1,7 +1,7 @@
 import { Column, Img, Row, Section, Text } from "@react-email/components";
 import * as React from "react";
 
-export const BRAND_NAME = "SWALHA Analytics";
+export const BRAND_NAME = "Swalha Analytics";
 
 /**
  * Canonical SWALHA mark, served from the brand domain so it resolves in email

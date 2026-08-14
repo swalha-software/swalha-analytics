@@ -26,7 +26,7 @@ export const InvitationEmail = ({ email, invitedBy, organizationName, inviteLink
   return (
     <Html>
       <Head />
-      <Preview>You're invited to join {organizationName} on SWALHA Analytics</Preview>
+      <Preview>You're invited to join {organizationName} on Swalha Analytics</Preview>
       <Tailwind
         config={{
           presets: [pixelBasedPreset],
@@ -54,7 +54,7 @@ export const InvitationEmail = ({ email, invitedBy, organizationName, inviteLink
             </Text>
 
             <Text className="text-darkText text-base leading-relaxed mb-4">
-              SWALHA Analytics is an open-source analytics platform that helps you understand your website traffic while
+              Swalha Analytics is an open-source analytics platform that helps you understand your website traffic while
               respecting user privacy.
             </Text>
 
@@ -68,7 +68,7 @@ export const InvitationEmail = ({ email, invitedBy, organizationName, inviteLink
 
             <Hr className="border-borderColor my-8" />
 
-            <Text className="text-mutedText text-xs">SWALHA Analytics</Text>
+            <Text className="text-mutedText text-xs">Swalha Analytics</Text>
           </Container>
         </Body>
       </Tailwind>

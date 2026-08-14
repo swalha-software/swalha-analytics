@@ -47,7 +47,7 @@ function AppSidebarContent() {
       <div className="flex flex-col items-center gap-2">
         <Link
           href="/"
-          aria-label="SWALHA Analytics"
+          aria-label="Swalha Analytics"
           className="mb-2 mt-1 flex items-center justify-center rounded-md focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-neutral-950 dark:focus-visible:ring-neutral-300"
         >
           <SwalhaLogo width={24} height={18} />

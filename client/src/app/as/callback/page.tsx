@@ -293,7 +293,7 @@ export default function AppSumoSignupPage() {
       case 1:
         return (
           <div>
-            <h2 className="text-2xl font-semibold mb-2">Welcome to SWALHA Analytics!</h2>
+            <h2 className="text-2xl font-semibold mb-2">Welcome to Swalha Analytics!</h2>
             <p className="text-sm text-muted-foreground mb-6">Activate your AppSumo license by creating an account</p>
             <div className="space-y-4">
               <AuthInput
@@ -510,9 +510,9 @@ export default function AppSumoSignupPage() {
             href="https://analytics.swalha.com"
             target="_blank"
             rel="noopener"
-            title="SWALHA Analytics - Open Source Privacy-Focused Web Analytics"
+            title="Swalha Analytics - Open Source Privacy-Focused Web Analytics"
           >
-            Open source web analytics powered by SWALHA Analytics
+            Open source web analytics powered by Swalha Analytics
           </a>
         </div>
       </div>

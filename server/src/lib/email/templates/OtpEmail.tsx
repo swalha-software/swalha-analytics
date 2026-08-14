@@ -25,23 +25,23 @@ const getContent = (type: OtpEmailType) => {
   switch (type) {
     case "sign-in":
       return {
-        preview: "Your SWALHA Analytics sign-in code",
-        description: "Here is your one-time password to sign in to SWALHA Analytics:",
+        preview: "Your Swalha Analytics sign-in code",
+        description: "Here is your one-time password to sign in to Swalha Analytics:",
       };
     case "email-verification":
       return {
         preview: "Verify your email address",
-        description: "Here is your verification code for SWALHA Analytics:",
+        description: "Here is your verification code for Swalha Analytics:",
       };
     case "forget-password":
       return {
         preview: "Reset your password",
-        description: "You requested to reset your password for SWALHA Analytics. Here is your one-time password:",
+        description: "You requested to reset your password for Swalha Analytics. Here is your one-time password:",
       };
     case "change-email":
       return {
         preview: "Change your email address",
-        description: "Here is your verification code for SWALHA Analytics:",
+        description: "Here is your verification code for Swalha Analytics:",
       };
   }
 };
@@ -90,7 +90,7 @@ export const OtpEmail = ({ otp, type }: OtpEmailProps) => {
 
             <Hr className="border-borderColor my-8" />
 
-            <Text className="text-mutedText text-xs">SWALHA Analytics</Text>
+            <Text className="text-mutedText text-xs">Swalha Analytics</Text>
           </Container>
         </Body>
       </Tailwind>

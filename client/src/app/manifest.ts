@@ -4,8 +4,8 @@ import type { MetadataRoute } from "next";
 // scripts/generate-brand-assets.py; see brand/swalha-logo.png.
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "SWALHA Analytics",
-    short_name: "SWALHA",
+    name: "Swalha Analytics",
+    short_name: "Swalha",
     description:
       "Privacy-friendly, cookieless web and product analytics. Understand your traffic without tracking your visitors.",
     start_url: "/",

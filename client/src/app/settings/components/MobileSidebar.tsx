@@ -19,7 +19,7 @@ export function MobileSidebar() {
         </SheetTrigger>
         <VisuallyHidden>
           <SheetHeader>
-            <SheetTitle>SWALHA Analytics Sidebar</SheetTitle>
+            <SheetTitle>Swalha Analytics Sidebar</SheetTitle>
           </SheetHeader>
         </VisuallyHidden>
         <SheetContent side="left" className="p-0 w-[240px] flex gap-0" showClose={false}>

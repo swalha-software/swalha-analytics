@@ -232,7 +232,7 @@ describe("visible brand labels use the SWALHA product name", () => {
   it("no locale still shows the old brand name", () => {
     const dir = path.join(CLIENT, "messages");
     const en = JSON.parse(readFileSync(path.join(dir, "en.json"), "utf8")) as Record<string, string>;
-    const rebranded = Object.keys(en).filter(key => /SWALHA Analytics/.test(en[key]));
+    const rebranded = Object.keys(en).filter(key => /Swalha Analytics/.test(en[key]));
     expect(rebranded.length).toBeGreaterThan(0);
 
     for (const file of readdirSync(dir).filter(name => name.endsWith(".json"))) {
@@ -259,12 +259,12 @@ describe("visible brand labels use the SWALHA product name", () => {
     const en = JSON.parse(readFileSync(path.join(dir, "en.json"), "utf8")) as Record<string, string>;
     const de = JSON.parse(readFileSync(path.join(dir, "de.json"), "utf8")) as Record<string, string>;
     const rebranded = Object.keys(en).filter(
-      key => /SWALHA Analytics/.test(en[key]) && !UPSTREAM_ATTRIBUTION.test(en[key])
+      key => /Swalha Analytics/.test(en[key]) && !UPSTREAM_ATTRIBUTION.test(en[key])
     );
 
     const untranslated = rebranded.filter(key => !de[key]);
     expect(untranslated, "German lost translations during the rebrand").toEqual([]);
-    expect(rebranded.every(key => de[key].includes("SWALHA Analytics"))).toBe(true);
+    expect(rebranded.every(key => de[key].includes("Swalha Analytics"))).toBe(true);
   });
 
   it("makes no affiliate or commission promise SWALHA does not offer", () => {
@@ -321,9 +321,9 @@ describe("product branding links to this deployment", () => {
 
   it("the app metadata and manifest carry the product name", () => {
     const layout = readFileSync(path.join(CLIENT, "src", "app", "layout.tsx"), "utf8");
-    expect(layout).toContain("SWALHA Analytics");
+    expect(layout).toContain("Swalha Analytics");
     const manifest = readFileSync(path.join(CLIENT, "src", "app", "manifest.ts"), "utf8");
-    expect(manifest).toContain('name: "SWALHA Analytics"');
+    expect(manifest).toContain('name: "Swalha Analytics"');
   });
 });
 

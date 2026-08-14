@@ -83,7 +83,7 @@ export const ApproachingLimitEmail = ({
 
             <Hr className="border-borderColor my-8" />
 
-            <Text className="text-mutedText text-xs">SWALHA Analytics</Text>
+            <Text className="text-mutedText text-xs">Swalha Analytics</Text>
           </Container>
         </Body>
       </Tailwind>

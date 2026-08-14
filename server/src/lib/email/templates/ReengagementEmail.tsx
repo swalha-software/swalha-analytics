@@ -91,7 +91,7 @@ export const ReengagementEmail = ({
             <Text className="text-darkText text-base leading-relaxed mt-8">
               You can reply to this email,
               <br />
-              The SWALHA Analytics team
+              The Swalha Analytics team
             </Text>
 
             <Hr className="border-borderColor my-8" />

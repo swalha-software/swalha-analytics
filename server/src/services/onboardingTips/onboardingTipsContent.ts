@@ -10,9 +10,9 @@ export const ONBOARDING_TIPS: OnboardingTipContent[] = [
   {
     day: 1,
     subject: "You made the right choice",
-    body: `Thanks for signing up for SWALHA Analytics. Your account is set up with analytics that respect your visitors' privacy.
+    body: `Thanks for signing up for Swalha Analytics. Your account is set up with analytics that respect your visitors' privacy.
 
-Unlike traditional analytics tools, SWALHA Analytics doesn't use cookies, doesn't track users across websites, and doesn't sell your data to advertisers. Your visitors stay anonymous, and you still get the insights you need.
+Unlike traditional analytics tools, Swalha Analytics doesn't use cookies, doesn't track users across websites, and doesn't sell your data to advertisers. Your visitors stay anonymous, and you still get the insights you need.
 
 Privacy shouldn't mean giving up on understanding your audience.
 
@@ -23,7 +23,7 @@ If you're curious how it compares to other tools, the docs have a side-by-side c
   {
     day: 2,
     subject: "Why your metrics might look different than GA",
-    body: `If you've been using Google Analytics before, you might notice your SWALHA Analytics numbers look different. That's actually a good thing.
+    body: `If you've been using Google Analytics before, you might notice your Swalha Analytics numbers look different. That's actually a good thing.
 
 Adblockers commonly block Google Analytics. Lightweight, privacy-focused analytics is blocked far less often, so you're probably seeing closer to your real traffic - and it's likely higher than GA ever showed you.
 
@@ -60,7 +60,7 @@ Funnels go deeper. Define a multi-step process (view product -> add to cart -> c
   {
     day: 5,
     subject: "Build with your data",
-    body: `Everything in your SWALHA Analytics dashboard is available through our API.
+    body: `Everything in your Swalha Analytics dashboard is available through our API.
 
 Build custom dashboards, set up alerts when traffic spikes, pipe data into your own tools, create reports for clients - the data is yours to use however you want.
 

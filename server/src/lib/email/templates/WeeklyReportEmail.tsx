@@ -395,7 +395,7 @@ export const WeeklyReportEmail = ({ userName, organizationName, site }: WeeklyRe
                 Unsubscribe from weekly reports
               </Link>
             </Text>
-            <Text className="text-mutedText text-xs">SWALHA Analytics</Text>
+            <Text className="text-mutedText text-xs">Swalha Analytics</Text>
           </Container>
         </Body>
       </Tailwind>

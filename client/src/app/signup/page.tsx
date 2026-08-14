@@ -262,7 +262,7 @@ function SignupPageContent() {
         <div className="flex-1 flex flex-col justify-center w-full max-w-[550px] mx-auto">
           <div className="mb-8">
             <h1 className="text-3xl font-medium">
-              {IS_CLOUD ? t("Start your 7-day free trial") : t("Get started with SWALHA Analytics")}
+              {IS_CLOUD ? t("Start your 7-day free trial") : t("Get started with Swalha Analytics")}
             </h1>
             {IS_CLOUD && (
               <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-3">
@@ -324,9 +324,9 @@ function SignupPageContent() {
               href="https://analytics.swalha.com"
               target="_blank"
               rel="noopener"
-              title="SWALHA Analytics - Open Source Privacy-Focused Web Analytics"
+              title="Swalha Analytics - Open Source Privacy-Focused Web Analytics"
             >
-              {t("Open source web analytics powered by SWALHA Analytics")}
+              {t("Open source web analytics powered by Swalha Analytics")}
             </a>
           </div>
         )}

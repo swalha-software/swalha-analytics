@@ -282,7 +282,7 @@ const pluginList = [
 
 export const auth = betterAuth({
   basePath: "/api/auth",
-  appName: "SWALHA Analytics",
+  appName: "Swalha Analytics",
   logger: {
     log: (level, message, ...args) => {
       // Route better-auth's internal logs (e.g. API key rate-limit errors)

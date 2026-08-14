@@ -76,7 +76,7 @@ const UNSUPPORTED_CLAIMS: { pattern: RegExp; why: string }[] = [
     why: "unsupported superlative",
   },
   { pattern: /\b(money[- ]back|free forever|lifetime (deal|access)|guaranteed)\b/i, why: "commercial promise" },
-  { pattern: /SWALHA Analytics analytics\b/i, why: "duplicated brand token" },
+  { pattern: /Swalha Analytics analytics\b/i, why: "duplicated brand token" },
 ];
 
 function claimsIn(text: string) {
@@ -100,7 +100,7 @@ describe("email templates carry SWALHA branding", () => {
   });
 
   it("the brand lockup points at the canonical logo", () => {
-    expect(BRAND_NAME).toBe("SWALHA Analytics");
+    expect(BRAND_NAME).toBe("Swalha Analytics");
     expect(BRAND_LOGO_URL).toBe("https://swalha.com/logo.png");
   });
 
@@ -149,7 +149,7 @@ describe("server-sent copy carries SWALHA branding", () => {
     const source = readFileSync(path.join(SRC, "lib", "email", "email.ts"), "utf8");
     const senders = [...source.matchAll(/from:\s*"([^"<]+)</g)].map(match => match[1].trim());
     expect(senders.length).toBeGreaterThan(0);
-    // Catches personal sender names such as "Bill from SWALHA Analytics".
+    // Catches personal sender names such as "Bill from Swalha Analytics".
     expect([...new Set(senders)]).toEqual([BRAND_NAME]);
   });
 
@@ -237,12 +237,12 @@ describe("no upstream history or business claims are reassigned to SWALHA", () =
   // Guards the guard: a typo'd pattern that matches nothing would silently let
   // every regression below back in.
   it.each([
-    "SWALHA Analytics is fully self-funded and we're fully committed",
-    "Bill from SWALHA Analytics",
-    "Bill – Founder of SWALHA Analytics",
+    "Swalha Analytics is fully self-funded and we're fully committed",
+    "Bill from Swalha Analytics",
+    "Bill – Founder of Swalha Analytics",
     "You've joined thousands of developers who care about privacy",
-    "We built SWALHA Analytics because we were tired of tools that treat users as products",
-    "Your SWALHA Analytics analytics are waiting",
+    "We built Swalha Analytics because we were tired of tools that treat users as products",
+    "Your Swalha Analytics analytics are waiting",
     "Trusted by millions of users since 2021",
   ])("the claim guard rejects %j", sample => {
     expect(claimsIn(sample).length).toBeGreaterThan(0);
@@ -252,7 +252,7 @@ describe("no upstream history or business claims are reassigned to SWALHA", () =
 describe("PDF report branding", () => {
   it("the report footer is branded SWALHA", () => {
     const source = readFileSync(PDF_TEMPLATE, "utf8");
-    expect(source).toContain("Powered by SWALHA Analytics");
+    expect(source).toContain("Powered by Swalha Analytics");
     expect(source).not.toMatch(/Powered by Rybbit/);
   });
 

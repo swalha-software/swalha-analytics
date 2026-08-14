@@ -16,18 +16,18 @@ const DESCRIPTION =
 // the canonical SWALHA logo by scripts/generate-brand-assets.py.
 export const metadata: Metadata = {
   metadataBase: new URL("https://analytics.swalha.com"),
-  title: { default: "SWALHA Analytics", template: "%s | SWALHA Analytics" },
+  title: { default: "Swalha Analytics", template: "%s | Swalha Analytics" },
   description: DESCRIPTION,
-  applicationName: "SWALHA Analytics",
+  applicationName: "Swalha Analytics",
   openGraph: {
     type: "website",
-    siteName: "SWALHA Analytics",
-    title: "SWALHA Analytics",
+    siteName: "Swalha Analytics",
+    title: "Swalha Analytics",
     description: DESCRIPTION,
   },
   twitter: {
     card: "summary_large_image",
-    title: "SWALHA Analytics",
+    title: "Swalha Analytics",
     description: DESCRIPTION,
   },
 };

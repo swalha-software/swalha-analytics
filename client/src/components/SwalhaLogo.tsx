@@ -2,7 +2,7 @@ import Image from "next/image";
 import { useWhiteLabel } from "../hooks/useIsWhiteLabel";
 import { cn } from "../lib/utils";
 
-export const BRAND_NAME = "SWALHA Analytics";
+export const BRAND_NAME = "Swalha Analytics";
 
 const MARK_SRC = "/swalha/mark-256.png";
 
@@ -56,7 +56,7 @@ export function SwalhaTextLogo({ height = 32, className }: { height?: number; cl
         className="font-semibold tracking-tight text-foreground whitespace-nowrap leading-none"
         style={{ fontSize: Math.round(height * 0.62) }}
       >
-        {BRAND_NAME}
+        SWALHA Analytics
       </span>
     </div>
   );

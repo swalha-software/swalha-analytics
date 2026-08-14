@@ -1677,13 +1677,13 @@
   "zxvhnE": "Daily",
   "zyQ3nw": "Add Another Property",
   "zz0om1": "IP Exclusions",
-  "5vx5Fp": "SWALHA Analytics Sidebar",
-  "BhtOqE": "No conversion event code is needed for this path goal. SWALHA Analytics will count sessions that reach {goalLabel}.",
-  "MpjXDL": "No conversion event code is needed for this goal. SWALHA Analytics tracks it automatically based on user behavior.",
-  "NrJ4Vo": "SWALHA Analytics is built on the open-source Rybbit project. The documentation and policy pages linked above are published by Rybbit.",
-  "V6CdYt": "Open source web analytics powered by SWALHA Analytics",
-  "bb5lvK": "How did you find SWALHA Analytics?",
-  "bcLC6f": "Get started with SWALHA Analytics",
-  "vZGWEj": "Enable if tracking requests reach SWALHA Analytics through your own proxy or CDN (Cloudflare Worker, CloudFront, nginx). Visitor IPs will be read from forwarded headers instead of the connecting IP.",
-  "M1mPWU": "SWALHA Analytics v{latest} is available (you're on v{current})"
+  "5vx5Fp": "Swalha Analytics Sidebar",
+  "BhtOqE": "No conversion event code is needed for this path goal. Swalha Analytics will count sessions that reach {goalLabel}.",
+  "MpjXDL": "No conversion event code is needed for this goal. Swalha Analytics tracks it automatically based on user behavior.",
+  "NrJ4Vo": "Swalha Analytics is built on the open-source Rybbit project. The documentation and policy pages linked above are published by Rybbit.",
+  "V6CdYt": "Open source web analytics powered by Swalha Analytics",
+  "bb5lvK": "How did you find Swalha Analytics?",
+  "bcLC6f": "Get started with Swalha Analytics",
+  "vZGWEj": "Enable if tracking requests reach Swalha Analytics through your own proxy or CDN (Cloudflare Worker, CloudFront, nginx). Visitor IPs will be read from forwarded headers instead of the connecting IP.",
+  "M1mPWU": "Swalha Analytics v{latest} is available (you're on v{current})"
 }

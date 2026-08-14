@@ -32,7 +32,7 @@ export const OnboardingTipEmail = ({ userName, body, linkText, linkUrl, unsubscr
   return (
     <Html>
       <Head />
-      <Preview>{paragraphs[0]?.substring(0, 100) || "A message from SWALHA Analytics"}</Preview>
+      <Preview>{paragraphs[0]?.substring(0, 100) || "A message from Swalha Analytics"}</Preview>
       <Tailwind
         config={{
           presets: [pixelBasedPreset],
@@ -71,7 +71,7 @@ export const OnboardingTipEmail = ({ userName, body, linkText, linkUrl, unsubscr
             <Text className="text-darkText text-base leading-relaxed mt-8">
               You can reply to this email,
               <br />
-              The SWALHA Analytics team
+              The Swalha Analytics team
             </Text>
 
             <Hr className="border-borderColor my-8" />

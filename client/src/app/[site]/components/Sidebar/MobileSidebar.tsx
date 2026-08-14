@@ -32,7 +32,7 @@ function MobileSidebarContent() {
         </SheetTrigger>
         <VisuallyHidden>
           <SheetHeader>
-            <SheetTitle>{t("SWALHA Analytics Sidebar")}</SheetTitle>
+            <SheetTitle>{t("Swalha Analytics Sidebar")}</SheetTitle>
           </SheetHeader>
         </VisuallyHidden>
         <SheetContent side="left" className="p-0 w-[240px] flex gap-0" showClose={false}>

@@ -81,7 +81,7 @@ export const sendEmail = async (email: string, subject: string, html: string) =>
   }
   try {
     const response = await resend.emails.send({
-      from: "SWALHA Analytics <automail@email.rybbit.com>",
+      from: "Swalha Analytics <automail@email.rybbit.com>",
       to: email,
       subject,
       html,
@@ -94,7 +94,7 @@ export const sendEmail = async (email: string, subject: string, html: string) =>
 };
 
 const OTP_SUBJECTS: Record<OtpEmailType, string> = {
-  "sign-in": "Your SWALHA Analytics Sign-In Code",
+  "sign-in": "Your Swalha Analytics Sign-In Code",
   "email-verification": "Verify Your Email Address",
   "forget-password": "Reset Your Password",
   "change-email": "Change Your Email Address",
@@ -109,7 +109,7 @@ export const sendEmailVerificationLink = async (email: string, verificationUrl: 
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 560px; margin: 0 auto; padding: 24px; color: #111;">
       <h2 style="margin: 0 0 16px;">Verify your email</h2>
-      <p>Click the button below to verify this email address on your SWALHA Analytics account.</p>
+      <p>Click the button below to verify this email address on your Swalha Analytics account.</p>
       <p style="margin: 24px 0;">
         <a href="${verificationUrl}" style="background: #111; color: #fff; padding: 12px 20px; border-radius: 6px; text-decoration: none; display: inline-block;">Verify email</a>
       </p>
@@ -117,7 +117,7 @@ export const sendEmailVerificationLink = async (email: string, verificationUrl: 
     </div>
   `;
 
-  await sendEmail(email, "Verify your SWALHA Analytics email", html);
+  await sendEmail(email, "Verify your Swalha Analytics email", html);
 };
 
 export const sendChangeEmailVerification = async (
@@ -128,7 +128,7 @@ export const sendChangeEmailVerification = async (
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 560px; margin: 0 auto; padding: 24px; color: #111;">
       <h2 style="margin: 0 0 16px;">Confirm your new email</h2>
-      <p>We received a request to change the email on your SWALHA Analytics account from <strong>${currentEmail}</strong> to <strong>${newEmail}</strong>.</p>
+      <p>We received a request to change the email on your Swalha Analytics account from <strong>${currentEmail}</strong> to <strong>${newEmail}</strong>.</p>
       <p>Click the button below to confirm the change. If you didn't request this, you can safely ignore this email.</p>
       <p style="margin: 24px 0;">
         <a href="${verificationUrl}" style="background: #111; color: #fff; padding: 12px 20px; border-radius: 6px; text-decoration: none; display: inline-block;">Confirm email change</a>
@@ -137,7 +137,7 @@ export const sendChangeEmailVerification = async (
     </div>
   `;
 
-  await sendEmail(currentEmail, "Confirm your email change on SWALHA Analytics", html);
+  await sendEmail(currentEmail, "Confirm your email change on Swalha Analytics", html);
 };
 
 export const sendInvitationEmail = async (
@@ -155,7 +155,7 @@ export const sendInvitationEmail = async (
     })
   );
 
-  await sendEmail(email, "You're Invited to Join an Organization on SWALHA Analytics", html);
+  await sendEmail(email, "You're Invited to Join an Organization on Swalha Analytics", html);
 };
 
 export const sendLimitExceededEmail = async (
@@ -223,21 +223,21 @@ export const sendWelcomeEmail = async (email: string, name?: string) => {
   const greeting = name ? `Hi ${name}` : "Hi there";
   const text = `${greeting},
 
-Welcome to SWALHA Analytics! Thanks for signing up.
+Welcome to Swalha Analytics! Thanks for signing up.
 
 Your account is ready. Add the tracking script to your site and your dashboard will start filling in.
 
 If you run into any issues or have any questions or suggestions, just reply to this email - we'd love to hear from you.
 
 Cheers,
-The SWALHA Analytics team`;
+The Swalha Analytics team`;
 
   try {
     await resend.emails.send({
-      from: "SWALHA Analytics <bill@email.rybbit.com>",
+      from: "Swalha Analytics <bill@email.rybbit.com>",
       replyTo: "hello@rybbit.com",
       to: email,
-      subject: "Welcome to SWALHA Analytics!",
+      subject: "Welcome to Swalha Analytics!",
       text,
     });
   } catch (error) {
@@ -268,7 +268,7 @@ export const scheduleOnboardingTipEmail = async (
     );
 
     const response = await resend.emails.send({
-      from: "SWALHA Analytics <automail@email.rybbit.com>",
+      from: "Swalha Analytics <automail@email.rybbit.com>",
       to: email,
       subject: tipContent.subject,
       html,
@@ -323,7 +323,7 @@ export const sendReengagementEmail = async (
     );
 
     await resend.emails.send({
-      from: "SWALHA Analytics <automail@email.rybbit.com>",
+      from: "Swalha Analytics <automail@email.rybbit.com>",
       to: email,
       subject: content.subject,
       html,

@@ -172,12 +172,12 @@ export function Footer({ disabled = false }: FooterProps) {
               the SWALHA mark imply we own them. */}
           <p className="mb-4 text-sm text-neutral-500 dark:text-neutral-400">
             {t(
-              "SWALHA Analytics is built on the open-source Rybbit project. The documentation and policy pages linked above are published by Rybbit."
+              "Swalha Analytics is built on the open-source Rybbit project. The documentation and policy pages linked above are published by Rybbit."
             )}
           </p>
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-4 text-sm text-neutral-500 dark:text-neutral-400">
-              <span>SWALHA Analytics — a branded fork of the open-source Rybbit project.</span>
+              <span>Swalha Analytics — a branded fork of the open-source Rybbit project.</span>
               <Link
                 href={`https://github.com/rybbit-io/rybbit/releases/tag/v${APP_VERSION}`}
                 className="hover:text-neutral-700 dark:hover:text-neutral-300"
