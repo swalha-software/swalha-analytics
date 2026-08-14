@@ -329,6 +329,12 @@ export const auth = betterAuth({
       // link to that user instead of creating a duplicate — this is how
       // pre-SSO accounts migrate without losing their organizations or sites.
       trustedProviders: ["swalha"],
+      // Pre-SSO analytics accounts are unverified (requireEmailVerification
+      // was always false here), so the default local-verification gate would
+      // refuse every migration link with account_not_linked. The identity
+      // provider only asserts emails it verified itself, and better-auth
+      // marks the local account verified after a successful link.
+      requireLocalEmailVerified: false,
     },
   },
   user: {
