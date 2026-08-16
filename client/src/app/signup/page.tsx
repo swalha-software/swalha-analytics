@@ -2,19 +2,16 @@
 
 import { AuthError } from "@/components/auth/AuthError";
 import { CheckoutModal } from "@/components/subscription/components/CheckoutModal";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Check } from "lucide-react";
 import { useExtracted } from "next-intl";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { parseAsInteger, useQueryState } from "nuqs";
 import React, { Suspense, useState } from "react";
 import { addSite } from "../../api/admin/endpoints";
-import { SwalhaLogo, SwalhaTextLogo } from "../../components/SwalhaLogo";
+import { SwalhaTextLogo } from "../../components/SwalhaLogo";
 
 import { useSetPageTitle } from "../../hooks/useSetPageTitle";
 import { authClient } from "../../lib/auth";
-import { useConfigs } from "../../lib/configs";
 import { BACKEND_URL, IS_CLOUD } from "../../lib/const";
 import { trackAdEvent } from "../../lib/trackAdEvent";
 import { userStore } from "../../lib/userStore";
@@ -25,7 +22,6 @@ import { PlanStep } from "./components/PlanStep";
 import { SetupStep } from "./components/SetupStep";
 
 function SignupPageContent() {
-  const { configs, isLoading: isLoadingConfigs } = useConfigs();
   useSetPageTitle("Signup");
   const t = useExtracted();
 
@@ -220,34 +216,6 @@ function SignupPageContent() {
         return null;
     }
   };
-
-  if (isLoadingConfigs) {
-    return null;
-  }
-
-  if (configs?.disableSignup) {
-    return (
-      <div className="flex justify-center items-center h-dvh w-full">
-        <Card className="w-full max-w-sm p-1">
-          <CardHeader>
-            <SwalhaLogo width={32} height={32} />
-            <CardTitle className="text-2xl flex justify-center">{t("Sign Up Disabled")}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-col gap-6">
-              <p className="text-center">
-                {t("New account registration is currently disabled. If you have an account, you can")}{" "}
-                <Link href="/login" className="underline">
-                  {t("sign in")}
-                </Link>
-                .
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
 
   return (
     <div className="flex h-dvh w-full justify-center">

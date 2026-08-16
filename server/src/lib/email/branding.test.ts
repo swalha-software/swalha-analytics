@@ -8,7 +8,6 @@ import { REENGAGEMENT_EMAILS } from "../../services/reengagement/reengagementCon
 import { BRAND_LOGO_URL, BRAND_NAME } from "./templates/BrandHeader.js";
 import { InvitationEmail } from "./templates/InvitationEmail.js";
 import { OnboardingTipEmail } from "./templates/OnboardingTipEmail.js";
-import { OtpEmail, type OtpEmailType } from "./templates/OtpEmail.js";
 import { ReengagementEmail } from "./templates/ReengagementEmail.js";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -110,16 +109,6 @@ describe("email templates carry SWALHA branding", () => {
       .map(([name]) => name);
     expect(offenders).toEqual([]);
   });
-
-  it.each<OtpEmailType>(["sign-in", "email-verification", "forget-password", "change-email"])(
-    "the %s OTP email renders the SWALHA lockup",
-    async type => {
-      const html = await render(OtpEmail({ otp: "123456", type }));
-      expect(html).toContain(BRAND_LOGO_URL);
-      expect(visibleText(html)).toContain(BRAND_NAME);
-      expect(visibleText(html)).not.toMatch(/\bRybbit\b/);
-    }
-  );
 
   it("the invitation email renders the SWALHA lockup", async () => {
     const html = await render(

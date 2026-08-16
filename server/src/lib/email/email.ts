@@ -5,7 +5,6 @@ import { ApproachingLimitEmail } from "./templates/ApproachingLimitEmail.js";
 import { InvitationEmail } from "./templates/InvitationEmail.js";
 import { LimitExceededEmail } from "./templates/LimitExceededEmail.js";
 import { OnboardingTipEmail } from "./templates/OnboardingTipEmail.js";
-import { OtpEmail, type OtpEmailType } from "./templates/OtpEmail.js";
 import { ReengagementEmail } from "./templates/ReengagementEmail.js";
 import { WeeklyReportEmail } from "./templates/WeeklyReportEmail.js";
 import type { SiteReport } from "../../services/weekyReports/weeklyReportTypes.js";
@@ -91,18 +90,6 @@ export const sendEmail = async (email: string, subject: string, html: string) =>
     console.error(error);
     throw error;
   }
-};
-
-const OTP_SUBJECTS: Record<OtpEmailType, string> = {
-  "sign-in": "Your Swalha Analytics Sign-In Code",
-  "email-verification": "Verify Your Email Address",
-  "forget-password": "Reset Your Password",
-  "change-email": "Change Your Email Address",
-};
-
-export const sendOtpEmail = async (email: string, otp: string, type: OtpEmailType) => {
-  const html = await render(OtpEmail({ otp, type }));
-  await sendEmail(email, OTP_SUBJECTS[type], html);
 };
 
 export const sendEmailVerificationLink = async (email: string, verificationUrl: string) => {

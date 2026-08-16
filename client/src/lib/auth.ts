@@ -1,4 +1,4 @@
-import { adminClient, organizationClient, emailOTPClient, genericOAuthClient } from "better-auth/client/plugins";
+import { adminClient, organizationClient, genericOAuthClient } from "better-auth/client/plugins";
 import { apiKeyClient } from "@better-auth/api-key/client"
 import { createAuthClient } from "better-auth/react";
 
@@ -26,7 +26,7 @@ export const authClient = createAuthClient({
         additionalFields: invitationSiteAccessFields,
       },
     },
-  }), emailOTPClient(), apiKeyClient(), genericOAuthClient()],
+  }), apiKeyClient(), genericOAuthClient()],
   fetchOptions: {
     credentials: "include",
   },

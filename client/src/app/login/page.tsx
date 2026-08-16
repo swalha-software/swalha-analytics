@@ -8,14 +8,12 @@ import { useState } from "react";
 import { SwalhaTextLogo } from "../../components/SwalhaLogo";
 import { SpinningGlobe } from "../../components/SpinningGlobe";
 import { useSetPageTitle } from "../../hooks/useSetPageTitle";
-import { useConfigs } from "../../lib/configs";
 import { IS_CLOUD } from "../../lib/const";
 
 // Sign-in is SSO-only: identity lives at auth.swalha.com. Email/password and
 // social sign-in were removed from this page; existing password accounts
 // link to their SWALHA account by email on first SSO sign-in.
 export default function Page() {
-  const { configs, isLoading: isLoadingConfigs } = useConfigs();
   useSetPageTitle("Login");
   const t = useExtracted();
   const [error, setError] = useState<string>();
@@ -37,17 +35,15 @@ export default function Page() {
 
             <AuthError error={error} title={t("Error Logging In")} />
 
-            {!isLoadingConfigs && !configs?.disableSignup && (
-              <div className="text-center text-sm">
-                {t("Don't have an account?")}{" "}
-                <Link
-                  href="/signup"
-                  className="underline underline-offset-4 hover:text-accent-400 transition-colors duration-300"
-                >
-                  {t("Sign up")}
-                </Link>
-              </div>
-            )}
+            <div className="text-center text-sm">
+              {t("Don't have an account?")}{" "}
+              <Link
+                href="/signup"
+                className="underline underline-offset-4 hover:text-accent-400 transition-colors duration-300"
+              >
+                {t("Sign up")}
+              </Link>
+            </div>
           </div>
         </div>
 

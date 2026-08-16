@@ -1,6 +1,6 @@
 import { betterAuth } from "better-auth";
 import { APIError, createAuthMiddleware, getSessionFromCtx } from "better-auth/api";
-import { admin, captcha, emailOTP, genericOAuth, mcp, organization } from "better-auth/plugins";
+import { admin, captcha, genericOAuth, mcp, organization } from "better-auth/plugins";
 import { createAccessControl } from "better-auth/plugins/access";
 import { adminAc, defaultStatements, memberAc, ownerAc } from "better-auth/plugins/organization/access";
 import { ALL_SCOPE_STRINGS, OIDC_STANDARD_SCOPES } from "./scopes.js";
@@ -16,13 +16,12 @@ import { invitation, member, memberSiteAccess, sites, user } from "../db/postgre
 import { apiKeyLimitForPlan, countApiKeysForReference } from "./apiKeyLimits.js";
 import { invalidateSitesAccessCache } from "./auth-utils.js";
 import { ORG_API_KEY_CONFIG_ID } from "./bearerAuth.js";
-import { DISABLE_SIGNUP, IS_CLOUD } from "./const.js";
+import { IS_CLOUD } from "./const.js";
 import {
   addContactToAudience,
   sendChangeEmailVerification,
   sendEmailVerificationLink,
   sendInvitationEmail,
-  sendOtpEmail,
   sendWelcomeEmail,
 } from "./email/email.js";
 import { onboardingTipsService } from "../services/onboardingTips/onboardingTipsService.js";
@@ -237,11 +236,6 @@ const pluginList = [
       },
     },
   }),
-  emailOTP({
-    async sendVerificationOTP({ email, otp, type }) {
-      await sendOtpEmail(email, otp, type);
-    },
-  }),
   // Add Cloudflare Turnstile captcha (cloud only)
   ...(IS_CLOUD && process.env.TURNSTILE_SECRET_KEY && process.env.NODE_ENV === "production"
     ? [
@@ -269,10 +263,9 @@ const pluginList = [
               "https://auth.swalha.com/.well-known/openid-configuration",
             scopes: ["openid", "email", "profile"],
             pkce: true,
-            // With DISABLE_SIGNUP=true, SSO only signs in users that already
-            // exist locally (or link by email) — it never provisions new
-            // analytics accounts. Flip the env to onboard someone new.
-            disableSignUp: DISABLE_SIGNUP,
+            // auth.swalha.com is the gate — reaching this callback already
+            // means approved, so provision on first login.
+            disableSignUp: false,
           },
         ],
       }),

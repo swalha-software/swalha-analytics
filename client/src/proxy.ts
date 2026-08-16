@@ -38,7 +38,6 @@ export async function proxy(request: NextRequest) {
       "signup",
       "subscribe",
       "invitation",
-      "reset-password",
       "auth",
       "admin",
       "organization",

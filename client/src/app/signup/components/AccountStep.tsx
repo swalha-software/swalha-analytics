@@ -6,9 +6,9 @@ interface AccountStepProps {
   setError: (v: string) => void;
 }
 
-// Account creation is SSO-only: identity lives at auth.swalha.com. The SSO
-// callback returns to step 2 to continue onboarding. Whether a new local
-// account may be created at all is controlled server-side by DISABLE_SIGNUP.
+// Account creation is SSO-only: identity lives at auth.swalha.com, which is
+// the sole gate on who may register. The SSO callback returns to step 2 to
+// continue onboarding.
 export function AccountStep({ setError }: AccountStepProps) {
   const t = useExtracted();
 
