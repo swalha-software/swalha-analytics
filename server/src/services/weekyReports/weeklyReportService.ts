@@ -222,6 +222,42 @@ class WeeklyReportService {
     }
   }
 
+  /**
+   * This week's reports for the orgs a single user owns, delivered to that
+   * user alone. Backs the admin "send me a test" trigger: it exercises the
+   * real generation and mail path without touching anyone else's inbox, and
+   * ignores the user's own sendAutoEmailReports opt-out since the send was
+   * explicitly asked for.
+   */
+  public async sendReportsToUser(
+    userId: string,
+    email: string,
+    name: string
+  ): Promise<{ organizations: number; emails: number }> {
+    if (!EMAIL_ENABLED) {
+      throw new Error("Email is not configured");
+    }
+
+    const memberships = await db
+      .select({ organizationId: member.organizationId })
+      .from(member)
+      .where(and(eq(member.userId, userId), eq(member.role, "owner")));
+
+    let emails = 0;
+    for (const { organizationId } of memberships) {
+      const report = await this.generateOrganizationReport(organizationId);
+      if (!report) continue;
+
+      for (const site of report.sites) {
+        await sendWeeklyReportEmail(email, name, report.organizationName, site);
+        emails++;
+      }
+    }
+
+    this.logger.info({ userId, organizations: memberships.length, emails }, "Sent test weekly reports to user");
+    return { organizations: memberships.length, emails };
+  }
+
   public async generateAndSendReports(): Promise<void> {
     if (!EMAIL_ENABLED) {
       this.logger.info("Skipping weekly reports: no RESEND_API_KEY configured");

@@ -138,3 +138,6 @@ export type {
   ClickhouseQueryLogResponse,
   QueryLogParams,
 } from "./clickhouseStats";
+
+export { fetchWeeklyReportStatus, sendTestWeeklyReport } from "./weeklyReport";
+export type { WeeklyReportStatus, SendTestWeeklyReportResponse } from "./weeklyReport";

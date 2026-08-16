@@ -13,6 +13,8 @@ import {
   getAdminSites,
   getClickhouseStats,
   getClickhouseQueryLog,
+  getWeeklyReportStatus,
+  runWeeklyReport,
 } from "./api/admin/index.js";
 import {
   createDashboard,
@@ -511,6 +513,8 @@ async function stripeAdminRoutes(fastify: FastifyInstance) {
   fastify.put("/admin/sites/:siteId/move", adminOnly, adminMoveSite);
   fastify.get("/admin/organizations", adminOnly, getAdminOrganizations);
   fastify.get("/admin/service-event-count", adminOnly, getAdminServiceEventCount);
+  fastify.get("/admin/weekly-report", adminOnly, getWeeklyReportStatus);
+  fastify.post("/admin/weekly-report/send-test", adminOnly, runWeeklyReport);
   fastify.post("/admin/telemetry", collectTelemetry); // Public - telemetry collection
 
   // STRIPE & ADMIN

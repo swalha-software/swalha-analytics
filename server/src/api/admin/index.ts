@@ -6,3 +6,4 @@ export { getAdminServiceEventCount } from "./getAdminServiceEventCount.js";
 export { getAdminSites } from "./getAdminSites.js";
 export { getClickhouseStats } from "./getClickhouseStats.js";
 export { getClickhouseQueryLog } from "./getClickhouseQueryLog.js";
+export { getWeeklyReportStatus, runWeeklyReport } from "./runWeeklyReport.js";

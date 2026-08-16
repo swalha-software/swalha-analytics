@@ -12,12 +12,13 @@ import { Button } from "../../components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "../../components/ui/sheet";
 import { DEPLOYMENT, IS_CLOUD } from "../../lib/const";
 import { Database } from "./components/database/Database";
+import { Email } from "./components/email/Email";
 import { Organizations } from "./components/organizations/Organizations";
 import { AdminLayout } from "./components/shared/AdminLayout";
 import { Sites } from "./components/sites/Sites";
 import { Users } from "./components/users/Users";
 
-const ADMIN_TABS = ["organizations", "sites", "users", "database"] as const;
+const ADMIN_TABS = ["organizations", "sites", "users", "database", "email"] as const;
 
 function MobileSidebar() {
   const t = useExtracted();
@@ -66,6 +67,7 @@ export default function AdminPage() {
               <TabsTrigger value="sites">{t("Sites")}</TabsTrigger>
               <TabsTrigger value="users">{t("Users")}</TabsTrigger>
               <TabsTrigger value="database">{t("Database")}</TabsTrigger>
+              <TabsTrigger value="email">{t("Email")}</TabsTrigger>
             </TabsList>
 
             <TabsContent value="organizations">
@@ -82,6 +84,10 @@ export default function AdminPage() {
 
             <TabsContent value="database">
               <Database />
+            </TabsContent>
+
+            <TabsContent value="email">
+              <Email />
             </TabsContent>
           </Tabs>
         </AdminLayout>
