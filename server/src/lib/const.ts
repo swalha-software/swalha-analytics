@@ -9,6 +9,15 @@ export const LITE_DASHBOARD = process.env.LITE_DASHBOARD === "true";
 export const SECRET = process.env.BETTER_AUTH_SECRET;
 export const MAPBOX_TOKEN = process.env.MAPBOX_TOKEN;
 
+// Mail is gated on the key, not on IS_CLOUD, so enabling it does not also drag
+// in Stripe, event limits and API charging.
+export const RESEND_API_KEY = process.env.RESEND_API_KEY;
+export const EMAIL_ENABLED = Boolean(RESEND_API_KEY);
+export const EMAIL_FROM = process.env.EMAIL_FROM || "Swalha Analytics <analytics@swalha.com>";
+
+// Dashboard origin for links inside emails.
+export const APP_URL = (process.env.BASE_URL || "https://analytics.swalha.com").replace(/\/+$/, "");
+
 // Trial constants (commented out as we're replacing with free tier)
 // export const TRIAL_DURATION_DAYS = 14;
 // export const TRIAL_EVENT_LIMIT = 100000;

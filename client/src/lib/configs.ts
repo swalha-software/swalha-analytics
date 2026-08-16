@@ -4,6 +4,7 @@ import { authedFetch } from "../api/utils";
 interface Configs {
   mapboxToken: string;
   liteDashboard: boolean;
+  emailEnabled: boolean;
 }
 
 export function useConfigs() {

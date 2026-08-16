@@ -45,9 +45,12 @@ if (workerCount === 0) {
   // Start cron jobs on the primary process only
   telemetryService.startTelemetryCron();
   usageService.startUsageCheckCron();
-  if (IS_CLOUD && process.env.NODE_ENV !== "development") {
+  if (process.env.NODE_ENV !== "development") {
+    // Weekly reports follow the mail key; reengagement stays cloud-only.
     weeklyReportService.startWeeklyReportCron();
-    reengagementService.startReengagementCron();
+    if (IS_CLOUD) {
+      reengagementService.startReengagementCron();
+    }
   }
 
   // Broadcast usage state (sitesOverLimit + sitesWithoutReplay) to workers after each usage update

@@ -130,6 +130,8 @@ services:
       - LITE_DASHBOARD=${LITE_DASHBOARD}
       - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
       - OPENROUTER_MODEL=${OPENROUTER_MODEL}
+      - RESEND_API_KEY=${RESEND_API_KEY}
+      - EMAIL_FROM=${EMAIL_FROM}
     depends_on:
       clickhouse:
         condition: service_healthy

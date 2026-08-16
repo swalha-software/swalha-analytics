@@ -1,6 +1,6 @@
 import { Resend } from "resend";
 import { render } from "@react-email/components";
-import { IS_CLOUD } from "../const.js";
+import { EMAIL_FROM, RESEND_API_KEY } from "../const.js";
 import { ApproachingLimitEmail } from "./templates/ApproachingLimitEmail.js";
 import { InvitationEmail } from "./templates/InvitationEmail.js";
 import { LimitExceededEmail } from "./templates/LimitExceededEmail.js";
@@ -14,8 +14,8 @@ import type { ReengagementContent } from "../../services/reengagement/reengageme
 let resend: Resend | undefined;
 let marketingAudienceId: string | null = null;
 
-if (IS_CLOUD) {
-  resend = new Resend(process.env.RESEND_API_KEY);
+if (RESEND_API_KEY) {
+  resend = new Resend(RESEND_API_KEY);
 }
 
 // Marketing audience management
@@ -80,7 +80,7 @@ export const sendEmail = async (email: string, subject: string, html: string) =>
   }
   try {
     const response = await resend.emails.send({
-      from: "Swalha Analytics <automail@email.rybbit.com>",
+      from: EMAIL_FROM,
       to: email,
       subject,
       html,
@@ -221,8 +221,7 @@ The Swalha Analytics team`;
 
   try {
     await resend.emails.send({
-      from: "Swalha Analytics <bill@email.rybbit.com>",
-      replyTo: "hello@rybbit.com",
+      from: EMAIL_FROM,
       to: email,
       subject: "Welcome to Swalha Analytics!",
       text,
@@ -255,7 +254,7 @@ export const scheduleOnboardingTipEmail = async (
     );
 
     const response = await resend.emails.send({
-      from: "Swalha Analytics <automail@email.rybbit.com>",
+      from: EMAIL_FROM,
       to: email,
       subject: tipContent.subject,
       html,
@@ -310,7 +309,7 @@ export const sendReengagementEmail = async (
     );
 
     await resend.emails.send({
-      from: "Swalha Analytics <automail@email.rybbit.com>",
+      from: EMAIL_FROM,
       to: email,
       subject: content.subject,
       html,

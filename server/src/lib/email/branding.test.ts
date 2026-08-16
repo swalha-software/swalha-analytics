@@ -134,12 +134,19 @@ describe("server-sent copy carries SWALHA branding", () => {
     expect(offenders).toEqual([]);
   });
 
-  it("every email is sent under the SWALHA sender name", () => {
+  it("every email is sent through the single configured sender", () => {
     const source = readFileSync(path.join(SRC, "lib", "email", "email.ts"), "utf8");
-    const senders = [...source.matchAll(/from:\s*"([^"<]+)</g)].map(match => match[1].trim());
-    expect(senders.length).toBeGreaterThan(0);
+    // The sender is centralised in EMAIL_FROM so a deploy can point mail at its
+    // own verified domain; no call site may hardcode one.
+    expect([...source.matchAll(/from:\s*"([^"]+)"/g)].map(match => match[1])).toEqual([]);
+    expect(source).toMatch(/from:\s*EMAIL_FROM/);
+  });
+
+  it("the default sender falls back to the SWALHA brand name", () => {
+    const source = readFileSync(path.join(SRC, "lib", "const.ts"), "utf8");
+    const fallback = source.match(/EMAIL_FROM\s*=\s*process\.env\.EMAIL_FROM\s*\|\|\s*"([^"<]+)</);
     // Catches personal sender names such as "Bill from Swalha Analytics".
-    expect([...new Set(senders)]).toEqual([BRAND_NAME]);
+    expect(fallback?.[1].trim()).toBe(BRAND_NAME);
   });
 
   it("mail subjects are branded SWALHA and never Rybbit", () => {

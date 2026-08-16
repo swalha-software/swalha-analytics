@@ -14,6 +14,7 @@ import {
 } from "@react-email/components";
 import * as React from "react";
 import { BrandHeader } from "./BrandHeader.js";
+import { APP_URL } from "../../const.js";
 import type { SiteReport, MetricData } from "../../../services/weekyReports/weeklyReportTypes.js";
 
 interface WeeklyReportEmailProps {
@@ -378,7 +379,7 @@ export const WeeklyReportEmail = ({ userName, organizationName, site }: WeeklyRe
               </div>
 
               <Text className="text-darkText text-base leading-relaxed mb-4">
-                <Link href={`https://app.rybbit.io/${site.siteId}`} className="text-brand underline">
+                <Link href={`${APP_URL}/${site.siteId}`} className="text-brand underline">
                   View full dashboard
                 </Link>
               </Text>
@@ -391,7 +392,7 @@ export const WeeklyReportEmail = ({ userName, organizationName, site }: WeeklyRe
             <Hr className="border-borderColor my-8" />
 
             <Text className="text-mutedText text-xs mb-2">
-              <Link href="https://app.rybbit.io/settings/account" className="text-mutedText underline">
+              <Link href={`${APP_URL}/settings/account`} className="text-mutedText underline">
                 Unsubscribe from weekly reports
               </Link>
             </Text>

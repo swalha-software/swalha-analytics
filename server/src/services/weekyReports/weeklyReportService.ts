@@ -1,14 +1,13 @@
 import * as cron from "node-cron";
 import { DateTime } from "luxon";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { db } from "../../db/postgres/postgres.js";
 import { organization, member, user, sites } from "../../db/postgres/schema.js";
 import { clickhouse } from "../../db/clickhouse/clickhouse.js";
 import { getTimeStatement, processResults } from "../../api/analytics/utils/utils.js";
 import { createServiceLogger } from "../../lib/logger/logger.js";
 import { sendWeeklyReportEmail } from "../../lib/email/email.js";
-import { filterSitesByMemberAccess } from "../../lib/access.js";
-import { IS_CLOUD } from "../../lib/const.js";
+import { EMAIL_ENABLED } from "../../lib/const.js";
 import {
   BreakdownDimension,
   buildBreakdownQuery,
@@ -181,46 +180,26 @@ class WeeklyReportService {
 
   private async sendReportsToOrganization(report: OrganizationReport): Promise<void> {
     try {
-      // Fetch all members of the organization with their access restrictions
-      const members = await db
+      // Owners only. They have unrestricted access to every site in the org, so
+      // there is no per-member site filtering to do.
+      const owners = await db
         .select({
-          memberId: member.id,
-          userId: member.userId,
-          role: member.role,
           email: user.email,
           name: user.name,
           sendAutoEmailReports: user.sendAutoEmailReports,
-          hasRestrictedSiteAccess: member.hasRestrictedSiteAccess,
         })
         .from(member)
         .innerJoin(user, eq(member.userId, user.id))
-        .where(eq(member.organizationId, report.organizationId));
+        .where(and(eq(member.organizationId, report.organizationId), eq(member.role, "owner")));
 
-      // Send a separate email for each site to each member
-      for (const memberData of members) {
+      // Send a separate email for each site to each owner
+      for (const memberData of owners) {
         // Skip users who have disabled email reports
         if (memberData.sendAutoEmailReports === false) {
           continue;
         }
 
-        // Only report on sites the member can actually access
-        let allowedSites = report.sites;
-        if (memberData.role === "member") {
-          allowedSites = await filterSitesByMemberAccess(
-            report.sites,
-            report.organizationId,
-            memberData.userId,
-            memberData.memberId,
-            memberData.hasRestrictedSiteAccess
-          );
-
-          // Skip this member entirely if they have no site access
-          if (allowedSites.length === 0) {
-            continue;
-          }
-        }
-
-        for (const site of allowedSites) {
+        for (const site of report.sites) {
           try {
             await sendWeeklyReportEmail(memberData.email, memberData.name, report.organizationName, site);
             this.logger.info(
@@ -244,8 +223,8 @@ class WeeklyReportService {
   }
 
   public async generateAndSendReports(): Promise<void> {
-    if (!IS_CLOUD) {
-      this.logger.info("Skipping weekly reports for non-cloud instance");
+    if (!EMAIL_ENABLED) {
+      this.logger.info("Skipping weekly reports: no RESEND_API_KEY configured");
       return;
     }
 
@@ -294,8 +273,8 @@ class WeeklyReportService {
   }
 
   private initializeWeeklyReportCron(): void {
-    if (!IS_CLOUD) {
-      this.logger.info("Skipping weekly report cron initialization for non-cloud instance");
+    if (!EMAIL_ENABLED) {
+      this.logger.info("Skipping weekly report cron: no RESEND_API_KEY configured");
       return;
     }
 
