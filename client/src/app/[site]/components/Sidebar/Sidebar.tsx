@@ -3,8 +3,6 @@ import {
   AlertTriangle,
   Bot,
   ChartColumnDecreasing,
-  Code,
-  Database,
   File,
   Flag,
   FlaskConical,
@@ -85,6 +83,12 @@ function SidebarContent() {
           icon={<LayoutDashboard className="w-4 h-4" />}
         />
         <SidebarComponents.Item
+          label={t("Dashboards")}
+          active={isActiveTab("dashboards")}
+          href={getTabPath("dashboards")}
+          icon={<LayoutGrid className="w-4 h-4" />}
+        />
+        <SidebarComponents.Item
           label={t("Globe")}
           active={isActiveTab("globe")}
           href={getTabPath("globe")}
@@ -120,30 +124,12 @@ function SidebarContent() {
           href={getTabPath("goals")}
           icon={<Target className="w-4 h-4" />}
         />
-        <div className="hidden md:block">
-          <SidebarComponents.Item
-            label={t("API Playground")}
-            active={isActiveTab("api-playground")}
-            href={getTabPath("api-playground")}
-            icon={<Code className="w-4 h-4" />}
-          />
-        </div>
-        {!IS_CLOUD && (
-          <>
-            <SidebarComponents.Item
-              label={t("Query")}
-              active={isActiveTab("query")}
-              href={getTabPath("query")}
-              icon={<Database className="w-4 h-4" />}
-            />
-            <SidebarComponents.Item
-              label={t("Dashboards")}
-              active={isActiveTab("dashboards")}
-              href={getTabPath("dashboards")}
-              icon={<LayoutGrid className="w-4 h-4" />}
-            />
-          </>
-        )}
+        {/*
+          API Playground and Query are builder tools, not analytics views — you
+          reach for them while wiring up an integration or answering a one-off
+          question, not daily. They stay fully working at /{site}/api-playground
+          and /{site}/query; only the nav entries are gone.
+        */}
         <SidebarComponents.SectionHeader>{t("Product Analytics")}</SidebarComponents.SectionHeader>
         <div className="hidden md:block">
           {!isMobileSite &&
