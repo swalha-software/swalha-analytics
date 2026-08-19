@@ -1,8 +1,16 @@
 "use strict";
 
-const SDK_VERSION = "0.1.1";
+const SDK_VERSION = "0.2.0";
 const DEFAULT_CONFIG_TIMEOUT_MS = 3000;
 const DEFAULT_MAX_QUEUE_SIZE = 100;
+const DEFAULT_STORAGE_KEY_PREFIX = "@swalha";
+
+/**
+ * The storage prefix this SDK shipped with before the Swalha rebrand. Installs
+ * that predate the rename still hold their identity under it, so the default
+ * prefix reads through to it once and carries the value forward.
+ */
+const LEGACY_STORAGE_KEY_PREFIX = "@rybbit";
 
 let ReactNativeModule;
 
@@ -87,15 +95,15 @@ function getUserAgent(appVersion) {
     const { Platform } = getReactNative();
     if (Platform.OS === "android") {
       const version = Platform.Version || "";
-      return `Mozilla/5.0 (Linux; Android ${version}) AppleWebKit/537.36 (KHTML, like Gecko) RybbitReactNative/${SDK_VERSION}${appVersion ? ` ${appVersion}` : ""}`;
+      return `Mozilla/5.0 (Linux; Android ${version}) AppleWebKit/537.36 (KHTML, like Gecko) SwalhaAnalyticsReactNative/${SDK_VERSION}${appVersion ? ` ${appVersion}` : ""}`;
     }
     if (Platform.OS === "ios") {
       const version = String(Platform.Version || "").replace(/\./g, "_");
-      return `Mozilla/5.0 (iPhone; CPU iPhone OS ${version} like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) RybbitReactNative/${SDK_VERSION}${appVersion ? ` ${appVersion}` : ""}`;
+      return `Mozilla/5.0 (iPhone; CPU iPhone OS ${version} like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) SwalhaAnalyticsReactNative/${SDK_VERSION}${appVersion ? ` ${appVersion}` : ""}`;
     }
-    return `RybbitReactNative/${SDK_VERSION} (${Platform.OS})${appVersion ? ` ${appVersion}` : ""}`;
+    return `SwalhaAnalyticsReactNative/${SDK_VERSION} (${Platform.OS})${appVersion ? ` ${appVersion}` : ""}`;
   } catch {
-    return `RybbitReactNative/${SDK_VERSION}`;
+    return `SwalhaAnalyticsReactNative/${SDK_VERSION}`;
   }
 }
 
@@ -122,7 +130,7 @@ function createRequestHeaders(payload) {
   return headers;
 }
 
-class RybbitReactNative {
+class SwalhaAnalytics {
   constructor() {
     this.config = null;
     this.remoteConfig = {};
@@ -144,7 +152,7 @@ class RybbitReactNative {
       appIdentifier: config.appIdentifier || config.bundleId || "",
       appVersion: config.appVersion || "",
       tag: config.tag || "",
-      storageKeyPrefix: config.storageKeyPrefix || "@rybbit",
+      storageKeyPrefix: config.storageKeyPrefix || DEFAULT_STORAGE_KEY_PREFIX,
       debug: !!config.debug,
       autoTrackAppLifecycle: config.autoTrackAppLifecycle !== false,
       initialScreenName: config.initialScreenName || "",
@@ -155,7 +163,7 @@ class RybbitReactNative {
     this.storage = config.storage || createMemoryStorage();
 
     this.anonymousId = await this.getOrCreateAnonymousId();
-    this.userId = await this.storage.getItem(this.storageKey("user-id"));
+    this.userId = await this.readStoredValue("user-id");
     this.remoteConfig = await this.fetchRemoteConfig();
 
     if (this.config.autoTrackAppLifecycle) {
@@ -173,13 +181,34 @@ class RybbitReactNative {
     return `${this.config.storageKeyPrefix}:${this.config.siteId}:${name}`;
   }
 
+  /**
+   * Reads a stored value, adopting the pre-rebrand key when the current one is
+   * empty and carrying it forward. Without this every install that predates the
+   * rename would mint a fresh anonymous ID on upgrade and report itself as a
+   * brand new user.
+   *
+   * Only the default prefix reads through: a caller who set their own
+   * `storageKeyPrefix` was never writing under the legacy one.
+   */
+  async readStoredValue(name) {
+    const current = await this.storage.getItem(this.storageKey(name));
+    if (current) return current;
+    if (this.config.storageKeyPrefix !== DEFAULT_STORAGE_KEY_PREFIX) return null;
+
+    const legacyKey = `${LEGACY_STORAGE_KEY_PREFIX}:${this.config.siteId}:${name}`;
+    const legacy = await this.storage.getItem(legacyKey);
+    if (!legacy) return null;
+
+    await this.storage.setItem(this.storageKey(name), legacy);
+    return legacy;
+  }
+
   async getOrCreateAnonymousId() {
-    const key = this.storageKey("anonymous-id");
-    const existing = await this.storage.getItem(key);
+    const existing = await this.readStoredValue("anonymous-id");
     if (existing) return existing;
 
     const nextId = generateId();
-    await this.storage.setItem(key, nextId);
+    await this.storage.setItem(this.storageKey("anonymous-id"), nextId);
     return nextId;
   }
 
@@ -429,7 +458,7 @@ class RybbitReactNative {
 
   ensureInitialized() {
     if (!this.config || !this.anonymousId) {
-      throw new Error("rybbit.init() must be called before tracking");
+      throw new Error("analytics.init() must be called before tracking");
     }
     if (typeof this.config.fetch !== "function") {
       throw new Error("No fetch implementation is available");
@@ -438,13 +467,13 @@ class RybbitReactNative {
 
   debug(message, error) {
     if (this.config?.debug) {
-      console.warn(`[Rybbit] ${message}`, error);
+      console.warn(`[SwalhaAnalytics] ${message}`, error);
     }
   }
 }
 
-const defaultClient = new RybbitReactNative();
+const defaultClient = new SwalhaAnalytics();
 
 module.exports = defaultClient;
 module.exports.default = defaultClient;
-module.exports.RybbitReactNative = RybbitReactNative;
+module.exports.SwalhaAnalytics = SwalhaAnalytics;
