@@ -202,3 +202,5 @@ export const getFilteredFilters = (parameters: FilterParameter[]) => {
 };
 
 export const canGoForward = (time: Time) => canGoForwardFrom(time, getTimezone());
+
+export const canGoBack = (time: Time) => shiftTimeBackward(time, getTimezone()) !== null;
