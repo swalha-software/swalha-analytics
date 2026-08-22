@@ -26,11 +26,9 @@ interface GeneratePdfReportRequest {
   Querystring: z.infer<typeof QuerystringSchema>;
 }
 
-// PDF export is a paid feature. Mirror the client-side gate (planName !== "free"
-// and not the entry AppSumo tiers) so the endpoint can't be called directly to
-// bypass it. Self-hosted deployments have no billing and are always allowed.
-const PLAN_GATED_APPSUMO_TIERS = ["appsumo-1", "appsumo-2"];
-
+// PDF export is a paid feature. Mirror the client-side gate (planName !== "free")
+// so the endpoint can't be called directly to bypass it. Self-hosted deployments
+// have no billing and are always allowed.
 async function isPdfExportAllowed(organizationId: string | null): Promise<boolean> {
   if (!IS_CLOUD) {
     return true;
@@ -40,7 +38,7 @@ async function isPdfExportAllowed(organizationId: string | null): Promise<boolea
   }
   const subscription = await getSubscriptionInner(organizationId);
   const planName = subscription?.planName ?? "free";
-  return planName !== "free" && !PLAN_GATED_APPSUMO_TIERS.includes(planName);
+  return planName !== "free";
 }
 
 export async function generatePdfReport(request: FastifyRequest<GeneratePdfReportRequest>, reply: FastifyReply) {

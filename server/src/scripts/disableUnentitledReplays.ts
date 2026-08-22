@@ -23,8 +23,8 @@ import {
 
 const apply = process.argv.includes("--apply");
 
-// How many orgs to resolve at once. Each org costs 2-3 sequential Postgres round-trips
-// (custom plan, override, possibly AppSumo), which is painfully slow one-org-at-a-time
+// How many orgs to resolve at once. Each org costs a couple of sequential Postgres
+// round-trips (custom plan, override), which is painfully slow one-org-at-a-time
 // over a tunnel to a remote database.
 const CONCURRENCY = 10;
 

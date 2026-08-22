@@ -71,47 +71,6 @@ export const STANDARD_API_KEY_LIMIT = 5;
 export const PRO_API_KEY_LIMIT = 20;
 export const SELF_HOSTED_API_KEY_LIMIT = 50;
 
-export const APPSUMO_SITE_LIMITS: Record<string, number | null> = {
-  "1": 3,
-  "2": 10,
-  "3": 25,
-  "4": 50,
-  "5": 100,
-  "6": null,
-  "7": null,
-};
-export const APPSUMO_MEMBER_LIMITS: Record<string, number | null> = {
-  "1": 1,
-  "2": 3,
-  "3": 10,
-  "4": 25,
-  "5": 50,
-  "6": null,
-  "7": null,
-};
-
-// AppSumo tier limits (lifetime plans with standard features)
-export const APPSUMO_TIER_LIMITS = {
-  "1": 20_000,
-  "2": 100_000,
-  "3": 250_000,
-  "4": 500_000,
-  "5": 1_000_000,
-  "6": 2_000_000,
-  "7": 3_000_000,
-} as const;
-
-// Monthly session replay limits per AppSumo tier (0 = replays not included)
-export const APPSUMO_REPLAY_LIMITS: Record<string, number> = {
-  "1": 0,
-  "2": 0,
-  "3": 0,
-  "4": 500,
-  "5": 1_000,
-  "6": 2_000,
-  "7": 3_000,
-};
-
 // Define a type for the plan objects
 export interface StripePlan {
   priceId: string;

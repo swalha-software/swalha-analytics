@@ -127,12 +127,6 @@ export const invitationParsers = {
   invitationId: parseAsString,
 };
 
-// AppSumo callback parameters
-export const appSumoCallbackParsers = {
-  code: parseAsString,
-  step: parseAsInteger,
-};
-
 // URL parameters for analytics/dashboard pages
 export const analyticsParsers = {
   // Time parameters

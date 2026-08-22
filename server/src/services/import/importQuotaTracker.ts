@@ -15,10 +15,6 @@ function getHistoricalWindowMonths(subscription: SubscriptionInfo): number {
     return 6;
   }
 
-  if (subscription.source === "appsumo") {
-    return 24;
-  }
-
   if (subscription.source === "stripe") {
     if (subscription.planName.startsWith("pro")) {
       return 60;

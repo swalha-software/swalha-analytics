@@ -641,7 +641,7 @@ Three defects account for a large share of the high-severity findings; fixing ea
 ### [MEDIUM] Standard (non-pro) cloud plans get a 24-month import window, not the documented 36 months
 
 - **Kind:** docs-mismatch
-- **Expected:** data-import.mdx plan table (lines 24-29) and 'Historical Data Windows' (line 44): Standard plans can import data from the past 36 months (3 years); Pro 60; AppSumo 24.
+- **Expected:** data-import.mdx plan table (lines 24-29) and 'Historical Data Windows' (line 44): Standard plans can import data from the past 36 months (3 years); Pro 60.
 - **Actual:** getHistoricalWindowMonths returns 60 only when the stripe planName starts with 'pro' and falls through to `return 24` for every other stripe plan, so Standard plans (planNames like 'standard100k', see server/src/lib/const.ts:121) get 24 months. Events between 24 and 36 months old are skipped, and createSiteImport reports the correspondingly narrower earliestAllowedDate to the client, which then drops those rows client-side too.
 - **Code:** `server/src/services/import/importQuotaTracker.ts:13-30`, `server/src/services/import/importQuotaTracker.ts:63-64`, `server/src/api/sites/createSiteImport.ts:74-79`
 - **Docs:** `docs/content/docs/(docs)/data-import.mdx`
@@ -1736,9 +1736,9 @@ Three defects account for a large share of the high-severity findings; fixing ea
 ### [LOW] PDF export plan gating is client-side only; the server enforces no subscription check and public sites allow anonymous Puppeteer-backed generation
 
 - **Kind:** unexpected-behavior
-- **Expected:** The client hides 'Export as PDF Report' for free and AppSumo plans (ExportButton.tsx:82), implying PDF export is a paid feature.
+- **Expected:** The client hides 'Export as PDF Report' for free plans (ShareExportButton.tsx:83), implying PDF export is a paid feature.
 - **Actual:** GET /sites/:siteId/export/pdf is registered with the publicSite preHandler (index.ts:342 → allowPublicSiteAccess) and neither the handler nor pdfReportService checks the site owner's plan, so any free-plan user can generate PDFs by calling the endpoint directly, and for sites marked public any unauthenticated visitor can too. Each request launches a fresh headless Chromium instance (pdfReportService.ts:465 puppeteer.launch per call) plus 11 parallel ClickHouse queries.
-- **Code:** `client/src/app/[site]/components/SubHeader/Export/ExportButton.tsx:82`, `server/src/index.ts:342`, `server/src/api/analytics/generatePdfReport.ts:20-62`, `server/src/lib/auth-middleware.ts:153-177`, `server/src/services/pdfReports/pdfReportService.ts:464-490`
+- **Code:** `client/src/app/[site]/components/SubHeader/ShareExportButton.tsx:83`, `server/src/index.ts:342`, `server/src/api/analytics/generatePdfReport.ts:20-62`, `server/src/lib/auth-middleware.ts:153-177`, `server/src/services/pdfReports/pdfReportService.ts:464-490`
 
 
 **[dashboards-custom-query]**

@@ -1,8 +1,6 @@
-import { sql } from "drizzle-orm";
 import { DateTime } from "luxon";
 import Stripe from "stripe";
-import { db } from "../../db/postgres/postgres.js";
-import { APPSUMO_TIER_LIMITS, DEFAULT_EVENT_LIMIT, getStripePrices } from "../../lib/const.js";
+import { DEFAULT_EVENT_LIMIT, getStripePrices } from "../../lib/const.js";
 import { stripe } from "../../lib/stripe.js";
 import { getAllStripeSubscriptionsByCustomer } from "../../lib/subscriptionUtils.js";
 
@@ -95,57 +93,6 @@ async function fetchSubscriptionsForCustomers(
   return subscriptionMap;
 }
 
-interface AppSumoLicenseData {
-  tier: string;
-  eventLimit: number;
-}
-
-/**
- * Fetches AppSumo license data for multiple organization IDs
- * @param organizationIds Set of organization IDs to fetch AppSumo licenses for
- * @returns Map of organization ID to AppSumo license data
- */
-async function fetchAppSumoLicensesForOrganizations(
-  organizationIds: Set<string>
-): Promise<Map<string, AppSumoLicenseData>> {
-  const licenseMap = new Map<string, AppSumoLicenseData>();
-
-  if (organizationIds.size === 0) {
-    return licenseMap;
-  }
-
-  try {
-    const orgIdsArray = Array.from(organizationIds);
-    const BATCH_SIZE = 1000;
-
-    // Batch queries to avoid PostgreSQL's row expression limit
-    for (let i = 0; i < orgIdsArray.length; i += BATCH_SIZE) {
-      const batch = orgIdsArray.slice(i, i + BATCH_SIZE);
-      const placeholders = sql.join(
-        batch.map(id => sql`${id}`),
-        sql`, `
-      );
-      const licenses = await db.execute(
-        sql`SELECT organization_id, tier FROM appsumo.licenses WHERE organization_id IN (${placeholders}) AND status = 'active'`
-      );
-
-      if (Array.isArray(licenses)) {
-        for (const license of licenses) {
-          const orgId = (license as any).organization_id as string;
-          const tier = (license as any).tier as keyof typeof APPSUMO_TIER_LIMITS;
-          const eventLimit = APPSUMO_TIER_LIMITS[tier] || APPSUMO_TIER_LIMITS["1"];
-
-          licenseMap.set(orgId, { tier, eventLimit });
-        }
-      }
-    }
-  } catch (error) {
-    console.error("Error fetching AppSumo licenses:", error);
-  }
-
-  return licenseMap;
-}
-
 /**
  * Creates a map of organization IDs to their subscription data
  * @param organizations Array of organization objects with id and stripeCustomerId
@@ -160,13 +107,8 @@ export async function getOrganizationSubscriptions(
 > {
   const orgsWithStripe = organizations.filter(org => org.stripeCustomerId);
   const stripeCustomerIds = new Set(orgsWithStripe.map(org => org.stripeCustomerId!));
-  const allOrgIds = new Set(organizations.map(org => org.id));
 
-  // Fetch both Stripe subscriptions and AppSumo licenses in parallel
-  const [stripeSubscriptionMap, appsumoLicenseMap] = await Promise.all([
-    fetchSubscriptionsForCustomers(stripeCustomerIds, includeFullDetails),
-    fetchAppSumoLicensesForOrganizations(allOrgIds),
-  ]);
+  const stripeSubscriptionMap = await fetchSubscriptionsForCustomers(stripeCustomerIds, includeFullDetails);
 
   // Create organization map with subscription data
   const orgSubscriptionMap = new Map<
@@ -178,14 +120,8 @@ export async function getOrganizationSubscriptions(
 
   for (const org of organizations) {
     const stripeData = org.stripeCustomerId ? stripeSubscriptionMap.get(org.stripeCustomerId) : null;
-    const appsumoData = appsumoLicenseMap.get(org.id);
 
-    // Determine which subscription to use (highest event limit wins)
-    const stripeEventLimit = stripeData?.eventLimit ?? 0;
-    const appsumoEventLimit = appsumoData?.eventLimit ?? 0;
-
-    if (stripeData && (!appsumoData || stripeEventLimit >= appsumoEventLimit)) {
-      // Use Stripe subscription
+    if (stripeData) {
       orgSubscriptionMap.set(org.id, {
         ...stripeData,
         planName: stripeData.planName || "free",
@@ -193,28 +129,6 @@ export async function getOrganizationSubscriptions(
         eventLimit: stripeData.eventLimit ?? 0,
         currentPeriodEnd: stripeData.currentPeriodEnd ?? new Date(),
       });
-    } else if (appsumoData) {
-      // Use AppSumo subscription
-      const subscriptionData: SubscriptionData & {
-        planName: string;
-        status: string;
-        eventLimit: number;
-        currentPeriodEnd: Date;
-      } = {
-        id: "",
-        planName: `appsumo-${appsumoData.tier}`,
-        status: "active",
-        eventLimit: appsumoData.eventLimit,
-        currentPeriodEnd: nextMonthStart,
-      };
-
-      if (includeFullDetails) {
-        subscriptionData.currentPeriodStart = DateTime.now().startOf("month").toJSDate();
-        subscriptionData.cancelAtPeriodEnd = false;
-        subscriptionData.interval = "lifetime";
-      }
-
-      orgSubscriptionMap.set(org.id, subscriptionData);
     } else {
       // Free plan with all required fields
       orgSubscriptionMap.set(org.id, {

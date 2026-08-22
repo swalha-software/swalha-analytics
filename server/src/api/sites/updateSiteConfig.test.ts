@@ -135,16 +135,6 @@ describe("updateSiteConfig — session replay pro gating (the only subscription-
     expect(state.updates).toHaveLength(0);
   });
 
-  it("allows enabling session replay on an AppSumo tier with a replay entitlement", async () => {
-    mocks.getSubscriptionInner.mockResolvedValue({ ...subscription(true), planName: "appsumo-4" });
-    const reply = replyStub();
-
-    await updateSiteConfig(makeRequest({ sessionReplay: true }), reply);
-
-    expect(reply.statusCode).toBe(200);
-    expect(state.updates[0]).toMatchObject({ sessionReplay: true });
-  });
-
   it("always allows turning session replay off, without a subscription lookup", async () => {
     state.site = makeSite({ sessionReplay: true });
     const reply = replyStub();

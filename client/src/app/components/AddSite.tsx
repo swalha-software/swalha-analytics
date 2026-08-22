@@ -93,7 +93,6 @@ export function AddSite({ trigger, disabled }: { trigger?: React.ReactNode; disa
     !subscription?.planName.includes("custom") &&
     !subscription?.planName.includes("standard") &&
     !subscription?.planName.includes("pro") &&
-    !subscription?.planName.includes("appsumo") &&
     IS_CLOUD;
 
   const privacyToggles: CreateToggle[] = [
@@ -121,11 +120,7 @@ export function AddSite({ trigger, disabled }: { trigger?: React.ReactNode; disa
       description: t("Record and replay user sessions to understand user behavior"),
       badge: <Badge variant="success">Pro</Badge>,
       disabled: sessionReplayDisabled,
-      // Hide for AppSumo tiers without replays, matching the Tracking settings tab
-      hidden:
-        isMobile ||
-        isSubscriptionLoading ||
-        (subscription?.planName?.startsWith("appsumo") && !planIncludesReplay(subscription)),
+      hidden: isMobile || isSubscriptionLoading,
     },
     {
       key: "webVitals",

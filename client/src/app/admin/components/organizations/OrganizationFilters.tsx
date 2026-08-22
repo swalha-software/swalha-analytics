@@ -25,7 +25,6 @@ export interface TierOption {
 }
 
 const QUICK_TIER_FILTERS = [
-  { key: "appsumo", label: "AppSumo", match: (tier: string) => tier.toLowerCase().includes("appsumo") },
   { key: "basic", label: "Basic", match: (tier: string) => tier.toLowerCase().includes("basic") },
   { key: "standard", label: "Standard", match: (tier: string) => tier.toLowerCase().includes("standard") },
   { key: "pro", label: "Pro", match: (tier: string) => tier.toLowerCase().includes("pro") },

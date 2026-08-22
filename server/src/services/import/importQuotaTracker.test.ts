@@ -193,15 +193,6 @@ describe("ImportQuotaTracker", () => {
       expect(tracker.getOldestAllowedMonth()).toBe("202312");
     });
 
-    it("should allow 24 months of history for appsumo", async () => {
-      const tracker = await createTrackerForSubscription({
-        source: "appsumo",
-        planName: "appsumo-tier2",
-        eventLimit: 100000,
-      });
-      expect(tracker.getOldestAllowedMonth()).toBe("202206");
-    });
-
     it("should allow 60 months of history for stripe pro plans", async () => {
       const tracker = await createTrackerForSubscription({
         source: "stripe",
