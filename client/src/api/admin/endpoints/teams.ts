@@ -26,16 +26,9 @@ export type ListTeamsResponse = {
   teams: Team[];
 };
 
-export type CreateTeamInput = {
-  name: string;
-  memberUserIds?: string[];
-  siteIds?: number[];
-};
-
+// Team name and membership are owned by SWALHA Auth; Analytics only assigns sites.
 export type UpdateTeamInput = {
-  name?: string;
-  memberUserIds?: string[];
-  siteIds?: number[];
+  siteIds: number[];
 };
 
 export function fetchTeams(organizationId: string) {
@@ -44,34 +37,19 @@ export function fetchTeams(organizationId: string) {
   );
 }
 
-export function createTeam(organizationId: string, data: CreateTeamInput) {
-  return authedFetch<Team>(`/organizations/${organizationId}/teams`, undefined, {
-    method: "POST",
-    data,
-    headers: { "Content-Type": "application/json" },
-  });
-}
-
-export function updateTeam(
+// Mirrors the member site-access route: only site assignment is Analytics-owned.
+export function updateTeamSites(
   organizationId: string,
   teamId: string,
   data: UpdateTeamInput
 ) {
   return authedFetch<{ success: boolean }>(
-    `/organizations/${organizationId}/teams/${teamId}`,
+    `/organizations/${organizationId}/teams/${teamId}/sites`,
     undefined,
     {
       method: "PUT",
       data,
       headers: { "Content-Type": "application/json" },
     }
-  );
-}
-
-export function deleteTeam(organizationId: string, teamId: string) {
-  return authedFetch<{ success: boolean }>(
-    `/organizations/${organizationId}/teams/${teamId}`,
-    undefined,
-    { method: "DELETE" }
   );
 }

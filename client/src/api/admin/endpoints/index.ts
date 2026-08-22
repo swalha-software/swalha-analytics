@@ -13,18 +13,8 @@ export {
 export type { SiteResponse, GetSitesFromOrgResponse, SiteUsageResponse } from "./sites";
 
 // Organizations endpoints
-export {
-  getUserOrganizations,
-  addUserToOrganization,
-  createUserInOrganization,
-  USER_ORGANIZATIONS_QUERY_KEY,
-} from "./organizations";
-export type {
-  UserOrganization,
-  AddUserToOrganizationInput,
-  CreateUserInOrganizationInput,
-  RemoveUserFromOrganizationInput,
-} from "./organizations";
+export { getUserOrganizations, USER_ORGANIZATIONS_QUERY_KEY } from "./organizations";
+export type { UserOrganization } from "./organizations";
 
 // Admin Organizations endpoints
 export { getAdminOrganizations } from "./adminOrganizations";
@@ -111,18 +101,12 @@ export { getOrganizationMembers, getOrgApiUsage } from "./auth";
 export type { GetOrganizationMembersResponse, GetOrgApiUsageResponse } from "./auth";
 
 // Teams endpoints
-export {
-  fetchTeams,
-  createTeam,
-  updateTeam,
-  deleteTeam,
-} from "./teams";
+export { fetchTeams, updateTeamSites } from "./teams";
 export type {
   Team,
   TeamMember,
   TeamSite,
   ListTeamsResponse,
-  CreateTeamInput,
   UpdateTeamInput,
 } from "./teams";
 

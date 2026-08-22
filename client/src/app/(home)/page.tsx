@@ -8,7 +8,6 @@ import { useUserOrganizations } from "../../api/admin/hooks/useOrganizations";
 import { useGetSitesFromOrg } from "../../api/admin/hooks/useSites";
 import { useTeams } from "../../api/admin/hooks/useTeams";
 import { AppSidebar } from "../../components/AppSidebar";
-import { CreateOrganizationDialog } from "../../components/CreateOrganizationDialog";
 import { DateSelector } from "../../components/DateSelector/DateSelector";
 import { NoOrganization } from "../../components/NoOrganization";
 import { OrganizationSelector } from "../../components/OrganizationSelector";
@@ -43,11 +42,7 @@ export default function Home() {
 
   const { data: sites, refetch: refetchSites, isLoading: isLoadingSites } = useGetSitesFromOrg(activeOrganization?.id);
 
-  const {
-    data: userOrganizationsData,
-    isLoading: isLoadingOrganizations,
-    refetch: refetchOrganizations,
-  } = useUserOrganizations();
+  const { data: userOrganizationsData, isLoading: isLoadingOrganizations } = useUserOrganizations();
 
   // Consolidated loading state
   const isLoading = isLoadingOrganizations || isPending || isLoadingSites;
@@ -68,7 +63,6 @@ export default function Home() {
 
   const { data: teamsData } = useTeams(activeOrganization?.id);
 
-  const [createOrgDialogOpen, setCreateOrgDialogOpen] = useState(false);
   const [nameFilter, setNameFilter] = useState("");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [selectedTeamFilter, setSelectedTeamFilter] = useState<string>("all");
@@ -113,12 +107,6 @@ export default function Home() {
   const paginatedSites = filteredSites?.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
   const hasNoMatches = totalFiltered === 0;
 
-  // Handle successful organization creation
-  const handleOrganizationCreated = () => {
-    refetchOrganizations();
-    refetchSites();
-  };
-
   // Handle tag click to toggle filter
   const handleTagClick = (tag: string) => {
     setSelectedTags(prev => (prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]));
@@ -131,7 +119,6 @@ export default function Home() {
       teams={teams}
       value={selectedTeamFilter}
       onValueChange={setSelectedTeamFilter}
-      canCreateTeam={!isUserMember && hasOrganizations}
     />
   );
 
@@ -252,11 +239,6 @@ export default function Home() {
       {filterBar}
       {siteCards}
       {pagination}
-      <CreateOrganizationDialog
-        open={createOrgDialogOpen}
-        onOpenChange={setCreateOrgDialogOpen}
-        onSuccess={handleOrganizationCreated}
-      />
     </>
   );
 

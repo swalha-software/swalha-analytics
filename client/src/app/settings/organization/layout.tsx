@@ -1,16 +1,11 @@
 "use client";
 
-import { Plus } from "lucide-react";
 import { useExtracted } from "next-intl";
-import { useState } from "react";
-import { CreateOrganizationDialog } from "../../../components/CreateOrganizationDialog";
+import { ManageInSwalhaAuthNotice } from "../../../components/ManageInSwalhaAuth";
 import { OrganizationSelector } from "../../../components/OrganizationSelector";
-import { Button } from "../../../components/ui/button";
 import { authClient } from "../../../lib/auth";
 
 export default function OrganizationLayout({ children }: { children: React.ReactNode }) {
-  const [createOrgDialogOpen, setCreateOrgDialogOpen] = useState(false);
-
   const t = useExtracted();
   const { data: session } = authClient.useSession();
   const { data: activeOrg } = authClient.useActiveOrganization();
@@ -29,16 +24,11 @@ export default function OrganizationLayout({ children }: { children: React.React
 
         <div className="flex items-center gap-2">
           <OrganizationSelector />
-          <CreateOrganizationDialog
-            open={createOrgDialogOpen}
-            onOpenChange={setCreateOrgDialogOpen}
-            trigger={
-              <Button variant="secondary" size="icon">
-                <Plus className="h-4 w-4" />
-              </Button>
-            }
-          />
         </div>
+
+        <ManageInSwalhaAuthNotice
+          description={t("Organizations, members, roles and invitations are managed in SWALHA Auth. Analytics shows a read-only copy and controls site access only.")}
+        />
 
         {isMember ? (
           <div className="rounded-lg border border-neutral-200 dark:border-neutral-800 p-6 text-center text-neutral-500 dark:text-neutral-400">

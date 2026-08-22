@@ -1,22 +1,19 @@
 "use client";
 
-import { ChevronDown, Globe, Plus, Users } from "lucide-react";
+import { ChevronDown, Globe, Users } from "lucide-react";
 import { useExtracted } from "next-intl";
 import { useState } from "react";
 import { Team } from "../api/admin/endpoints/teams";
-import { CreateEditTeamDialog } from "../app/settings/teams/components/CreateEditTeamDialog";
 import { cn } from "../lib/utils";
-import { Button } from "./ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 
 interface TeamSelectorProps {
   teams: Team[];
   value: string;
   onValueChange: (value: string) => void;
-  canCreateTeam?: boolean;
 }
 
-export function TeamSelector({ teams, value, onValueChange, canCreateTeam = false }: TeamSelectorProps) {
+export function TeamSelector({ teams, value, onValueChange }: TeamSelectorProps) {
   const t = useExtracted();
   const [open, setOpen] = useState(false);
 
@@ -33,7 +30,7 @@ export function TeamSelector({ teams, value, onValueChange, canCreateTeam = fals
       <PopoverTrigger asChild>
         <button className="flex gap-2 items-center border border-neutral-200 dark:border-neutral-800 rounded-lg py-1.5 px-3 justify-start cursor-pointer hover:bg-neutral-150 dark:hover:bg-neutral-800/50 transition-colors h-[36px] w-[200px]">
           <Users className="w-4 h-4 text-neutral-600 dark:text-neutral-400 shrink-0" />
-          <div className="text-neutral-900 dark:text-white truncate text-sm flex-1 text-left">
+          <div className="text-neutral-900 dark:text-white truncate text-sm flex-1 text-start">
             {displayLabel}
           </div>
           <ChevronDown className="w-4 h-4 text-neutral-600 dark:text-neutral-400 shrink-0" />
@@ -97,19 +94,6 @@ export function TeamSelector({ teams, value, onValueChange, canCreateTeam = fals
             </div>
           ))}
         </div>
-        {canCreateTeam && (
-          <div className="mt-2 border-t border-neutral-100 dark:border-neutral-800 pt-2">
-            <CreateEditTeamDialog
-              trigger={
-                <Button variant="ghost" className="w-full justify-start gap-2">
-                  <Plus className="h-4 w-4" />
-                  {t("Create Team")}
-                </Button>
-              }
-              onSuccess={() => setOpen(false)}
-            />
-          </div>
-        )}
       </PopoverContent>
     </Popover>
   );

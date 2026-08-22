@@ -23,7 +23,6 @@ export function RollupTopBar({
         teams={teams}
         value={selectedTeamFilter}
         onValueChange={onSelectedTeamFilterChange}
-        canCreateTeam={false}
       />
       <div className="flex items-center gap-2">
         <DateSelector time={time} setTime={setTime} />
