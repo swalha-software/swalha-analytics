@@ -2,7 +2,44 @@
 
 import { type LucideIcon, User } from "lucide-react";
 import Link from "next/link";
+import { createContext, useContext } from "react";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+
+// The mobile sheet renders the same tree but always expanded, so the icon-rail
+// mode travels by context instead of a prop on every nav row.
+const CollapsedContext = createContext(false);
+
+export function SidebarCollapsedProvider({ collapsed, children }: { collapsed: boolean; children: React.ReactNode }) {
+  return <CollapsedContext.Provider value={collapsed}>{children}</CollapsedContext.Provider>;
+}
+
+export function useSidebarCollapsed() {
+  return useContext(CollapsedContext);
+}
+
+/** Wraps a row in a tooltip only while the sidebar is an icon rail. */
+export function CollapsedTooltip({
+  label,
+  collapsed,
+  children,
+}: {
+  label: string;
+  collapsed: boolean;
+  children: React.ReactNode;
+}) {
+  if (!collapsed) return <>{children}</>;
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>{children}</TooltipTrigger>
+      {/* Radix sides are physical; "right" is the inline end in this LTR app. */}
+      <TooltipContent side="right" sideOffset={8}>
+        {label}
+      </TooltipContent>
+    </Tooltip>
+  );
+}
 
 export function getInitials(name?: string | null, fallback?: string | null) {
   const trimmed = name?.trim();
@@ -52,12 +89,15 @@ export function InitialsAvatar({
 }
 
 /** Shared look for the org / site / user rows that open a menu. */
-export const switcherRowClass = cn(
-  "flex h-11 w-full items-center gap-2 rounded-md px-2 text-start transition-colors",
-  "hover:bg-neutral-150 dark:hover:bg-neutral-800/70",
-  "data-[state=open]:bg-neutral-150 dark:data-[state=open]:bg-neutral-800/70",
-  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-500/60"
-);
+export function switcherRowClass(collapsed = false) {
+  return cn(
+    "flex items-center rounded-md text-start transition-colors",
+    collapsed ? "size-10 justify-center p-0" : "h-11 w-full gap-2 px-2",
+    "hover:bg-neutral-150 dark:hover:bg-neutral-800/70",
+    "data-[state=open]:bg-neutral-150 dark:data-[state=open]:bg-neutral-800/70",
+    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-500/60"
+  );
+}
 
 export function SwitcherLabel({ primary, secondary }: { primary: string; secondary?: string | null }) {
   return (
@@ -75,8 +115,18 @@ export function SwitcherLabel({ primary, secondary }: { primary: string; seconda
 }
 
 export function SwitcherSkeleton() {
+  const collapsed = useSidebarCollapsed();
+
+  if (collapsed) {
+    return (
+      <div className={cn(switcherRowClass(true), "pointer-events-none animate-pulse")}>
+        <div className="size-7 shrink-0 rounded-md bg-neutral-200 dark:bg-neutral-800" />
+      </div>
+    );
+  }
+
   return (
-    <div className={cn(switcherRowClass, "pointer-events-none animate-pulse")}>
+    <div className={cn(switcherRowClass(), "pointer-events-none animate-pulse")}>
       <div className="size-7 shrink-0 rounded-md bg-neutral-200 dark:bg-neutral-800" />
       <div className="min-w-0 flex-1 space-y-1.5">
         <div className="h-3 w-24 rounded bg-neutral-200 dark:bg-neutral-800" />
@@ -87,6 +137,19 @@ export function SwitcherSkeleton() {
 }
 
 export function NavGroup({ label, children }: { label: string; children: React.ReactNode }) {
+  const collapsed = useSidebarCollapsed();
+
+  // Group labels have nowhere to go on the rail; a short rule keeps the
+  // grouping readable. The nav container hides the very first one.
+  if (collapsed) {
+    return (
+      <>
+        <div className="nav-divider mx-auto h-px w-6 shrink-0 bg-neutral-200 dark:bg-neutral-800" />
+        <div className="flex flex-col items-center gap-0.5">{children}</div>
+      </>
+    );
+  }
+
   return (
     <div>
       <div className="mb-1 px-2 text-xs font-medium tracking-wide text-neutral-500 dark:text-neutral-400">{label}</div>
@@ -95,9 +158,10 @@ export function NavGroup({ label, children }: { label: string; children: React.R
   );
 }
 
-export function navRowClass(active: boolean) {
+export function navRowClass(active: boolean, collapsed = false) {
   return cn(
-    "flex h-9 w-full cursor-pointer items-center gap-2 rounded-md px-2 text-[13px] transition-colors",
+    "flex h-9 cursor-pointer items-center rounded-md text-[13px] transition-colors",
+    collapsed ? "w-9 justify-center px-0" : "w-full gap-2 px-2",
     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-500/60",
     active
       ? "bg-neutral-150 text-neutral-900 dark:bg-neutral-800 dark:text-white"
@@ -125,20 +189,33 @@ export function NavItem({
   active?: boolean;
   target?: string;
 }) {
+  const collapsed = useSidebarCollapsed();
+
   return (
-    <Link href={href} target={target} className={navRowClass(active)}>
-      <Icon className={navIconClass(active)} />
-      <span className="truncate">{label}</span>
-    </Link>
+    <CollapsedTooltip label={label} collapsed={collapsed}>
+      <Link
+        href={href}
+        target={target}
+        aria-label={collapsed ? label : undefined}
+        className={navRowClass(active, collapsed)}
+      >
+        <Icon className={navIconClass(active)} />
+        {!collapsed && <span className="truncate">{label}</span>}
+      </Link>
+    </CollapsedTooltip>
   );
 }
 
 /** Same row, but for things that open a dialog instead of navigating. */
 export function NavActionRow({ label, icon: Icon }: { label: string; icon: LucideIcon }) {
+  const collapsed = useSidebarCollapsed();
+
   return (
-    <div className={navRowClass(false)}>
-      <Icon className={navIconClass(false)} />
-      <span className="truncate">{label}</span>
-    </div>
+    <CollapsedTooltip label={label} collapsed={collapsed}>
+      <div aria-label={collapsed ? label : undefined} className={navRowClass(false, collapsed)}>
+        <Icon className={navIconClass(false)} />
+        {!collapsed && <span className="truncate">{label}</span>}
+      </div>
+    </CollapsedTooltip>
   );
 }

@@ -14,9 +14,10 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { authClient } from "@/lib/auth";
 import { DEMO_HOSTNAME } from "@/lib/const";
 import { getCurrentSiteId } from "@/lib/siteRoute";
+import { useOrgSwitch } from "@/lib/orgSwitch";
 import { userStore } from "@/lib/userStore";
 import { cn, formatter } from "@/lib/utils";
-import { SwitcherLabel, SwitcherSkeleton, switcherRowClass } from "./parts";
+import { CollapsedTooltip, SwitcherLabel, SwitcherSkeleton, switcherRowClass, useSidebarCollapsed } from "./parts";
 
 // Show the search field once the list is long enough to scan slowly.
 const SEARCH_THRESHOLD = 10;
@@ -77,7 +78,7 @@ function SiteSkeletonRow() {
   );
 }
 
-function SiteListContent({ onSiteSelect }: { onSiteSelect: () => void }) {
+function SiteListContent({ onSiteSelect, side }: { onSiteSelect: () => void; side: "bottom" | "right" }) {
   const t = useExtracted();
   const { data: activeOrganization } = authClient.useActiveOrganization();
   const { data: sites } = useGetSitesFromOrg(activeOrganization?.id);
@@ -122,7 +123,7 @@ function SiteListContent({ onSiteSelect }: { onSiteSelect: () => void }) {
   const showSearch = (siteOptions?.length ?? 0) >= SEARCH_THRESHOLD;
 
   return (
-    <PopoverContent align="start" sideOffset={6} className="w-80 overflow-hidden p-0">
+    <PopoverContent side={side} align="start" sideOffset={6} className="w-80 overflow-hidden p-0">
       {isLoading ? (
         <div className="p-1">
           {Array.from({ length: 3 }).map((_, index) => (
@@ -195,7 +196,11 @@ function SiteListContent({ onSiteSelect }: { onSiteSelect: () => void }) {
 function SiteSwitcherInner() {
   const t = useExtracted();
   const pathname = usePathname();
-  const currentSiteId = getCurrentSiteId(pathname);
+  const collapsed = useSidebarCollapsed();
+  const switchingOrg = useOrgSwitch(state => state.switching);
+  // Mid-switch the URL still names the previous organization's site: treat it
+  // as no site at all so the row reads "Select a site" until "/" resolves.
+  const currentSiteId = switchingOrg ? null : getCurrentSiteId(pathname);
   const { data: site } = useGetSite(currentSiteId ?? undefined);
   const [open, setOpen] = useState(false);
   const embed = useEmbedablePage();
@@ -203,35 +208,39 @@ function SiteSwitcherInner() {
   // On a site route we know the id but not the name yet: hold the row's shape.
   if (currentSiteId !== null && !site) return <SwitcherSkeleton />;
 
+  const label = site?.name ?? t("Select a site");
+
   const trigger = site ? (
     <>
       <Favicon domain={site.domain} className="size-7 shrink-0 rounded-md" />
-      <SwitcherLabel primary={site.name} secondary={site.domain !== site.name ? site.domain : null} />
+      {!collapsed && <SwitcherLabel primary={site.name} secondary={site.domain !== site.name ? site.domain : null} />}
     </>
   ) : (
     <>
       <span className="flex size-7 shrink-0 items-center justify-center rounded-md bg-neutral-200 text-neutral-500 dark:bg-neutral-800 dark:text-neutral-400">
         <AppWindow className="size-4" />
       </span>
-      <span className="min-w-0 flex-1 truncate text-[13px] text-neutral-500 dark:text-neutral-400">
-        {t("Select a site")}
-      </span>
+      {!collapsed && (
+        <span className="min-w-0 flex-1 truncate text-[13px] text-neutral-500 dark:text-neutral-400">{label}</span>
+      )}
     </>
   );
 
   // Embedded dashboards show which site they are, but cannot switch away.
   if (embed) {
-    return <div className={cn(switcherRowClass, "pointer-events-none")}>{trigger}</div>;
+    return <div className={cn(switcherRowClass(collapsed), "pointer-events-none")}>{trigger}</div>;
   }
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger className={switcherRowClass} aria-label={t("Switch site")}>
-        {trigger}
-        <ChevronsUpDown className="size-4 shrink-0 text-neutral-400 dark:text-neutral-500" />
-      </PopoverTrigger>
+      <CollapsedTooltip label={label} collapsed={collapsed}>
+        <PopoverTrigger className={switcherRowClass(collapsed)} aria-label={t("Switch site")}>
+          {trigger}
+          {!collapsed && <ChevronsUpDown className="size-4 shrink-0 text-neutral-400 dark:text-neutral-500" />}
+        </PopoverTrigger>
+      </CollapsedTooltip>
       <Suspense fallback={null}>
-        <SiteListContent onSiteSelect={() => setOpen(false)} />
+        <SiteListContent onSiteSelect={() => setOpen(false)} side={collapsed ? "right" : "bottom"} />
       </Suspense>
     </Popover>
   );

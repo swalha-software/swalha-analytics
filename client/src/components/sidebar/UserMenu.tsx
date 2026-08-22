@@ -16,7 +16,15 @@ import {
 import { useSignout } from "@/hooks/useSignout";
 import { authClient } from "@/lib/auth";
 import { AUTH_ACCOUNT_URL, DEPLOYMENT, IS_CLOUD } from "@/lib/const";
-import { InitialsAvatar, SwitcherLabel, SwitcherSkeleton, switcherRowClass } from "./parts";
+import { cn } from "@/lib/utils";
+import {
+  CollapsedTooltip,
+  InitialsAvatar,
+  SwitcherLabel,
+  SwitcherSkeleton,
+  switcherRowClass,
+  useSidebarCollapsed,
+} from "./parts";
 
 function ThemeRow() {
   const { resolvedTheme, setTheme } = useTheme();
@@ -40,8 +48,17 @@ function ThemeRow() {
 }
 
 /** The footer owns its own border and padding so it can disappear cleanly. */
-function UserMenuFrame({ children }: { children: React.ReactNode }) {
-  return <div className="shrink-0 border-t border-neutral-150 p-3 dark:border-neutral-850">{children}</div>;
+function UserMenuFrame({ children, collapsed }: { children: React.ReactNode; collapsed?: boolean }) {
+  return (
+    <div
+      className={cn(
+        "shrink-0 border-t border-neutral-150 dark:border-neutral-850",
+        collapsed ? "flex justify-center p-2" : "p-3"
+      )}
+    >
+      {children}
+    </div>
+  );
 }
 
 export function UserMenu() {
@@ -51,11 +68,12 @@ export function UserMenu() {
   const { width } = useWindowSize();
   const { data: session, isPending } = authClient.useSession();
   const { isAdmin } = useAdminPermission();
+  const collapsed = useSidebarCollapsed();
 
   const user = session?.user;
   if (isPending && !user)
     return (
-      <UserMenuFrame>
+      <UserMenuFrame collapsed={collapsed}>
         <SwitcherSkeleton />
       </UserMenuFrame>
     );
@@ -64,14 +82,22 @@ export function UserMenu() {
 
   const showAdmin = (IS_CLOUD || !!DEPLOYMENT) && isAdmin;
 
+  const triggerLabel = user.name || user.email || t("Account");
+
   return (
-    <UserMenuFrame>
+    <UserMenuFrame collapsed={collapsed}>
       <DropdownMenu>
-        <DropdownMenuTrigger className={switcherRowClass} aria-label={user.name || user.email || t("Account")}>
-          <InitialsAvatar name={user.name} fallback={user.email} image={user.image} round />
-          <SwitcherLabel primary={user.name || user.email} secondary={user.name ? user.email : null} />
-          <ChevronsUpDown className="size-4 shrink-0 text-neutral-400 dark:text-neutral-500" />
-        </DropdownMenuTrigger>
+        <CollapsedTooltip label={triggerLabel} collapsed={collapsed}>
+          <DropdownMenuTrigger className={switcherRowClass(collapsed)} aria-label={triggerLabel}>
+            <InitialsAvatar name={user.name} fallback={user.email} image={user.image} round />
+            {!collapsed && (
+              <>
+                <SwitcherLabel primary={user.name || user.email} secondary={user.name ? user.email : null} />
+                <ChevronsUpDown className="size-4 shrink-0 text-neutral-400 dark:text-neutral-500" />
+              </>
+            )}
+          </DropdownMenuTrigger>
+        </CollapsedTooltip>
         <DropdownMenuContent
           side={width !== null && width < 768 ? "bottom" : "right"}
           align="end"

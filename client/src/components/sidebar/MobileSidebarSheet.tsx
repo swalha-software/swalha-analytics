@@ -24,7 +24,7 @@ export function MobileSidebarTrigger() {
         </SheetHeader>
       </VisuallyHidden>
       <SheetContent side="left" className="flex w-[260px] gap-0 p-0" showClose={false}>
-        <AppShellSidebar className="w-full border-e-0" />
+        <AppShellSidebar className="w-full border-e-0" forceExpanded />
       </SheetContent>
     </Sheet>
   );

@@ -1,5 +1,6 @@
 "use client";
 
+import { useQueryClient } from "@tanstack/react-query";
 import { Building2, Check, ChevronsUpDown, ExternalLink } from "lucide-react";
 import { useExtracted } from "next-intl";
 import { usePathname, useRouter } from "next/navigation";
@@ -14,14 +15,26 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { authClient } from "@/lib/auth";
 import { AUTH_ORGANIZATIONS_URL } from "@/lib/const";
-import { getCurrentSiteId } from "@/lib/siteRoute";
+import { useOrgSwitch } from "@/lib/orgSwitch";
+import { useStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
-import { InitialsAvatar, SwitcherLabel, SwitcherSkeleton, switcherRowClass } from "./parts";
+import {
+  CollapsedTooltip,
+  InitialsAvatar,
+  SwitcherLabel,
+  SwitcherSkeleton,
+  switcherRowClass,
+  useSidebarCollapsed,
+} from "./parts";
 
 export function OrgSwitcher() {
   const t = useExtracted();
   const router = useRouter();
   const pathname = usePathname();
+  const queryClient = useQueryClient();
+  const collapsed = useSidebarCollapsed();
+  const setSiteContext = useStore(state => state.setSiteContext);
+  const setSwitching = useOrgSwitch(state => state.setSwitching);
   const { data: organizations, isLoading } = useUserOrganizations();
   const { data: activeOrganization, isPending } = authClient.useActiveOrganization();
 
@@ -30,6 +43,12 @@ export function OrgSwitcher() {
   useEffect(() => {
     if (activeOrganization?.id) setSelectedOrgId(activeOrganization.id);
   }, [activeOrganization?.id]);
+
+  // The router landing on a new route ends the switch: from here on the URL and
+  // the active organization describe the same place again.
+  useEffect(() => {
+    setSwitching(false);
+  }, [pathname, setSwitching]);
 
   const activeId = selectedOrgId ?? activeOrganization?.id ?? null;
   const activeOrg = organizations?.find(org => org.id === activeId);
@@ -43,39 +62,54 @@ export function OrgSwitcher() {
     return t("Organization");
   };
 
-  const switchOrganization = (organizationId: string) => {
+  const switchOrganization = async (organizationId: string) => {
     if (organizationId === activeId) return;
+
     setSelectedOrgId(organizationId);
-    authClient.organization.setActive({ organizationId });
-    // The site in the URL belongs to the organization we just left.
-    if (getCurrentSiteId(pathname) !== null) router.push("/");
+    // Drop the old organization's site before anything can read it again.
+    setSwitching(true);
+    setSiteContext("", null);
+
+    // "/" picks a site for whichever organization is active, so the switch has
+    // to be committed before we navigate there.
+    await authClient.organization.setActive({ organizationId });
+    await queryClient.invalidateQueries({ queryKey: ["get-sites-from-org"] });
+    router.push("/");
   };
 
   if (!isLoading && organizations?.length === 0) {
     return (
-      <div className={cn(switcherRowClass, "pointer-events-none")}>
+      <div className={cn(switcherRowClass(collapsed), "pointer-events-none")}>
         <span className="flex size-7 shrink-0 items-center justify-center rounded-md bg-neutral-200 text-neutral-500 dark:bg-neutral-800 dark:text-neutral-400">
           <Building2 className="size-4" />
         </span>
-        <SwitcherLabel primary={t("No organizations")} secondary={t("Organization")} />
+        {!collapsed && <SwitcherLabel primary={t("No organizations")} secondary={t("Organization")} />}
       </div>
     );
   }
 
   if ((isLoading || isPending) && !activeName) return <SwitcherSkeleton />;
 
+  const triggerLabel = activeName ?? t("Select an organization");
+
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger className={switcherRowClass} aria-label={t("Switch organization")}>
-        <InitialsAvatar name={activeName} />
-        <SwitcherLabel primary={activeName ?? t("Select an organization")} secondary={roleLabel(activeOrg?.role)} />
-        <ChevronsUpDown className="size-4 shrink-0 text-neutral-400 dark:text-neutral-500" />
-      </DropdownMenuTrigger>
+      <CollapsedTooltip label={triggerLabel} collapsed={collapsed}>
+        <DropdownMenuTrigger className={switcherRowClass(collapsed)} aria-label={t("Switch organization")}>
+          <InitialsAvatar name={activeName} />
+          {!collapsed && (
+            <>
+              <SwitcherLabel primary={triggerLabel} secondary={roleLabel(activeOrg?.role)} />
+              <ChevronsUpDown className="size-4 shrink-0 text-neutral-400 dark:text-neutral-500" />
+            </>
+          )}
+        </DropdownMenuTrigger>
+      </CollapsedTooltip>
       <DropdownMenuContent
-        side="bottom"
+        side={collapsed ? "right" : "bottom"}
         align="start"
         sideOffset={6}
-        className="w-[var(--radix-dropdown-menu-trigger-width)] min-w-56"
+        className={cn("min-w-56", !collapsed && "w-[var(--radix-dropdown-menu-trigger-width)]")}
       >
         {organizations?.map(org => (
           <DropdownMenuItem key={org.id} onSelect={() => switchOrganization(org.id)} className="gap-2 py-1.5">

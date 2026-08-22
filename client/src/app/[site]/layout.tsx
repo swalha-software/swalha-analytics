@@ -2,9 +2,10 @@
 import { useWindowSize } from "@uidotdev/usehooks";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
+import { useGetSite } from "../../api/admin/hooks/useSites";
 import { authClient } from "../../lib/auth";
 import { rememberLastSiteId } from "../../lib/lastSite";
-import { getMainDashboardPath, getSiteRouteContext } from "../../lib/siteRoute";
+import { getCurrentSiteId, getMainDashboardPath, getSiteRouteContext } from "../../lib/siteRoute";
 import { useStore } from "../../lib/store";
 import { useSyncStateWithUrl } from "../../lib/urlParams";
 import { Footer } from "../components/Footer";
@@ -22,6 +23,8 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
   const { setSiteContext, site, privateKey } = useStore();
   const { embed, hideSidebar } = useEmbedPageOptions();
   const { data: activeOrganization } = authClient.useActiveOrganization();
+  // Same query key the site switcher uses, so this shares its cache entry.
+  const { data: currentSite } = useGetSite(getCurrentSiteId(pathname) ?? undefined);
 
   // Sync store state with URL parameters
   useSyncStateWithUrl();
@@ -38,9 +41,12 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
   useEffect(() => {
     const siteId = Number(getSiteRouteContext(pathname).siteId);
     if (!Number.isInteger(siteId)) return;
+    // Right after an organization switch the URL still points at the previous
+    // organization's site; recording it would poison the new one's memory.
+    if (!activeOrganization?.id || currentSite?.organizationId !== activeOrganization.id) return;
 
-    rememberLastSiteId(activeOrganization?.id, siteId);
-  }, [activeOrganization?.id, pathname]);
+    rememberLastSiteId(activeOrganization.id, siteId);
+  }, [activeOrganization?.id, currentSite?.organizationId, pathname]);
 
   useEffect(() => {
     if (!hideSidebar || isMainDashboardPath(pathname)) return;
