@@ -6,6 +6,7 @@ export { listOrganizationMembers } from "./listOrganizationMembers.js";
 // Account Settings
 export { unsubscribeMarketing, oneClickUnsubscribeMarketing } from "./unsubscribeMarketing.js";
 export { unsubscribeWeeklyReports } from "./unsubscribeWeeklyReports.js";
+export { ssoSignOut } from "./ssoSignOut.js";
 
 // API Keys
 export { createOrgApiKey } from "./createOrgApiKey.js";

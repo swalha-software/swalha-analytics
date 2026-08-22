@@ -36,7 +36,9 @@ export function AuthenticationGuard() {
       !isPublicSite &&
       !hasPrivateKey
     ) {
-      redirect("/login");
+      // Carry the deep link through the SSO round trip.
+      const next = `${pathname}${window.location.search}`;
+      redirect(next === "/" ? "/login" : `/login?next=${encodeURIComponent(next)}`);
     }
   }, [isPending, user, pathname, isCheckingPublic, isPublicSite, hasPrivateKey]);
 

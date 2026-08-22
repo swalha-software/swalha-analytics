@@ -12,6 +12,7 @@ export type Discovery = {
   issuer: string;
   token_endpoint: string;
   userinfo_endpoint: string;
+  end_session_endpoint: string;
   jwks_uri: string;
 };
 
@@ -64,6 +65,7 @@ export function setKeySetForTests(keySet: JWTVerifyGetKey | null, issuer?: strin
         issuer,
         token_endpoint: `${issuer}/api/auth/oauth2/token`,
         userinfo_endpoint: `${issuer}/api/auth/oauth2/userinfo`,
+        end_session_endpoint: `${issuer}/api/auth/oauth2/end-session`,
         jwks_uri: `${issuer}/api/auth/jwks`,
       })
     : null;

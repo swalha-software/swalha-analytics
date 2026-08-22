@@ -154,6 +154,7 @@ import {
   listOrganizationMembers,
   oneClickUnsubscribeMarketing,
   unsubscribeWeeklyReports,
+  ssoSignOut,
   unsubscribeMarketing,
 } from "./api/user/index.js";
 import { validateHttpTimeParams } from "./api/analytics/utils/query-validation.js";
@@ -475,6 +476,7 @@ async function userRoutes(fastify: FastifyInstance) {
   fastify.get("/version", getVersion); // Public - returns app version
   fastify.get("/user/organizations", authOrgRead, getUserOrganizations);
   fastify.post("/user/unsubscribe-marketing", authOnlyNoScopedKeys, unsubscribeMarketing);
+  fastify.post("/user/sso-sign-out", authOnlyNoScopedKeys, ssoSignOut); // Ends the SWALHA Auth session before local sign-out
   fastify.get("/user/unsubscribe-marketing-oneclick", oneClickUnsubscribeMarketing); // Public - for link clicks
   fastify.post("/user/unsubscribe-marketing-oneclick", oneClickUnsubscribeMarketing); // Public - for List-Unsubscribe header
   fastify.get("/user/unsubscribe-weekly-reports", unsubscribeWeeklyReports); // Public - link in the weekly report email
