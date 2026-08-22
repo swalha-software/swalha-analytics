@@ -102,7 +102,6 @@ import {
   gscCallback,
   selectGSCProperty,
 } from "./api/gsc/index.js";
-import { listTeams, updateTeamSites } from "./api/teams/index.js";
 import { handleOrganizationSyncWebhook } from "./api/orgSync/webhook.js";
 import { startOrgSyncReconcile } from "./lib/orgSync/reconcile.js";
 import {
@@ -252,7 +251,6 @@ const orgAnalyticsRead = orgMemberScoped("analytics", "read");
 const orgSqlRead = orgMemberScoped("sql", "read");
 const orgOrgRead = orgMemberScoped("org", "read");
 const orgAdminSitesWrite = orgAdminScoped("sites", "write");
-const orgAdminOrgWrite = orgAdminScoped("org", "write");
 
 // Scope-exempt / non-bearer chains. "deny-scoped" rejects scoped credentials
 // on surfaces with no taxonomy resource (account settings, billing).
@@ -464,12 +462,6 @@ async function organizationsRoutes(fastify: FastifyInstance) {
   fastify.get("/organizations/:organizationId/members", orgOrgRead, listOrganizationMembers);
 }
 
-async function teamsRoutes(fastify: FastifyInstance) {
-  // Teams
-  fastify.get("/organizations/:organizationId/teams", orgOrgRead, listTeams);
-  fastify.put("/organizations/:organizationId/teams/:teamId/sites", orgAdminOrgWrite, updateTeamSites);
-}
-
 // Organization sync webhook from SWALHA Auth. Own scope: JSON is kept as the
 // raw buffer so the signature can be verified over the exact bytes.
 async function orgSyncRoutes(fastify: FastifyInstance) {
@@ -533,7 +525,6 @@ async function apiRoutes(fastify: FastifyInstance) {
   await fastify.register(sessionReplayRoutes);
   await fastify.register(sitesRoutes);
   await fastify.register(organizationsRoutes);
-  await fastify.register(teamsRoutes);
   await fastify.register(orgSyncRoutes);
   await fastify.register(userRoutes);
   await fastify.register(gscRoutes);

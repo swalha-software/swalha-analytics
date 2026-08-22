@@ -334,7 +334,7 @@ describe("mcp endpoint", () => {
     const tools = await listTools(app);
     const names = tools.map(tool => tool.name);
 
-    expect(tools).toHaveLength(39);
+    expect(tools).toHaveLength(35);
     expect(names).toContain("list_sites");
     expect(names).toContain("get_overview");
     expect(names).toContain("get_breakdown");
@@ -372,7 +372,7 @@ describe("mcp endpoint", () => {
 
   it("legacy OAuth grants with only standard scopes stay unrestricted", async () => {
     const tools = await listTools(app, "Bearer oauth_valid_token");
-    expect(tools).toHaveLength(39);
+    expect(tools).toHaveLength(35);
   });
 
   it("partitions tools into reads, writes, and destructive deletes", async () => {
@@ -384,7 +384,7 @@ describe("mcp endpoint", () => {
       .filter(tool => tool.annotations?.destructiveHint)
       .map(tool => tool.name)
       .sort();
-    expect(destructive).toEqual(["delete_funnel", "delete_goal", "delete_site", "delete_team", "delete_user"]);
+    expect(destructive).toEqual(["delete_funnel", "delete_goal", "delete_site", "delete_user"]);
 
     const writes = tools
       .filter(tool => tool.annotations?.readOnlyHint === false)
@@ -395,18 +395,15 @@ describe("mcp endpoint", () => {
         "add_member",
         "create_goal",
         "create_site",
-        "create_team",
         "delete_funnel",
         "delete_goal",
         "delete_site",
-        "delete_team",
         "delete_user",
         "identify_user",
         "save_funnel",
         "update_goal",
         "update_member_site_access",
         "update_site_config",
-        "update_team",
         "update_user_traits",
       ].sort()
     );

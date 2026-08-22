@@ -1,29 +1,14 @@
 "use client";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { Team } from "@/api/admin/endpoints/teams";
 import { DateSelector } from "@/components/DateSelector/DateSelector";
-import { TeamSelector } from "@/components/TeamSelector";
 import { Button } from "@/components/ui/button";
 import { canGoForward, goBack, goForward, useStore } from "@/lib/store";
 
-export function RollupTopBar({
-  teams,
-  selectedTeamFilter,
-  onSelectedTeamFilterChange,
-}: {
-  teams: Team[];
-  selectedTeamFilter: string;
-  onSelectedTeamFilterChange: (value: string) => void;
-}) {
+export function RollupTopBar() {
   const { time, setTime } = useStore();
 
   return (
-    <div className="flex flex-wrap gap-2 justify-between items-center">
-      <TeamSelector
-        teams={teams}
-        value={selectedTeamFilter}
-        onValueChange={onSelectedTeamFilterChange}
-      />
+    <div className="flex flex-wrap gap-2 justify-end items-center">
       <div className="flex items-center gap-2">
         <DateSelector time={time} setTime={setTime} />
         <div className="flex items-center">

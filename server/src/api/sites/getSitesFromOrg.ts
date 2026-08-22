@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { FastifyRequest, FastifyReply } from "fastify";
 import { clickhouse } from "../../db/clickhouse/clickhouse.js";
 import { db } from "../../db/postgres/postgres.js";
-import { sites, organization, team, teamSiteAccess } from "../../db/postgres/schema.js";
+import { sites, organization } from "../../db/postgres/schema.js";
 import { DEFAULT_EVENT_LIMIT, IS_CLOUD, LITE_DASHBOARD } from "../../lib/const.js";
 import { getUserIdFromRequest } from "../../lib/auth-utils.js";
 import { filterSitesByMemberAccess, getOrgMembership } from "../../lib/access.js";
@@ -80,24 +80,6 @@ export async function getSitesFromOrg(
       eventLimit = subscription?.eventLimit || DEFAULT_EVENT_LIMIT;
     }
 
-    // Get team info for all sites in this org
-    const teamSiteMappings = await db
-      .select({
-        siteId: teamSiteAccess.siteId,
-        teamId: team.id,
-        teamName: team.name,
-      })
-      .from(teamSiteAccess)
-      .innerJoin(team, eq(teamSiteAccess.teamId, team.id))
-      .where(eq(team.organizationId, organizationId));
-
-    const siteTeamMap = new Map<number, { id: string; name: string }[]>();
-    for (const mapping of teamSiteMappings) {
-      const existing = siteTeamMap.get(mapping.siteId) || [];
-      existing.push({ id: mapping.teamId, name: mapping.teamName });
-      siteTeamMap.set(mapping.siteId, existing);
-    }
-
     // Enhance sites data with session counts and subscription info.
     // apiKey and privateLinkKey are secrets (ingestion auth / private-link
     // dashboard access) and must not be exposed to org members here — the
@@ -108,7 +90,6 @@ export async function getSitesFromOrg(
       domain: site.domain || "",
       sessionsLast24Hours: sessionCountMap.get(site.siteId) || 0,
       isOwner: memberRecord?.role !== "member",
-      teams: siteTeamMap.get(site.siteId) || [],
     }));
 
     // Sort by sessions descending

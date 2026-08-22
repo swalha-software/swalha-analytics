@@ -4,7 +4,6 @@ import { useExtracted } from "next-intl";
 import { ReactNode, useEffect, useMemo, useState } from "react";
 import { useUserOrganizations } from "@/api/admin/hooks/useOrganizations";
 import { useGetSitesFromOrg } from "@/api/admin/hooks/useSites";
-import { useTeams } from "@/api/admin/hooks/useTeams";
 import { AppShellSidebar } from "@/components/sidebar/AppShellSidebar";
 import { MobileSidebarTrigger } from "@/components/sidebar/MobileSidebarSheet";
 import { StandardPage } from "@/components/StandardPage";
@@ -43,51 +42,34 @@ export default function RollupPage() {
 
   const { data: activeOrganization } = authClient.useActiveOrganization();
   const { data: sitesData } = useGetSitesFromOrg(activeOrganization?.id);
-  const { data: teamsData } = useTeams(activeOrganization?.id);
   useUserOrganizations(); // ensure org list is loaded for header consistency
 
   const allSites = useMemo(() => sitesData?.sites ?? [], [sitesData]);
-  const teams = teamsData?.teams || [];
 
-  const [selectedTeamFilter, setSelectedTeamFilter] = useState<string>("all");
   const [selectedSiteIds, setSelectedSiteIds] = useState<number[] | null>(null);
 
-  const filteredSites = useMemo(() => {
-    return allSites.filter(site => {
-      if (selectedTeamFilter === "all") return true;
-      if (selectedTeamFilter === "unassigned") {
-        return !site.teams || site.teams.length === 0;
-      }
-      return site.teams?.some(team => team.id === selectedTeamFilter) || false;
-    });
-  }, [allSites, selectedTeamFilter]);
-
-  // Default selected sites = all filtered sites (until user picks explicitly).
-  // When the team filter narrows the list, prune the explicit selection too.
+  // Default selected sites = all sites (until user picks explicitly).
+  // Drop explicit selections for sites that are no longer available.
   useEffect(() => {
     if (selectedSiteIds === null) return;
-    const allowed = new Set(filteredSites.map(s => s.siteId));
+    const allowed = new Set(allSites.map(s => s.siteId));
     const pruned = selectedSiteIds.filter(id => allowed.has(id));
     if (pruned.length !== selectedSiteIds.length) {
       setSelectedSiteIds(pruned);
     }
-  }, [filteredSites, selectedSiteIds]);
+  }, [allSites, selectedSiteIds]);
 
-  const effectiveSiteIds = selectedSiteIds ?? filteredSites.map(s => s.siteId);
+  const effectiveSiteIds = selectedSiteIds ?? allSites.map(s => s.siteId);
 
-  // Color assignment is by position in filteredSites so no two sites in view
+  // Color assignment is by position in allSites so no two sites in view
   // collide as long as count <= palette size.
-  const siteColorMap = useMemo(() => buildSiteColorMap(filteredSites.map(s => s.siteId)), [filteredSites]);
+  const siteColorMap = useMemo(() => buildSiteColorMap(allSites.map(s => s.siteId)), [allSites]);
 
   const content = (
     <div className="p-2 md:p-4 max-w-[1100px] mx-auto space-y-3">
-      <RollupTopBar
-        teams={teams}
-        selectedTeamFilter={selectedTeamFilter}
-        onSelectedTeamFilterChange={setSelectedTeamFilter}
-      />
+      <RollupTopBar />
       <SiteToggleStrip
-        sites={filteredSites}
+        sites={allSites}
         selectedSiteIds={effectiveSiteIds}
         siteColorMap={siteColorMap}
         onSelectedSiteIdsChange={setSelectedSiteIds}
@@ -98,7 +80,7 @@ export default function RollupPage() {
         </Card>
       ) : LITE_DASHBOARD ? (
         <>
-          <MainSection siteIds={effectiveSiteIds} sites={filteredSites} siteColorMap={siteColorMap} lite />
+          <MainSection siteIds={effectiveSiteIds} sites={allSites} siteColorMap={siteColorMap} lite />
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 mt-3">
             <LazySection>
               <PagesLite siteIds={effectiveSiteIds} />
@@ -110,7 +92,7 @@ export default function RollupPage() {
         </>
       ) : (
         <>
-          <MainSection siteIds={effectiveSiteIds} sites={filteredSites} siteColorMap={siteColorMap} />
+          <MainSection siteIds={effectiveSiteIds} sites={allSites} siteColorMap={siteColorMap} />
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 mt-3">
             <LazySection>
               <Referrers siteIds={effectiveSiteIds} />

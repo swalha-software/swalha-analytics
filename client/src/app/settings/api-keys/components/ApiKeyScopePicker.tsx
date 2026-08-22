@@ -47,7 +47,7 @@ const SCOPE_DESCRIPTORS: { resource: ScopeResource; label: string; description: 
   { resource: "experiments", label: "Experiments", description: "A/B experiments and their results" },
   { resource: "sites", label: "Sites", description: "Site configuration; write covers create, update, and delete" },
   { resource: "gsc", label: "Search Console", description: "Google Search Console connection and data" },
-  { resource: "org", label: "Organization", description: "Members and teams; write covers management" },
+  { resource: "org", label: "Organization", description: "Members; write covers management" },
   { resource: "replay", label: "Session replay", description: "Recorded replays; write covers deletion" },
   { resource: "sql", label: "Custom SQL", description: "Read-only ClickHouse queries" },
   { resource: "ingest", label: "Event ingestion", description: "Trusted server-side event tracking" },

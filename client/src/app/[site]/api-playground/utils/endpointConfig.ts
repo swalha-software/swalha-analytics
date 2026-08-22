@@ -199,53 +199,6 @@ export const endpointCategories: EndpointCategory[] = [
     ],
   },
   {
-    name: "Teams",
-    endpoints: [
-      {
-        method: "GET",
-        path: "/organizations/:organizationId/teams",
-        name: "Get Teams",
-        description: "Returns the teams in an organization with members and sites",
-        hasCommonParams: false,
-        pathParams: ["organizationId"],
-      },
-      {
-        method: "POST",
-        path: "/organizations/:organizationId/teams",
-        name: "Create Team",
-        description: "Creates a team. Requires admin/owner role.",
-        hasCommonParams: false,
-        pathParams: ["organizationId"],
-        hasRequestBody: true,
-        requestBodyExample: {
-          name: "Marketing",
-          memberUserIds: [],
-          siteIds: [],
-        },
-      },
-      {
-        method: "PUT",
-        path: "/organizations/:organizationId/teams/:teamId",
-        name: "Update Team",
-        description: "Updates a team's name, members, or sites. Requires admin/owner role.",
-        hasCommonParams: false,
-        pathParams: ["organizationId", "teamId"],
-        hasRequestBody: true,
-        requestBodyExample: {
-          name: "Growth",
-        },
-      },
-      {
-        method: "DELETE",
-        path: "/organizations/:organizationId/teams/:teamId",
-        name: "Delete Team",
-        description: "Deletes a team. Requires admin/owner role.",
-        hasCommonParams: false,
-        pathParams: ["organizationId", "teamId"],
-      },
-    ],
-  },
-  {
     name: "Overview",
     endpoints: [
       {
@@ -953,7 +906,6 @@ export const parameterMetadata: Record<string, ParameterMetadata> = {
   goalId: { label: "Goal ID", type: "number", placeholder: "Goal ID" },
   goal_ids: { label: "Goal IDs", type: "text", placeholder: "e.g. 1,2" },
   funnelId: { label: "Funnel ID", type: "number", placeholder: "Funnel ID" },
-  teamId: { label: "Team ID", type: "text", placeholder: "team_abc123" },
   sessionId: { label: "Session ID", type: "text", placeholder: "Session ID" },
   stepNumber: { label: "Step Number", type: "number", placeholder: "Step number (1-indexed)" },
   siteId: { label: "Site ID", type: "number", placeholder: "Site ID" },

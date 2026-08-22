@@ -1,7 +1,7 @@
-import { and, eq, inArray } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { FastifyReply, FastifyRequest } from "fastify";
 import { db } from "../../db/postgres/postgres.js";
-import { member, memberSiteAccess, team, teamMember, user } from "../../db/postgres/schema.js";
+import { member, memberSiteAccess, user } from "../../db/postgres/schema.js";
 
 interface ListOrganizationMembersRequest {
   Params: {
@@ -34,45 +34,25 @@ export async function listOrganizationMembers(
       .leftJoin(user, eq(member.userId, user.id))
       .where(eq(member.organizationId, organizationId));
 
-    // Get site access and team memberships for all members
+    // Get site access for all members
     const memberIds = organizationMembers.map(m => m.id);
-    const memberUserIds = organizationMembers.map(m => m.userId);
-    const [siteAccessRecords, teamMemberships] = await Promise.all([
+    const siteAccessRecords =
       memberIds.length > 0
-        ? db
+        ? await db
             .select({
               memberId: memberSiteAccess.memberId,
               siteId: memberSiteAccess.siteId,
             })
             .from(memberSiteAccess)
             .where(inArray(memberSiteAccess.memberId, memberIds))
-        : Promise.resolve([]),
-      memberUserIds.length > 0
-        ? db
-            .select({
-              userId: teamMember.userId,
-              teamId: team.id,
-              teamName: team.name,
-            })
-            .from(teamMember)
-            .innerJoin(team, eq(teamMember.teamId, team.id))
-            .where(and(inArray(teamMember.userId, memberUserIds), eq(team.organizationId, organizationId)))
-        : Promise.resolve([]),
-    ]);
+        : [];
 
-    // Create maps for quick lookup
+    // Create a map for quick lookup
     const siteIdsMap = new Map<string, number[]>();
     for (const record of siteAccessRecords) {
       const existing = siteIdsMap.get(record.memberId) || [];
       existing.push(record.siteId);
       siteIdsMap.set(record.memberId, existing);
-    }
-
-    const teamsMap = new Map<string, { id: string; name: string }[]>();
-    for (const record of teamMemberships) {
-      const existing = teamsMap.get(record.userId) || [];
-      existing.push({ id: record.teamId, name: record.teamName });
-      teamsMap.set(record.userId, existing);
     }
 
     // Transform the results to the expected format
@@ -93,7 +73,6 @@ export async function listOrganizationMembers(
           hasRestrictedSiteAccess: m.hasRestrictedSiteAccess,
           siteIds: siteIdsMap.get(m.id) || [],
         },
-        teams: teamsMap.get(m.userId) || [],
       })),
     });
   } catch (error) {

@@ -1,6 +1,6 @@
 "use client";
 
-import { Activity, AlertCircle, CreditCard, Globe, KeyRound, Plug2, Users } from "lucide-react";
+import { Activity, AlertCircle, CreditCard, Globe, KeyRound, Plug2 } from "lucide-react";
 import { useExtracted } from "next-intl";
 import { usePathname } from "next/navigation";
 import { useUserOrganizations } from "@/api/admin/hooks/useOrganizations";
@@ -23,7 +23,6 @@ export function SettingsGroup() {
 
   return (
     <NavGroup label={t("Settings")}>
-      <NavItem label={t("Teams")} href="/settings/teams" icon={Users} active={pathname.startsWith("/settings/teams")} />
       <NavItem
         label={t("API keys")}
         href="/settings/api-keys"

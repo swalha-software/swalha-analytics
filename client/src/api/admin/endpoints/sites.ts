@@ -59,7 +59,6 @@ export type GetSitesFromOrgResponse = {
     sessionsLast24Hours: number;
     isOwner: boolean;
     tags?: string[] | null;
-    teams?: { id: string; name: string }[];
   }>;
   subscription: {
     monthlyEventCount: number;

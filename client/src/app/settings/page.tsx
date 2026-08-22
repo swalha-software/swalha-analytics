@@ -7,7 +7,7 @@ export default function SettingsPage() {
   const router = useRouter();
 
   useEffect(() => {
-    router.replace("/settings/teams");
+    router.replace("/settings/api-keys");
   }, [router]);
 
   return null;

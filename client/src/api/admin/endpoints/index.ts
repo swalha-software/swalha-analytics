@@ -93,16 +93,6 @@ export type { GetSiteImportsResponse, CreateSiteImportResponse } from "./import"
 export { getOrganizationMembers, getOrgApiUsage } from "./auth";
 export type { GetOrganizationMembersResponse, GetOrgApiUsageResponse } from "./auth";
 
-// Teams endpoints
-export { fetchTeams, updateTeamSites } from "./teams";
-export type {
-  Team,
-  TeamMember,
-  TeamSite,
-  ListTeamsResponse,
-  UpdateTeamInput,
-} from "./teams";
-
 // ClickHouse Stats endpoints
 export { getClickhouseStats, getClickhouseQueryLog } from "./clickhouseStats";
 export type {
