@@ -5,8 +5,8 @@ import { ReactNode, useEffect, useMemo, useState } from "react";
 import { useUserOrganizations } from "@/api/admin/hooks/useOrganizations";
 import { useGetSitesFromOrg } from "@/api/admin/hooks/useSites";
 import { useTeams } from "@/api/admin/hooks/useTeams";
-import { AppSidebar } from "@/components/AppSidebar";
-import { NavigationSidebar } from "@/components/sidebar/NavigationSidebar";
+import { AppShellSidebar } from "@/components/sidebar/AppShellSidebar";
+import { MobileSidebarTrigger } from "@/components/sidebar/MobileSidebarSheet";
 import { StandardPage } from "@/components/StandardPage";
 import { Card } from "@/components/ui/card";
 import { useInView } from "@/hooks/useInView";
@@ -23,13 +23,7 @@ import { Devices } from "./components/sections/Devices";
 import { PagesLite } from "./components/sections/PagesLite";
 import { Referrers } from "./components/sections/Referrers";
 
-function LazySection({
-  children,
-  height = "405px",
-}: {
-  children: ReactNode;
-  height?: string;
-}) {
+function LazySection({ children, height = "405px" }: { children: ReactNode; height?: string }) {
   const { ref, isInView } = useInView({
     persistVisibility: true,
     rootMargin: "100px 0px",
@@ -59,14 +53,12 @@ export default function RollupPage() {
   const [selectedSiteIds, setSelectedSiteIds] = useState<number[] | null>(null);
 
   const filteredSites = useMemo(() => {
-    return allSites.filter((site) => {
+    return allSites.filter(site => {
       if (selectedTeamFilter === "all") return true;
       if (selectedTeamFilter === "unassigned") {
         return !site.teams || site.teams.length === 0;
       }
-      return (
-        site.teams?.some((team) => team.id === selectedTeamFilter) || false
-      );
+      return site.teams?.some(team => team.id === selectedTeamFilter) || false;
     });
   }, [allSites, selectedTeamFilter]);
 
@@ -74,22 +66,18 @@ export default function RollupPage() {
   // When the team filter narrows the list, prune the explicit selection too.
   useEffect(() => {
     if (selectedSiteIds === null) return;
-    const allowed = new Set(filteredSites.map((s) => s.siteId));
-    const pruned = selectedSiteIds.filter((id) => allowed.has(id));
+    const allowed = new Set(filteredSites.map(s => s.siteId));
+    const pruned = selectedSiteIds.filter(id => allowed.has(id));
     if (pruned.length !== selectedSiteIds.length) {
       setSelectedSiteIds(pruned);
     }
   }, [filteredSites, selectedSiteIds]);
 
-  const effectiveSiteIds =
-    selectedSiteIds ?? filteredSites.map((s) => s.siteId);
+  const effectiveSiteIds = selectedSiteIds ?? filteredSites.map(s => s.siteId);
 
   // Color assignment is by position in filteredSites so no two sites in view
   // collide as long as count <= palette size.
-  const siteColorMap = useMemo(
-    () => buildSiteColorMap(filteredSites.map((s) => s.siteId)),
-    [filteredSites]
-  );
+  const siteColorMap = useMemo(() => buildSiteColorMap(filteredSites.map(s => s.siteId)), [filteredSites]);
 
   const content = (
     <div className="p-2 md:p-4 max-w-[1100px] mx-auto space-y-3">
@@ -110,12 +98,7 @@ export default function RollupPage() {
         </Card>
       ) : LITE_DASHBOARD ? (
         <>
-          <MainSection
-            siteIds={effectiveSiteIds}
-            sites={filteredSites}
-            siteColorMap={siteColorMap}
-            lite
-          />
+          <MainSection siteIds={effectiveSiteIds} sites={filteredSites} siteColorMap={siteColorMap} lite />
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 mt-3">
             <LazySection>
               <PagesLite siteIds={effectiveSiteIds} />
@@ -127,11 +110,7 @@ export default function RollupPage() {
         </>
       ) : (
         <>
-          <MainSection
-            siteIds={effectiveSiteIds}
-            sites={filteredSites}
-            siteColorMap={siteColorMap}
-          />
+          <MainSection siteIds={effectiveSiteIds} sites={filteredSites} siteColorMap={siteColorMap} />
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 mt-3">
             <LazySection>
               <Referrers siteIds={effectiveSiteIds} />
@@ -149,13 +128,19 @@ export default function RollupPage() {
   );
 
   if (!isDesktop) {
-    return <StandardPage>{content}</StandardPage>;
+    return (
+      <StandardPage>
+        <div className="mt-4">
+          <MobileSidebarTrigger />
+        </div>
+        {content}
+      </StandardPage>
+    );
   }
 
   return (
     <div className="flex h-full">
-      <AppSidebar />
-      <NavigationSidebar />
+      <AppShellSidebar />
       <StandardPage showSidebar={false}>{content}</StandardPage>
     </div>
   );

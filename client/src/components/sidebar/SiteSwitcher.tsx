@@ -1,19 +1,22 @@
-import { Check, ChevronDown, Plus } from "lucide-react";
+"use client";
+
+import { AppWindow, Check, ChevronsUpDown, Plus } from "lucide-react";
 import { useExtracted } from "next-intl";
 import { usePathname, useRouter } from "next/navigation";
-import { useState, Suspense } from "react";
-import { useGetSite, useGetSitesFromOrg } from "../../../../api/admin/hooks/useSites";
-import { Favicon } from "../../../../components/Favicon";
-import { Button } from "../../../../components/ui/button";
-import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from "../../../../components/ui/command";
-import { Popover, PopoverContent, PopoverTrigger } from "../../../../components/ui/popover";
-import { authClient } from "../../../../lib/auth";
-import { useStore } from "../../../../lib/store";
-import { userStore } from "../../../../lib/userStore";
-import { cn, formatter } from "../../../../lib/utils";
-import { AddSite } from "../../../components/AddSite";
-import { useEmbedablePage } from "../../utils";
-import { DEMO_HOSTNAME } from "../../../../lib/const";
+import { Suspense, useState } from "react";
+import { useGetSite, useGetSitesFromOrg } from "@/api/admin/hooks/useSites";
+import { AddSite } from "@/app/components/AddSite";
+import { useEmbedablePage } from "@/app/[site]/utils";
+import { Favicon } from "@/components/Favicon";
+import { Button } from "@/components/ui/button";
+import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { authClient } from "@/lib/auth";
+import { DEMO_HOSTNAME } from "@/lib/const";
+import { getCurrentSiteId } from "@/lib/siteRoute";
+import { userStore } from "@/lib/userStore";
+import { cn, formatter } from "@/lib/utils";
+import { SwitcherLabel, SwitcherSkeleton, switcherRowClass } from "./parts";
 
 // Show the search field once the list is long enough to scan slowly.
 const SEARCH_THRESHOLD = 10;
@@ -25,8 +28,7 @@ type SiteOption = {
   sessions?: number;
 };
 
-const rowClass =
-  "flex w-full items-center gap-3 rounded-md px-2 py-2 text-left transition-colors cursor-pointer";
+const rowClass = "flex w-full cursor-pointer items-center gap-3 rounded-md px-2 py-2 text-start transition-colors";
 
 function SiteRow({ site, isSelected }: { site: SiteOption; isSelected: boolean }) {
   const t = useExtracted();
@@ -37,7 +39,7 @@ function SiteRow({ site, isSelected }: { site: SiteOption; isSelected: boolean }
 
   return (
     <>
-      <Favicon domain={site.domain} className="w-5 h-5 rounded shrink-0" />
+      <Favicon domain={site.domain} className="h-5 w-5 shrink-0 rounded" />
       <div className="min-w-0 flex-1">
         <div className="flex items-center justify-between gap-2">
           <span className="truncate text-sm text-neutral-900 dark:text-white">{site.name}</span>
@@ -58,55 +60,53 @@ function SiteRow({ site, isSelected }: { site: SiteOption; isSelected: boolean }
           </div>
         )}
       </div>
-      {isSelected && <Check className="h-4 w-4 shrink-0 text-accent-500" />}
+      {isSelected && <Check className="h-4 w-4 shrink-0 text-accent-600 dark:text-accent-400" />}
     </>
   );
 }
 
 function SiteSkeletonRow() {
   return (
-    <div className="flex items-center gap-3 rounded-md px-2 py-2 animate-pulse">
-      <div className="w-5 h-5 bg-neutral-200 dark:bg-neutral-800 rounded shrink-0" />
+    <div className="flex animate-pulse items-center gap-3 rounded-md px-2 py-2">
+      <div className="h-5 w-5 shrink-0 rounded bg-neutral-200 dark:bg-neutral-800" />
       <div className="min-w-0 flex-1 space-y-1.5">
-        <div className="h-3.5 bg-neutral-200 dark:bg-neutral-800 rounded w-32" />
-        <div className="h-3 bg-neutral-200 dark:bg-neutral-800 rounded w-20" />
+        <div className="h-3.5 w-32 rounded bg-neutral-200 dark:bg-neutral-800" />
+        <div className="h-3 w-20 rounded bg-neutral-200 dark:bg-neutral-800" />
       </div>
     </div>
   );
 }
 
-function SiteSelectorContent({ onSiteSelect }: { onSiteSelect: () => void }) {
+function SiteListContent({ onSiteSelect }: { onSiteSelect: () => void }) {
   const t = useExtracted();
   const { data: activeOrganization } = authClient.useActiveOrganization();
   const { data: sites } = useGetSitesFromOrg(activeOrganization?.id);
-  const embed = useEmbedablePage();
 
   const pathname = usePathname();
   const router = useRouter();
-  const currentSiteId = Number(pathname.split("/")[1]);
+  const currentSiteId = getCurrentSiteId(pathname);
 
   const { user } = userStore();
 
-  if (embed) return null;
-
   const isDemo = typeof window !== "undefined" && globalThis.location.hostname === DEMO_HOSTNAME;
 
-  if (!isDemo && !user) {
-    return null;
-  }
+  if (!isDemo && !user) return null;
 
   const navigateToSite = (siteId: number) => {
-    if (siteId === currentSiteId) {
-      onSiteSelect(); // Close popover even if same site
+    onSiteSelect();
+    if (siteId === currentSiteId) return;
+
+    // Already inside a site route: keep the tab and query, swap the site id.
+    if (currentSiteId !== null) {
+      const pathSegments = pathname.split("/");
+      pathSegments[1] = siteId.toString();
+      const newPath = pathSegments.join("/");
+      const queryString = window.location.search;
+      router.push(queryString ? `${newPath}${queryString}` : newPath);
       return;
     }
-    const pathSegments = pathname.split("/");
-    pathSegments[1] = siteId.toString();
-    const newPath = pathSegments.join("/");
-    const queryString = window.location.search;
-    // Let the layout's useEffect sync the site from the new pathname
-    router.push(queryString ? `${newPath}${queryString}` : newPath);
-    onSiteSelect(); // Close popover immediately
+
+    router.push(`/${siteId}`);
   };
 
   const siteOptions: SiteOption[] | undefined = isDemo
@@ -122,12 +122,16 @@ function SiteSelectorContent({ onSiteSelect }: { onSiteSelect: () => void }) {
   const showSearch = (siteOptions?.length ?? 0) >= SEARCH_THRESHOLD;
 
   return (
-    <PopoverContent align="start" className="w-80 p-0 overflow-hidden">
+    <PopoverContent align="start" sideOffset={6} className="w-80 overflow-hidden p-0">
       {isLoading ? (
         <div className="p-1">
           {Array.from({ length: 3 }).map((_, index) => (
             <SiteSkeletonRow key={`skeleton-${index}`} />
           ))}
+        </div>
+      ) : siteOptions.length === 0 ? (
+        <div className="px-3 py-6 text-center text-sm text-neutral-500 dark:text-neutral-400">
+          {t("No sites found")}
         </div>
       ) : showSearch ? (
         <Command defaultValue={String(currentSiteId)} className="bg-transparent">
@@ -142,7 +146,7 @@ function SiteSelectorContent({ onSiteSelect }: { onSiteSelect: () => void }) {
                   value={String(site.siteId)}
                   keywords={[site.name, site.domain]}
                   onSelect={() => navigateToSite(site.siteId)}
-                  className={cn(rowClass, "py-2", isSelected && "bg-neutral-50 dark:bg-neutral-800/40")}
+                  className={cn(rowClass, isSelected && "bg-neutral-50 dark:bg-neutral-800/40")}
                 >
                   <SiteRow site={site} isSelected={isSelected} />
                 </CommandItem>
@@ -161,7 +165,7 @@ function SiteSelectorContent({ onSiteSelect }: { onSiteSelect: () => void }) {
                 onClick={() => navigateToSite(site.siteId)}
                 className={cn(
                   rowClass,
-                  "hover:bg-neutral-100 dark:hover:bg-neutral-800/50 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-neutral-300 dark:focus-visible:ring-neutral-700",
+                  "hover:bg-neutral-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-neutral-300 dark:hover:bg-neutral-800/50 dark:focus-visible:ring-neutral-700",
                   isSelected && "bg-neutral-50 dark:bg-neutral-800/40"
                 )}
               >
@@ -173,7 +177,7 @@ function SiteSelectorContent({ onSiteSelect }: { onSiteSelect: () => void }) {
       )}
 
       {!isDemo && (
-        <div className="border-t border-neutral-200 dark:border-neutral-800 p-1">
+        <div className="border-t border-neutral-200 p-1 dark:border-neutral-800">
           <AddSite
             trigger={
               <Button variant="ghost" className="w-full justify-start gap-2">
@@ -188,47 +192,55 @@ function SiteSelectorContent({ onSiteSelect }: { onSiteSelect: () => void }) {
   );
 }
 
-function SiteSelectorWrapper() {
-  const { site: currentSite } = useStore();
-  const { data: site } = useGetSite(currentSite);
+function SiteSwitcherInner() {
+  const t = useExtracted();
+  const pathname = usePathname();
+  const currentSiteId = getCurrentSiteId(pathname);
+  const { data: site } = useGetSite(currentSiteId ?? undefined);
   const [open, setOpen] = useState(false);
   const embed = useEmbedablePage();
 
+  // On a site route we know the id but not the name yet: hold the row's shape.
+  if (currentSiteId !== null && !site) return <SwitcherSkeleton />;
+
+  const trigger = site ? (
+    <>
+      <Favicon domain={site.domain} className="size-7 shrink-0 rounded-md" />
+      <SwitcherLabel primary={site.name} secondary={site.domain !== site.name ? site.domain : null} />
+    </>
+  ) : (
+    <>
+      <span className="flex size-7 shrink-0 items-center justify-center rounded-md bg-neutral-200 text-neutral-500 dark:bg-neutral-800 dark:text-neutral-400">
+        <AppWindow className="size-4" />
+      </span>
+      <span className="min-w-0 flex-1 truncate text-[13px] text-neutral-500 dark:text-neutral-400">
+        {t("Select a site")}
+      </span>
+    </>
+  );
+
+  // Embedded dashboards show which site they are, but cannot switch away.
+  if (embed) {
+    return <div className={cn(switcherRowClass, "pointer-events-none")}>{trigger}</div>;
+  }
+
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        {site ? (
-          <button className="flex gap-2 items-center border border-neutral-200 dark:border-neutral-800 rounded-lg py-1.5 px-3 justify-start cursor-pointer hover:bg-neutral-150 dark:hover:bg-neutral-800/50 data-[state=open]:bg-neutral-150 dark:data-[state=open]:bg-neutral-800/50 transition-colors h-[36px] w-full">
-            <Favicon domain={site.domain} className="w-5 h-5" />
-            <div className="text-neutral-900 dark:text-white truncate text-sm flex-1 text-left">{site.name}</div>
-            {!embed && (
-              <ChevronDown
-                className={cn(
-                  "w-4 h-4 text-neutral-600 dark:text-neutral-400 transition-transform duration-200",
-                  open && "rotate-180"
-                )}
-              />
-            )}
-          </button>
-        ) : (
-          <button className="flex gap-2 border border-neutral-200 dark:border-neutral-800 rounded-lg py-1.5 px-3 justify-start items-center h-[36px] w-full animate-pulse">
-            <div className="w-5 h-5 bg-neutral-200 dark:bg-neutral-800 rounded"></div>
-            <div className="h-4 bg-neutral-200 dark:bg-neutral-800 rounded w-24 flex-1"></div>
-            {!embed && <ChevronDown className="w-4 h-4 text-neutral-600 dark:text-neutral-400" />}
-          </button>
-        )}
+      <PopoverTrigger className={switcherRowClass} aria-label={t("Switch site")}>
+        {trigger}
+        <ChevronsUpDown className="size-4 shrink-0 text-neutral-400 dark:text-neutral-500" />
       </PopoverTrigger>
       <Suspense fallback={null}>
-        <SiteSelectorContent onSiteSelect={() => setOpen(false)} />
+        <SiteListContent onSiteSelect={() => setOpen(false)} />
       </Suspense>
     </Popover>
   );
 }
 
-export function SiteSelector() {
+export function SiteSwitcher() {
   return (
-    <Suspense fallback={null}>
-      <SiteSelectorWrapper />
+    <Suspense fallback={<SwitcherSkeleton />}>
+      <SiteSwitcherInner />
     </Suspense>
   );
 }

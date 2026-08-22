@@ -2,16 +2,14 @@
 
 import { useExtracted } from "next-intl";
 import { ManageInSwalhaAuthNotice } from "../../../components/ManageInSwalhaAuth";
-import { OrganizationSelector } from "../../../components/OrganizationSelector";
+import { OrgSwitcher } from "../../../components/sidebar/OrgSwitcher";
 import { authClient } from "../../../lib/auth";
 
 export default function OrganizationLayout({ children }: { children: React.ReactNode }) {
   const t = useExtracted();
   const { data: session } = authClient.useSession();
   const { data: activeOrg } = authClient.useActiveOrganization();
-  const currentMember = activeOrg?.members?.find(
-    (m) => m.userId === session?.user?.id
-  );
+  const currentMember = activeOrg?.members?.find(m => m.userId === session?.user?.id);
   const isMember = currentMember?.role === "member";
 
   return (
@@ -22,12 +20,14 @@ export default function OrganizationLayout({ children }: { children: React.React
           <p className="text-neutral-500 dark:text-neutral-400">{t("Manage your organization settings and members")}</p>
         </div>
 
-        <div className="flex items-center gap-2">
-          <OrganizationSelector />
+        <div className="w-full max-w-xs rounded-lg border border-neutral-150 p-1 dark:border-neutral-850">
+          <OrgSwitcher />
         </div>
 
         <ManageInSwalhaAuthNotice
-          description={t("Organizations, members, roles and invitations are managed in SWALHA Auth. Analytics shows a read-only copy and controls site access only.")}
+          description={t(
+            "Organizations, members, roles and invitations are managed in SWALHA Auth. Analytics shows a read-only copy and controls site access only."
+          )}
         />
 
         {isMember ? (

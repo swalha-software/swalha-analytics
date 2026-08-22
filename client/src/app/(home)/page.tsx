@@ -7,11 +7,11 @@ import { useEffect, useMemo, useState } from "react";
 import { useUserOrganizations } from "../../api/admin/hooks/useOrganizations";
 import { useGetSitesFromOrg } from "../../api/admin/hooks/useSites";
 import { useTeams } from "../../api/admin/hooks/useTeams";
-import { AppSidebar } from "../../components/AppSidebar";
 import { DateSelector } from "../../components/DateSelector/DateSelector";
 import { NoOrganization } from "../../components/NoOrganization";
-import { OrganizationSelector } from "../../components/OrganizationSelector";
-import { NavigationSidebar } from "../../components/sidebar/NavigationSidebar";
+import { OrgSwitcher } from "../../components/sidebar/OrgSwitcher";
+import { AppShellSidebar } from "../../components/sidebar/AppShellSidebar";
+import { MobileSidebarTrigger } from "../../components/sidebar/MobileSidebarSheet";
 import { StandardPage } from "../../components/StandardPage";
 import { TeamSelector } from "../../components/TeamSelector";
 import { Button } from "../../components/ui/button";
@@ -114,13 +114,7 @@ export default function Home() {
 
   const hasSites = shouldShowSites && sites?.sites && sites.sites.length > 0;
 
-  const teamSelector = (
-    <TeamSelector
-      teams={teams}
-      value={selectedTeamFilter}
-      onValueChange={setSelectedTeamFilter}
-    />
-  );
+  const teamSelector = <TeamSelector teams={teams} value={selectedTeamFilter} onValueChange={setSelectedTeamFilter} />;
 
   const dateControls = (
     <div className="flex items-center gap-2">
@@ -131,7 +125,7 @@ export default function Home() {
           size="icon"
           onClick={goBack}
           disabled={time.mode === "past-minutes"}
-          className="rounded-r-none h-8 w-8"
+          className="rounded-e-none h-8 w-8"
         >
           <ChevronLeft />
         </Button>
@@ -140,7 +134,7 @@ export default function Home() {
           size="icon"
           onClick={goForward}
           disabled={!isMounted || !canGoForward(time)}
-          className="rounded-l-none -ml-px h-8 w-8"
+          className="rounded-s-none -ms-px h-8 w-8"
         >
           <ChevronRight />
         </Button>
@@ -151,12 +145,12 @@ export default function Home() {
   const filterBar = hasSites ? (
     <div className="flex gap-2 mb-4">
       <div className="relative flex-1">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-500" />
+        <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-500" />
         <Input
           placeholder={t("Filter by name...")}
           value={nameFilter}
           onChange={e => setNameFilter(e.target.value)}
-          className="pl-9"
+          className="ps-9"
         />
       </div>
       {!isDesktop && teamSelector}
@@ -246,8 +240,11 @@ export default function Home() {
     return (
       <StandardPage>
         <div className="flex justify-between items-center my-4">
-          <div>
-            <OrganizationSelector />
+          <div className="flex min-w-0 items-center gap-2">
+            <MobileSidebarTrigger />
+            <div className="min-w-0 max-w-[180px] flex-1">
+              <OrgSwitcher />
+            </div>
           </div>
           {dateControls}
         </div>
@@ -258,8 +255,7 @@ export default function Home() {
 
   return (
     <div className="flex h-full">
-      <AppSidebar />
-      <NavigationSidebar />
+      <AppShellSidebar />
       <StandardPage showSidebar={false}>
         <div className="flex justify-between items-center my-4">
           <div>{teamSelector}</div>
