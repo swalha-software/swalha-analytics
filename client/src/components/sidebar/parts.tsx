@@ -36,7 +36,7 @@ export function InitialsAvatar({
       className={cn(
         "flex size-7 shrink-0 select-none items-center justify-center overflow-hidden text-[11px] font-semibold uppercase",
         round ? "rounded-full" : "rounded-md",
-        "bg-accent-500/15 text-accent-700 dark:text-accent-300",
+        "bg-neutral-200 text-neutral-700 ring-1 ring-neutral-300/60 dark:bg-neutral-800 dark:text-neutral-200 dark:ring-neutral-700/60",
         className
       )}
     >
