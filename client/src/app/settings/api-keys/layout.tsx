@@ -18,9 +18,8 @@ export default function ApiKeysLayout({ children }: { children: React.ReactNode 
     <div className="space-y-5">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">{t("API keys")}</h1>
-        <p className="text-neutral-500 dark:text-neutral-400 flex items-center gap-1">
+        <p className="text-neutral-500 dark:text-neutral-400">
           {t("Organization-owned keys for scripts and integrations.")}
-          <ExternalLink href="https://www.rybbit.com/docs/api">{t("Learn more")}</ExternalLink>
         </p>
       </div>
 

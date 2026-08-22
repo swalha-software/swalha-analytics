@@ -1,7 +1,7 @@
 "use client";
 
 import { useWindowSize } from "@uidotdev/usehooks";
-import { BookOpen, ChevronsUpDown, ExternalLink, HelpCircle, LogOut, Moon, ShieldUser, Sun, User } from "lucide-react";
+import { ChevronsUpDown, ExternalLink, LogOut, Moon, ShieldUser, Sun, User } from "lucide-react";
 import { useExtracted } from "next-intl";
 import { useTheme } from "next-themes";
 import { useRouter } from "next/navigation";
@@ -16,7 +16,6 @@ import {
 import { useSignout } from "@/hooks/useSignout";
 import { authClient } from "@/lib/auth";
 import { AUTH_ACCOUNT_URL, DEPLOYMENT, IS_CLOUD } from "@/lib/const";
-import { useStripeSubscription } from "@/lib/subscription/useStripeSubscription";
 import { InitialsAvatar, SwitcherLabel, SwitcherSkeleton, switcherRowClass } from "./parts";
 
 function ThemeRow() {
@@ -52,7 +51,6 @@ export function UserMenu() {
   const { width } = useWindowSize();
   const { data: session, isPending } = authClient.useSession();
   const { isAdmin } = useAdminPermission();
-  const { data: subscription } = useStripeSubscription();
 
   const user = session?.user;
   if (isPending && !user)
@@ -65,7 +63,6 @@ export function UserMenu() {
   if (!user) return null;
 
   const showAdmin = (IS_CLOUD || !!DEPLOYMENT) && isAdmin;
-  const showSupport = IS_CLOUD && (subscription?.status === "active" || subscription?.status === "trialing");
 
   return (
     <UserMenuFrame>
@@ -104,22 +101,6 @@ export function UserMenu() {
             </DropdownMenuItem>
           )}
           <DropdownMenuSeparator />
-          <DropdownMenuItem
-            className="text-[13px]"
-            onSelect={() => window.open("https://rybbit.com/docs", "_blank", "noopener,noreferrer")}
-          >
-            <BookOpen />
-            {t("Documentation")}
-          </DropdownMenuItem>
-          {showSupport && (
-            <DropdownMenuItem
-              className="text-[13px]"
-              onSelect={() => window.open("mailto:hello@rybbit.com", "_blank", "noopener,noreferrer")}
-            >
-              <HelpCircle />
-              {t("Email Support")}
-            </DropdownMenuItem>
-          )}
           <ThemeRow />
           <DropdownMenuSeparator />
           <DropdownMenuItem

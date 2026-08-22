@@ -9,9 +9,7 @@ export default function TeamsLayout({ children }: { children: React.ReactNode })
   const t = useExtracted();
   const { data: session } = authClient.useSession();
   const { data: activeOrg } = authClient.useActiveOrganization();
-  const currentMember = activeOrg?.members?.find(
-    (m) => m.userId === session?.user?.id
-  );
+  const currentMember = activeOrg?.members?.find(m => m.userId === session?.user?.id);
   const isMember = currentMember?.role === "member";
 
   return (
@@ -19,17 +17,16 @@ export default function TeamsLayout({ children }: { children: React.ReactNode })
       <div className="flex items-end justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">{t("Teams")}</h1>
-          <p className="text-neutral-500 dark:text-neutral-400 flex items-center gap-1">
+          <p className="text-neutral-500 dark:text-neutral-400">
             {t("Organize sites into teams to control which members can access them.")}
-            <ExternalLink href="https://www.rybbit.com/docs/teams">
-              {t("Learn more about teams")}
-            </ExternalLink>
           </p>
         </div>
       </div>
 
       <ManageInSwalhaAuthNotice
-        description={t("Teams and their members are managed in SWALHA Auth. Here you decide which sites each team can access.")}
+        description={t(
+          "Teams and their members are managed in SWALHA Auth. Here you decide which sites each team can access."
+        )}
       />
 
       {isMember ? (

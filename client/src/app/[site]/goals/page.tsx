@@ -197,10 +197,7 @@ export default function GoalsPage() {
             icon={<Target className="w-10 h-10" />}
             title={t("No goals found")}
             description={
-              <span>
-                {t("Create your first conversion goal to start tracking important user actions.")}{" "}
-                <ExternalLink href="https://rybbit.com/docs/goals">{t("Learn more")}</ExternalLink>
-              </span>
+              <span>{t("Create your first conversion goal to start tracking important user actions.")}</span>
             }
             action={<CreateGoalButton siteId={Number(site)} />}
           />
