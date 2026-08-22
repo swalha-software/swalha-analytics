@@ -37,7 +37,7 @@ function AppShellSidebarContent({ className }: { className?: string }) {
         >
           <SwalhaLogo width={24} height={24} />
           <span className="flex min-w-0 items-baseline gap-1.5 truncate">
-            <span className="text-sm font-semibold tracking-tight text-neutral-900 dark:text-white">SWALHA</span>
+            <span className="text-sm font-semibold tracking-tight text-neutral-900 dark:text-white">Swalha</span>
             <span className="truncate text-[13px] font-normal tracking-wide text-neutral-500 dark:text-neutral-400">
               Analytics
             </span>
