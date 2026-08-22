@@ -4,9 +4,10 @@ export const BACKEND_URL =
     : `${process.env.NEXT_PUBLIC_BACKEND_URL}/api`;
 export const STRIPE_PUBLISHABLE_KEY = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? "";
 
-
 // Organizations, members and teams are managed in SWALHA Auth; Analytics mirrors them.
 export const AUTH_ORGANIZATIONS_URL = "https://auth.swalha.com/account/organizations";
+// Profile, email and password live in SWALHA Auth too.
+export const AUTH_ACCOUNT_URL = "https://auth.swalha.com/account";
 
 export const IS_CLOUD = process.env.NEXT_PUBLIC_CLOUD === "true";
 export const DEPLOYMENT = process.env.NEXT_PUBLIC_DEPLOYMENT;

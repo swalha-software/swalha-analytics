@@ -107,11 +107,7 @@ export const sendEmailVerificationLink = async (email: string, verificationUrl: 
   await sendEmail(email, "Verify your Swalha Analytics email", html);
 };
 
-export const sendChangeEmailVerification = async (
-  currentEmail: string,
-  newEmail: string,
-  verificationUrl: string
-) => {
+export const sendChangeEmailVerification = async (currentEmail: string, newEmail: string, verificationUrl: string) => {
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 560px; margin: 0 auto; padding: 24px; color: #111;">
       <h2 style="margin: 0 0 16px;">Confirm your new email</h2>
@@ -193,6 +189,7 @@ export const sendWeeklyReportEmail = async (
 ) => {
   const html = await render(
     WeeklyReportEmail({
+      email,
       userName,
       organizationName,
       site,

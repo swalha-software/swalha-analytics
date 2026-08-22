@@ -160,9 +160,7 @@ beforeAll(async () => {
 });
 
 beforeEach(async () => {
-  await (sql as any).exec(
-    `TRUNCATE "member", "member_site_access", "team", "teamMember", "team_site_access", "sites"`
-  );
+  await (sql as any).exec(`TRUNCATE "member", "member_site_access", "team", "teamMember", "team_site_access", "sites"`);
 
   // Org with 13 sites:
   //   1-11 gated by team "bbc", 12 gated by team "other", 13 not team-gated
@@ -179,10 +177,12 @@ beforeEach(async () => {
     { id: "team_bbc", name: "BBC", organizationId: ORG, createdAt: NOW },
     { id: "team_other", name: "Other", organizationId: ORG, createdAt: NOW },
   ]);
-  await db.insert(teamSiteAccess).values([
-    ...Array.from({ length: 11 }, (_, i) => ({ teamId: "team_bbc", siteId: i + 1 })),
-    { teamId: "team_other", siteId: 12 },
-  ]);
+  await db
+    .insert(teamSiteAccess)
+    .values([
+      ...Array.from({ length: 11 }, (_, i) => ({ teamId: "team_bbc", siteId: i + 1 })),
+      { teamId: "team_other", siteId: 12 },
+    ]);
 
   // Peer: member role, on team BBC
   await db.insert(member).values({
@@ -425,7 +425,7 @@ describe("checkApiKey — scope carrying", () => {
       .values({ id: "m_scope", organizationId: "org_scope", userId: "user_scope", role: "member", createdAt: NOW });
   });
 
-  it("carries API key permissions as statements", async () => {
+  it("rejects personal keys, which are no longer issued", async () => {
     vi.mocked(auth.api.verifyApiKey).mockResolvedValue({
       valid: true,
       key: { referenceId: "user_scope", permissions: { goals: ["read"] } },
@@ -433,20 +433,8 @@ describe("checkApiKey — scope carrying", () => {
 
     const result = await checkApiKey(request(), { organizationId: "org_scope" });
 
-    expect(result.valid).toBe(true);
-    expect(result.role).toBe("member");
-    expect(result.statements).toEqual({ goals: ["read"] });
-  });
-
-  it("legacy keys (null permissions) carry null statements", async () => {
-    vi.mocked(auth.api.verifyApiKey).mockResolvedValue({
-      valid: true,
-      key: { referenceId: "user_scope", permissions: null },
-    } as any);
-
-    const result = await checkApiKey(request(), { organizationId: "org_scope" });
-
-    expect(result.valid).toBe(true);
+    expect(result.valid).toBe(false);
+    expect(result.role).toBeNull();
     expect(result.statements).toBeNull();
   });
 
@@ -505,7 +493,7 @@ describe("checkApiKey — scope carrying", () => {
     });
     vi.mocked(auth.api.verifyApiKey).mockResolvedValue({
       valid: true,
-      key: { referenceId: "user_scope", permissions: null },
+      key: { referenceId: "org_scope", permissions: null, configId: "org" },
     } as any);
     const req = {
       headers: { authorization: "Bearer rb_key", [INTERNAL_BEARER_HANDOFF_HEADER]: nonce },
@@ -599,7 +587,7 @@ describe("checkApiKey — organization-owned keys", () => {
     expect(await getUserIdFromRequest(request())).toBeNull();
   });
 
-  it("keys from the default configuration still resolve through user membership", async () => {
+  it("keys from the default configuration no longer authenticate", async () => {
     await db.delete(member).where(eq(member.organizationId, "org_a"));
     await db
       .insert(member)
@@ -609,12 +597,13 @@ describe("checkApiKey — organization-owned keys", () => {
       key: { referenceId: "user_default", permissions: null, configId: "default" },
     } as any);
 
+    // The row still verifies against the api-key table; membership is never
+    // consulted, so the key resolves to nobody.
     const result = await checkApiKey(request("rb_user_key"), { organizationId: "org_a" });
 
-    expect(result.valid).toBe(true);
-    expect(result.role).toBe("member");
-    expect(result.userId).toBe("user_default");
-    expect(result.organizationId).toBeUndefined();
+    expect(result.valid).toBe(false);
+    expect(result.role).toBeNull();
+    expect(await getUserIdFromRequest(request("rb_user_key"))).toBeNull();
   });
 });
 
@@ -662,4 +651,3 @@ describe("getSitesUserHasAccessTo — organization-owned keys", () => {
     ]);
   });
 });
-

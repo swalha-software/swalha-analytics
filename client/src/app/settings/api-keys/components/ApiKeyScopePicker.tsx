@@ -32,7 +32,11 @@ type ScopeResource = keyof typeof SCOPE_MATRIX;
 type ScopeAction = "read" | "write";
 
 const SCOPE_DESCRIPTORS: { resource: ScopeResource; label: string; description: string }[] = [
-  { resource: "analytics", label: "Analytics", description: "Traffic overview, metrics, retention, journeys, performance, and errors" },
+  {
+    resource: "analytics",
+    label: "Analytics",
+    description: "Traffic overview, metrics, retention, journeys, performance, and errors",
+  },
   { resource: "sessions", label: "Sessions", description: "Visitor sessions and their locations" },
   { resource: "events", label: "Events", description: "Raw events, custom event names, and properties" },
   { resource: "users", label: "Users", description: "Visitor profiles and traits; write covers identify and deletion" },

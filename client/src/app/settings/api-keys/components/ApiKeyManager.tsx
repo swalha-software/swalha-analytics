@@ -7,7 +7,6 @@ import { useExtracted } from "next-intl";
 import { useState } from "react";
 import { toast } from "@/components/ui/sonner";
 import { useCreateOrgApiKey, useDeleteOrgApiKey, useListOrgApiKeys } from "../../../../api/admin/hooks/useOrgApiKeys";
-import { useCreateApiKey, useDeleteApiKey, useListApiKeys } from "../../../../api/admin/hooks/useUserApiKeys";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -20,7 +19,7 @@ import {
 } from "../../../../components/ui/alert-dialog";
 import { Badge } from "../../../../components/ui/badge";
 import { Button } from "../../../../components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "../../../../components/ui/card";
+import { Card, CardContent } from "../../../../components/ui/card";
 import { Checkbox } from "../../../../components/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "../../../../components/ui/dialog";
 import { Input } from "../../../../components/ui/input";
@@ -62,10 +61,11 @@ function PermissionsBadge({ permissions }: { permissions: Record<string, string[
 }
 
 /**
- * Manages API keys for the current user, or — when `organizationId` is set —
- * organization-owned keys (org-wide access, survive member departures).
+ * Manages the active organization's API keys — the only kind Analytics issues.
+ * A key belongs to the organization, reaches all of its sites, and keeps
+ * working when members leave.
  */
-export function ApiKeyManager({ organizationId }: { organizationId?: string }) {
+export function ApiKeyManager({ organizationId }: { organizationId: string }) {
   const t = useExtracted();
   const [apiKeyName, setApiKeyName] = useState("");
   const [showApiKeyDialog, setShowApiKeyDialog] = useState(false);
@@ -76,29 +76,15 @@ export function ApiKeyManager({ organizationId }: { organizationId?: string }) {
   const [pendingDelete, setPendingDelete] = useState<{ id: string; name: string | null } | null>(null);
 
   const { data: subscription } = useStripeSubscription();
-  // Both hooks are called unconditionally (rules of hooks); the unused one is
-  // disabled via its enabled flag.
-  const userKeysQuery = useListApiKeys(!organizationId);
-  const orgKeysQuery = useListOrgApiKeys(organizationId);
-  const {
-    data: apiKeysData,
-    isLoading: isLoadingApiKeys,
-    isError,
-    error,
-    refetch,
-  } = organizationId ? orgKeysQuery : userKeysQuery;
+  const { data: apiKeysData, isLoading: isLoadingApiKeys, isError, error, refetch } = useListOrgApiKeys(organizationId);
 
   const planName = subscription?.planName || "free";
   const isFreePlan = planName === "free" || planName.includes("basic");
   const isPlanGated = IS_CLOUD && isFreePlan;
 
   const apiKeys = apiKeysData?.apiKeys;
-  const createUserApiKey = useCreateApiKey();
-  const deleteUserApiKey = useDeleteApiKey();
-  const createOrgApiKey = useCreateOrgApiKey(organizationId);
-  const deleteOrgApiKey = useDeleteOrgApiKey(organizationId);
-  const createApiKey = organizationId ? createOrgApiKey : createUserApiKey;
-  const deleteApiKey = organizationId ? deleteOrgApiKey : deleteUserApiKey;
+  const createApiKey = useCreateOrgApiKey(organizationId);
+  const deleteApiKey = useDeleteOrgApiKey(organizationId);
 
   const handleCreateApiKey = async () => {
     if (!apiKeyName.trim()) {
@@ -152,35 +138,14 @@ export function ApiKeyManager({ organizationId }: { organizationId?: string }) {
   return (
     <>
       <Card className="p-2">
-        <CardHeader>
-          <CardTitle className="text-xl">
-            {organizationId ? t("Organization API Keys") : t("Personal API Keys")}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
+        <CardContent className="space-y-6 pt-6">
           <div className="space-y-2">
             <h4 className="text-sm font-medium">{t("Create API Key")}</h4>
             <p className="text-xs text-neutral-500">
-              {organizationId
-                ? t(
-                    "An organization key is the organization's own credential: it can access all of this organization's sites and keeps working when members leave. Use it for production integrations."
-                  )
-                : t(
-                    "A personal key acts as you, with exactly your access — for personal scripts and connecting MCP clients."
-                  )}
+              {t(
+                "An organization key is the organization's own credential: it can access all of this organization's sites and keeps working when members leave. Use it for production integrations."
+              )}
             </p>
-            {!organizationId && (
-              <p className="text-xs text-neutral-500">
-                {t("Building a production integration?")}{" "}
-                <Link
-                  href="/settings/organization"
-                  className="font-medium text-neutral-900 underline underline-offset-2 hover:text-neutral-700 dark:text-neutral-100 dark:hover:text-neutral-300"
-                >
-                  {t("Use an organization API key instead")}
-                </Link>{" "}
-                {t("— it keeps working when team members change (admins and owners only).")}
-              </p>
-            )}
             {isPlanGated ? (
               <div className="rounded-lg bg-neutral-50 dark:bg-neutral-900 p-3 border border-neutral-100 dark:border-neutral-800">
                 <p className="text-xs text-neutral-600 dark:text-neutral-400">
@@ -231,7 +196,7 @@ export function ApiKeyManager({ organizationId }: { organizationId?: string }) {
                     </Label>
                     <p className="text-xs text-neutral-500">
                       {t(
-                        "Limit this key to specific resources. Leave off for a full-access key that can do everything you can."
+                        "Limit this key to specific resources. Leave off for a full-access key that can reach everything in this organization."
                       )}
                     </p>
                   </div>
@@ -243,9 +208,7 @@ export function ApiKeyManager({ organizationId }: { organizationId?: string }) {
           </div>
 
           <div className="space-y-2">
-            <h4 className="text-sm font-medium">
-              {organizationId ? t("This organization's API keys") : t("Your personal API keys")}
-            </h4>
+            <h4 className="text-sm font-medium">{t("This organization's API keys")}</h4>
             {isLoadingApiKeys ? (
               <div className="space-y-2" aria-hidden="true">
                 <Skeleton className="h-8 w-full" />
@@ -293,9 +256,7 @@ export function ApiKeyManager({ organizationId }: { organizationId?: string }) {
                           {DateTime.fromJSDate(new Date(key.createdAt)).toLocaleString(DateTime.DATE_MED)}
                         </TableCell>
                         <TableCell className="text-neutral-600 dark:text-neutral-400">
-                          {key.lastRequest
-                            ? DateTime.fromJSDate(new Date(key.lastRequest)).toRelative()
-                            : t("Never")}
+                          {key.lastRequest ? DateTime.fromJSDate(new Date(key.lastRequest)).toRelative() : t("Never")}
                         </TableCell>
                         <TableCell className="text-right">
                           <Button

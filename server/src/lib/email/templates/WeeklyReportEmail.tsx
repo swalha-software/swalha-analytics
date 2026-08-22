@@ -18,6 +18,7 @@ import { APP_URL } from "../../const.js";
 import type { SiteReport, MetricData } from "../../../services/weekyReports/weeklyReportTypes.js";
 
 interface WeeklyReportEmailProps {
+  email: string;
   userName: string;
   organizationName: string;
   site: SiteReport;
@@ -245,8 +246,7 @@ const TopListSection = ({ title, items, renderLabel, showFavicon, labelClassName
   );
 };
 
-export const WeeklyReportEmail = ({ userName, organizationName, site }: WeeklyReportEmailProps) => {
-
+export const WeeklyReportEmail = ({ email, userName, organizationName, site }: WeeklyReportEmailProps) => {
   return (
     <Html>
       <Head />
@@ -276,8 +276,7 @@ export const WeeklyReportEmail = ({ userName, organizationName, site }: WeeklyRe
             <Text className="text-darkText text-base leading-relaxed mb-4">Hi {userName},</Text>
 
             <Text className="text-darkText text-base leading-relaxed mb-8">
-              Here's your weekly analytics summary for{" "}
-              <span className="font-semibold">{site.siteDomain}</span>.
+              Here's your weekly analytics summary for <span className="font-semibold">{site.siteDomain}</span>.
             </Text>
 
             <Section className="mb-10">
@@ -315,10 +314,7 @@ export const WeeklyReportEmail = ({ userName, organizationName, site }: WeeklyRe
                       <MetricCard
                         label="Avg Duration"
                         currentValue={formatDuration(site.currentWeek.session_duration)}
-                        growth={calculateGrowth(
-                          site.currentWeek.session_duration,
-                          site.previousWeek.session_duration
-                        )}
+                        growth={calculateGrowth(site.currentWeek.session_duration, site.previousWeek.session_duration)}
                         isPositive={site.currentWeek.session_duration >= site.previousWeek.session_duration}
                       />
                     </td>
@@ -392,7 +388,10 @@ export const WeeklyReportEmail = ({ userName, organizationName, site }: WeeklyRe
             <Hr className="border-borderColor my-8" />
 
             <Text className="text-mutedText text-xs mb-2">
-              <Link href={`${APP_URL}/settings/account`} className="text-mutedText underline">
+              <Link
+                href={`${APP_URL}/api/user/unsubscribe-weekly-reports?email=${encodeURIComponent(email)}`}
+                className="text-mutedText underline"
+              >
                 Unsubscribe from weekly reports
               </Link>
             </Text>

@@ -43,18 +43,3 @@ export type GetOrgApiUsageResponse = {
 export function getOrgApiUsage(organizationId: string) {
   return authedFetch<GetOrgApiUsageResponse>(`/organizations/${organizationId}/api-usage`);
 }
-
-export function updateMemberSiteAccess(
-  organizationId: string,
-  memberId: string,
-  data: { hasRestrictedSiteAccess: boolean; siteIds: number[] }
-) {
-  return authedFetch(
-    `/organizations/${organizationId}/members/${memberId}/sites`,
-    undefined,
-    {
-      method: "PUT",
-      data,
-    }
-  );
-}

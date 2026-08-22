@@ -54,6 +54,8 @@ const ORG_MUTATION_PATHS = new Set([
 ]);
 const ORG_MANAGED_IN_AUTH_MESSAGE =
   "Organizations, members and teams are managed in SWALHA Auth: https://auth.swalha.com/account/organizations";
+const PERSONAL_API_KEYS_REMOVED_MESSAGE =
+  "Personal API keys are no longer supported. Create an organization API key instead (organization owners and admins).";
 
 // The organization plugin's default access control, extended with an `apiKey`
 // resource. The @better-auth/api-key plugin consults it (via hasPermission)
@@ -105,7 +107,12 @@ const pluginList = [
   }),
   apiKey([
     {
-      // User-owned keys. Pre-existing rows (NULL configId) resolve here.
+      // Kept only because the plugin requires a default configuration: every
+      // verify/list/delete call without an explicit configId resolves through
+      // it, and removing it makes those calls throw for org keys too. No key
+      // is ever minted here — hooks.before refuses non-org creation — and
+      // legacy rows that still carry this configId (or NULL) are rejected at
+      // authentication time in lib/bearerAuth.ts.
       configId: "default",
       rateLimit: apiKeyRateLimit,
     },
@@ -412,50 +419,46 @@ export const auth = betterAuth({
 
       // Gate API key creation on better-auth's own /api-key/create route. This
       // is the only choke point that covers direct client calls — the Fastify
-      // endpoints (createUserApiKey / createOrgApiKey) do richer plan checks
-      // before calling in server-side (no ctx.request), so they gate there.
+      // endpoint (createOrgApiKey) does richer plan checks before calling in
+      // server-side (no ctx.request), so it gates there.
       if (ctx.path === "/api-key/create" && ctx.request) {
         const body = (ctx.body ?? {}) as { configId?: string; organizationId?: string };
-        const isOrgKey = body.configId === ORG_API_KEY_CONFIG_ID;
-        const session = await getSessionFromCtx(ctx);
 
-        // The key's owner: the org for org keys, the session user otherwise.
-        const referenceId = isOrgKey ? body.organizationId : session?.user?.id;
+        // Personal API keys are gone: only organization-owned keys can be
+        // minted, and only through the org key configuration.
+        if (body.configId !== ORG_API_KEY_CONFIG_ID) {
+          throw new APIError("FORBIDDEN", { message: PERSONAL_API_KEYS_REMOVED_MESSAGE });
+        }
+
+        const session = await getSessionFromCtx(ctx);
+        const referenceId = body.organizationId;
         if (!referenceId) return; // the api-key plugin rejects these itself
+
+        const userId = session?.user?.id;
+        if (!userId) return;
 
         // Don't reveal an org's plan tier or key quota to non-members: skip
         // the gate and let the plugin's own membership/permission check
         // produce its canonical rejection.
-        if (isOrgKey) {
-          const userId = session?.user?.id;
-          if (!userId) return;
-          const membership = await db
-            .select({ id: member.id })
-            .from(member)
-            .where(and(eq(member.userId, userId), eq(member.organizationId, referenceId)))
-            .limit(1);
-          if (membership.length === 0) return;
+        const membership = await db
+          .select({ id: member.id })
+          .from(member)
+          .where(and(eq(member.userId, userId), eq(member.organizationId, referenceId)))
+          .limit(1);
+        if (membership.length === 0) return;
 
-          // createdBy must identify the session user who minted the key —
-          // never caller-supplied metadata. The Fastify endpoint sets it
-          // server-side; this covers direct /api-key/create calls. In-place
-          // mutation is effective: better-auth hands this same body object to
-          // the endpoint.
-          const orgKeyBody = ctx.body as { metadata?: Record<string, unknown> };
-          orgKeyBody.metadata = { ...orgKeyBody.metadata, createdBy: userId };
-        }
+        // createdBy must identify the session user who minted the key —
+        // never caller-supplied metadata. The Fastify endpoint sets it
+        // server-side; this covers direct /api-key/create calls. In-place
+        // mutation is effective: better-auth hands this same body object to
+        // the endpoint.
+        const orgKeyBody = ctx.body as { metadata?: Record<string, unknown> };
+        orgKeyBody.metadata = { ...orgKeyBody.metadata, createdBy: userId };
 
         let planName: string | null = null;
         if (IS_CLOUD) {
-          // Billing org: the owning org for org keys, the active org for user keys.
-          const billingOrgId = isOrgKey
-            ? body.organizationId
-            : ((session?.session as any)?.activeOrganizationId as string | undefined);
-          if (!billingOrgId) {
-            throw new APIError("BAD_REQUEST", { message: "No active organization" });
-          }
           const { getSubscriptionInner } = await import("../api/stripe/getSubscription.js");
-          const subscription = await getSubscriptionInner(billingOrgId);
+          const subscription = await getSubscriptionInner(referenceId);
           planName = subscription?.planName || "free";
           if (planName === "free" || planName.includes("basic")) {
             throw new APIError("FORBIDDEN", {
@@ -468,7 +471,7 @@ export const auth = betterAuth({
         // this hook returns, so no lock can span check-and-create here.
         // Concurrent direct calls can overshoot the cap slightly — it's an
         // advisory quota on the caller's own plan, not a security boundary.
-        // The Fastify endpoints (the documented path) enforce it atomically
+        // The Fastify endpoint (the documented path) enforces it atomically
         // via createApiKeyWithinLimit.
         const limit = apiKeyLimitForPlan(planName);
         const existing = await countApiKeysForReference(referenceId);

@@ -55,8 +55,8 @@ export function UsageCards() {
 
   if (!subscription) return null;
 
-  // Mirrors the server's gate in createApiKey: free and basic plans can't hold
-  // API keys, so a quota card would describe a budget they can't spend.
+  // Mirrors the server's gate in createOrgApiKey: free and basic plans can't
+  // hold API keys, so a quota card would describe a budget they can't spend.
   const planName = subscription.planName || "free";
   const hasApiAccess = planName !== "free" && !planName.includes("basic");
 
@@ -78,8 +78,8 @@ export function UsageCards() {
     },
   ];
 
-  // Organization-owned keys only — personal keys are budgeted per user, so
-  // their usage isn't part of this number.
+  // Organization-owned keys are the only kind Analytics issues, so this is the
+  // organization's whole API budget.
   if (hasApiAccess && apiUsage?.metered) {
     items.push({
       label: "Org API requests today",

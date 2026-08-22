@@ -24,9 +24,8 @@ export interface OrgApiUsageResponse {
 /**
  * Today's API request usage for an organization's own API keys.
  *
- * Covers organization-owned keys only. Personal keys are budgeted per user
- * (that is the bucket they are charged against), so their usage is not part of
- * this number.
+ * Organization-owned keys are the only kind that authenticate, so this is the
+ * organization's whole API budget.
  */
 export async function getOrgApiUsage(
   request: FastifyRequest<{ Params: { organizationId: string } }>,

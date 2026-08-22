@@ -47,10 +47,7 @@ export interface BearerResolverDeps {
    * limiter; when absent, no request is charged. Returning null means the
    * deployment is not metered (self-hosted), which is not a denial.
    */
-  consumeRateLimit?: (identity: {
-    userId?: string;
-    organizationId?: string;
-  }) => Promise<RateLimitDecision | null>;
+  consumeRateLimit?: (identity: { userId?: string; organizationId?: string }) => Promise<RateLimitDecision | null>;
 }
 
 export type BearerIdentityStatus = "valid" | "invalid" | "rate_limited" | "verify_error";
@@ -120,13 +117,15 @@ export async function resolveBearerIdentity(token: string, deps: BearerResolverD
   }
 
   if (verification?.valid && verification.key?.referenceId) {
-    const statements = statementsFromApiKeyPermissions(verification.key.permissions);
-    // referenceId is a user id or an organization id depending on which key
-    // configuration minted the key (legacy keys have a NULL configId = user).
+    // Only organization-owned keys authenticate. Personal keys are gone:
+    // rows minted by the old user-key configuration (configId "default", or
+    // NULL on pre-configId rows) still verify against the api-key table, so
+    // they are rejected here rather than resolving to their owner.
     if (verification.key.configId === ORG_API_KEY_CONFIG_ID) {
+      const statements = statementsFromApiKeyPermissions(verification.key.permissions);
       return applyRateLimit({ status: "valid", organizationId: verification.key.referenceId, statements }, deps);
     }
-    return applyRateLimit({ status: "valid", userId: verification.key.referenceId, statements }, deps);
+    return { status: "invalid", statements: null };
   }
 
   if (verification?.error?.code === "RATE_LIMITED") {

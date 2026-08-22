@@ -74,13 +74,6 @@ export type {
   UpdateExcludedQueryParamsRequest,
 } from "./exclusions";
 
-// Account Settings endpoints
-export { updateAccountSettings } from "./accountSettings";
-export type {
-  UpdateAccountSettingsRequest,
-  UpdateAccountSettingsResponse,
-} from "./accountSettings";
-
 // Private Link endpoints
 export {
   getPrivateLinkConfig,
