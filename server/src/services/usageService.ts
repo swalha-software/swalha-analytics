@@ -152,7 +152,7 @@ class UsageService {
   }
 
   /**
-   * Resolves an organization's best subscription (custom plan / override / Stripe / AppSumo / free).
+   * Resolves an organization's best subscription (custom plan / override / Stripe / free).
    */
   private async getOrganizationSubscriptionInfo(
     orgData: {
@@ -164,16 +164,12 @@ class UsageService {
     stripeSubscriptions: Map<string, Stripe.Subscription>
   ): Promise<SubscriptionInfo> {
     // Resolve this org's Stripe subscription from the bulk snapshot (no per-org Stripe call),
-    // then layer in custom plan / override / AppSumo via the same priority rules as elsewhere.
+    // then layer in custom plan / override via the same priority rules as elsewhere.
     const stripeSub = stripeSubscriptionInfoFromSnapshot(stripeSubscriptions, orgData.stripeCustomerId);
     const subscription = await getBestSubscriptionFromStripeSub(orgData.id, stripeSub);
 
     // Log subscription details
-    if (subscription.source === "appsumo") {
-      this.logger.info(
-        `Organization ${orgData.name} using AppSumo ${subscription.planName} with ${subscription.eventLimit} events/month`
-      );
-    } else if (subscription.source === "stripe") {
+    if (subscription.source === "stripe") {
       this.logger.info(
         `Organization ${orgData.name} using Stripe ${subscription.planName} (${subscription.interval}) with ${subscription.eventLimit} events/month`
       );

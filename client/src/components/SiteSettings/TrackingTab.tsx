@@ -92,14 +92,10 @@ export function TrackingTab({ siteMetadata, disabled = false }: TrackingTabProps
     !subscription?.planName.includes("custom") &&
     !subscription?.planName.includes("standard") &&
     !subscription?.planName.includes("pro") &&
-    !subscription?.planName.includes("appsumo") &&
     IS_CLOUD;
 
   const analyticsToggles: ToggleConfig[] = [
-    // Hide the replay toggle for AppSumo tiers without replays (1-3); tiers 4-7 include them
-    ...(!isMobileSite &&
-    !isSubscriptionLoading &&
-    (!subscription?.planName?.startsWith("appsumo") || planIncludesReplay(subscription))
+    ...(!isMobileSite && !isSubscriptionLoading
       ? [
           {
             id: "sessionReplay",

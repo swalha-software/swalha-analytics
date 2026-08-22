@@ -14,7 +14,6 @@ import { Building } from "lucide-react";
 import { useExtracted } from "next-intl";
 import { authClient } from "@/lib/auth";
 import { useEffect } from "react";
-import { AppSumoPlan } from "../../../components/subscription/AppSumoPlan";
 
 export default function OrganizationBillingPage() {
   useSetPageTitle("Organization Billing");
@@ -73,10 +72,6 @@ export default function OrganizationBillingPage() {
 
     if (activeSubscription.planName === "custom") {
       return <CustomPlan />;
-    }
-
-    if (activeSubscription.planName.startsWith("appsumo")) {
-      return <AppSumoPlan />;
     }
 
     if (activeSubscription.isOverride) {

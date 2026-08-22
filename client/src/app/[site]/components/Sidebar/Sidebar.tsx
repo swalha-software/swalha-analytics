@@ -34,7 +34,7 @@ import { useAppEnv } from "../../../../hooks/useIsProduction";
 
 function SidebarContent() {
   const t = useExtracted();
-  const { data: subscription, isLoading: isSubscriptionLoading } = useStripeSubscription();
+  const { isLoading: isSubscriptionLoading } = useStripeSubscription();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const { embed, hideSidebar } = useEmbedPageOptions();
@@ -132,17 +132,14 @@ function SidebarContent() {
         */}
         <SidebarComponents.SectionHeader>{t("Product Analytics")}</SidebarComponents.SectionHeader>
         <div className="hidden md:block">
-          {!isMobileSite &&
-            !subscription?.planName?.startsWith("appsumo") &&
-            !isSubscriptionLoading &&
-            appEnv !== "demo" && (
-              <SidebarComponents.Item
-                label={t("Replay")}
-                active={isActiveTab("replay")}
-                href={getTabPath("replay")}
-                icon={<Video className="w-4 h-4" />}
-              />
-            )}
+          {!isMobileSite && !isSubscriptionLoading && appEnv !== "demo" && (
+            <SidebarComponents.Item
+              label={t("Replay")}
+              active={isActiveTab("replay")}
+              href={getTabPath("replay")}
+              icon={<Video className="w-4 h-4" />}
+            />
+          )}
         </div>
         {/* {!privateKey && (
           <SidebarComponents.Item

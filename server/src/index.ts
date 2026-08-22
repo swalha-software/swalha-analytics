@@ -187,7 +187,6 @@ import { handleIdentify } from "./services/tracker/identifyService.js";
 import { trackEvent } from "./services/tracker/trackEvent.js";
 import { usageService } from "./services/usageService.js";
 import { weeklyReportService } from "./services/weekyReports/weeklyReportService.js";
-import { handleAppSumoWebhook, activateAppSumoLicense } from "./api/as/index.js";
 
 // Reject requests whose shared time query params are present but invalid.
 // Historically they were silently dropped, so endpoints ran over all time and
@@ -530,10 +529,6 @@ async function stripeAdminRoutes(fastify: FastifyInstance) {
     fastify.get("/stripe/invoices", authOnlyNoScopedKeys, getInvoices);
     fastify.post("/stripe/cancellation-feedback", authOnlyNoScopedKeys, submitCancellationFeedback);
     fastify.post("/stripe/webhook", { config: { rawBody: true } }, handleWebhook); // Public - Stripe webhook
-
-    // AppSumo Routes
-    fastify.post("/as/activate", authOnlyNoScopedKeys, activateAppSumoLicense);
-    fastify.post("/as/webhook", handleAppSumoWebhook); // Public - AppSumo webhook
   }
 }
 

@@ -1,29 +1,11 @@
-import { eq, sql } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { DateTime } from "luxon";
 import Stripe from "stripe";
 import { db } from "../db/postgres/postgres.js";
 import { organization } from "../db/postgres/schema.js";
-import {
-  APPSUMO_REPLAY_LIMITS,
-  APPSUMO_TIER_LIMITS,
-  DEFAULT_EVENT_LIMIT,
-  getStripePrices,
-  StripePlan,
-} from "./const.js";
+import { DEFAULT_EVENT_LIMIT, getStripePrices, StripePlan } from "./const.js";
 import { stripe } from "./stripe.js";
 import { logger } from "./logger/logger.js";
-
-export interface AppSumoSubscriptionInfo {
-  source: "appsumo";
-  tier: string;
-  eventLimit: number;
-  replayLimit: number;
-  periodStart: string;
-  planName: string;
-  status: "active";
-  interval: "lifetime";
-  cancelAtPeriodEnd: false;
-}
 
 export interface StripeSubscriptionInfo {
   source: "stripe";
@@ -73,7 +55,6 @@ export interface CustomPlanSubscriptionInfo {
 }
 
 export type SubscriptionInfo =
-  | AppSumoSubscriptionInfo
   | StripeSubscriptionInfo
   | FreeSubscriptionInfo
   | OverrideSubscriptionInfo
@@ -84,41 +65,6 @@ export type SubscriptionInfo =
  */
 function getStartOfMonth(): string {
   return DateTime.now().startOf("month").toISODate() as string;
-}
-
-/**
- * Gets AppSumo subscription info for an organization
- * @returns AppSumo subscription info or null if no active license found
- */
-export async function getAppSumoSubscription(organizationId: string): Promise<AppSumoSubscriptionInfo | null> {
-  try {
-    const appsumoLicense = await db.execute(
-      sql`SELECT tier, status FROM appsumo.licenses WHERE organization_id = ${organizationId} AND status = 'active' LIMIT 1`
-    );
-
-    if (Array.isArray(appsumoLicense) && appsumoLicense.length > 0) {
-      const license = appsumoLicense[0] as any;
-      const tier = license.tier as keyof typeof APPSUMO_TIER_LIMITS;
-      const eventLimit = APPSUMO_TIER_LIMITS[tier] || APPSUMO_TIER_LIMITS["1"];
-
-      return {
-        source: "appsumo",
-        tier,
-        eventLimit,
-        replayLimit: APPSUMO_REPLAY_LIMITS[tier] ?? 0,
-        periodStart: getStartOfMonth(),
-        planName: `appsumo-${tier}`,
-        status: "active",
-        interval: "lifetime",
-        cancelAtPeriodEnd: false,
-      };
-    }
-
-    return null;
-  } catch (error) {
-    console.error("Error checking AppSumo license:", error);
-    return null;
-  }
 }
 
 /**
@@ -136,24 +82,6 @@ export async function getOverrideSubscription(organizationId: string): Promise<O
     const org = orgResult[0];
     if (!org?.planOverride) {
       return null;
-    }
-
-    // Check if it's an AppSumo tier override (e.g., "appsumo-1" through "appsumo-7")
-    const appsumoMatch = org.planOverride.match(/^appsumo-([1-7])$/);
-    if (appsumoMatch) {
-      const tier = appsumoMatch[1] as keyof typeof APPSUMO_TIER_LIMITS;
-      const eventLimit = APPSUMO_TIER_LIMITS[tier];
-
-      return {
-        source: "override",
-        planName: org.planOverride,
-        eventLimit,
-        replayLimit: APPSUMO_REPLAY_LIMITS[tier] ?? 0,
-        periodStart: getStartOfMonth(),
-        status: "active",
-        interval: "lifetime",
-        cancelAtPeriodEnd: false,
-      };
     }
 
     // Look up plan details from the plan name (Stripe plans)
@@ -470,7 +398,7 @@ export async function getCustomPlanSubscription(organizationId: string): Promise
 
 /**
  * Gets the best subscription for an organization
- * Priority: CustomPlan > Override > AppSumo/Stripe (highest limit) > Free
+ * Priority: CustomPlan > Override > Stripe > Free
  * @returns The active subscription, or free tier if none found
  */
 export async function getBestSubscription(
@@ -490,18 +418,9 @@ export async function getBestSubscription(
     return overrideSub;
   }
 
-  // Get both subscription types
-  const [appsumoSub, stripeSub] = await Promise.all([
-    getAppSumoSubscription(organizationId),
-    getStripeSubscription(stripeCustomerId, { throwOnError: throwOnStripeError }),
-  ]);
-
+  const stripeSub = await getStripeSubscription(stripeCustomerId, { throwOnError: throwOnStripeError });
   if (stripeSub) {
     return stripeSub;
-  }
-
-  if (appsumoSub) {
-    return appsumoSub;
   }
 
   return freeSubscription();
@@ -511,7 +430,7 @@ export async function getBestSubscription(
  * Like getBestSubscription, but uses an already-resolved Stripe subscription (e.g. from a bulk
  * account snapshot) instead of making a per-customer Stripe call. Used by callers that resolve
  * many orgs at once (admin endpoints, the usage cron).
- * Priority: CustomPlan > Override > Stripe > AppSumo > Free.
+ * Priority: CustomPlan > Override > Stripe > Free.
  */
 export async function getBestSubscriptionFromStripeSub(
   organizationId: string,
@@ -531,23 +450,17 @@ export async function getBestSubscriptionFromStripeSub(
     return stripeSub;
   }
 
-  const appsumoSub = await getAppSumoSubscription(organizationId);
-  if (appsumoSub) {
-    return appsumoSub;
-  }
-
   return freeSubscription();
 }
 
 /**
  * Whether a subscription's plan includes session replay.
  *
- * Replays are a Pro feature (see pricing page / PRO_FEATURES), plus AppSumo tiers
- * with a nonzero replay limit (4-6). This mirrors the client-side gate in
- * EnableSessionReplay/TrackingTab, including the exclusion of large (>=500k event)
- * trials. For Stripe plans the `limits.replays` numbers in const.ts are a volume
- * quota, not an entitlement — basic/standard plans carry them but do not include
- * the feature.
+ * Replays are a Pro feature (see pricing page / PRO_FEATURES). This mirrors the
+ * client-side gate in EnableSessionReplay/TrackingTab, including the exclusion of
+ * large (>=500k event) trials. For Stripe plans the `limits.replays` numbers in
+ * const.ts are a volume quota, not an entitlement — basic/standard plans carry
+ * them but do not include the feature.
  */
 export function subscriptionIncludesReplay(subscription: SubscriptionInfo): boolean {
   switch (subscription.source) {
@@ -555,17 +468,12 @@ export function subscriptionIncludesReplay(subscription: SubscriptionInfo): bool
       // Bespoke enterprise plans include everything in Pro
       return true;
     case "override":
-      // AppSumo tier overrides carry the tier's replay entitlement;
-      // Stripe-plan overrides follow the same pro-only rule as real Stripe plans
-      return subscription.planName.startsWith("appsumo")
-        ? subscription.replayLimit > 0
-        : subscription.planName.includes("pro");
+      // Overrides name a Stripe plan, so they follow the same pro-only rule
+      return subscription.planName.includes("pro");
     case "stripe": {
       const isLargeTrial = subscription.status === "trialing" && subscription.eventLimit >= 500_000;
       return subscription.planName.includes("pro") && !isLargeTrial;
     }
-    case "appsumo":
-      return subscription.replayLimit > 0;
     case "free":
       return false;
   }
@@ -582,7 +490,6 @@ export function getReplayLimit(subscription: SubscriptionInfo): number {
       return Infinity;
     case "stripe":
     case "override":
-    case "appsumo":
       return subscription.replayLimit;
     case "free":
       return 0;

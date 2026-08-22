@@ -80,8 +80,7 @@ export function ShareExportButton() {
   };
 
   const isExporting = isExportingCsv || isExportingPdf;
-  const canExportPdf =
-    subscription?.planName !== "free" && !["appsumo-1", "appsumo-2"].includes(subscription?.planName ?? "");
+  const canExportPdf = subscription?.planName !== "free";
 
   return (
     <div className={canShare ? undefined : "hidden md:block"}>

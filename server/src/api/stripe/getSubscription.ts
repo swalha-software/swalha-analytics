@@ -6,8 +6,6 @@ import { db } from "../../db/postgres/postgres.js";
 import { organization } from "../../db/postgres/schema.js";
 import { getOrgMembership } from "../../lib/access.js";
 import {
-  APPSUMO_MEMBER_LIMITS,
-  APPSUMO_SITE_LIMITS,
   BASIC_MEMBER_LIMIT,
   BASIC_SITE_LIMIT,
   FREE_MEMBER_LIMIT,
@@ -59,16 +57,6 @@ export function computeLimits(
     return { memberLimit: BASIC_MEMBER_LIMIT, siteLimit: BASIC_SITE_LIMIT };
   }
 
-  // AppSumo tiers (e.g. "appsumo-1" through "appsumo-7")
-  const appsumoMatch = planName.match(/^appsumo-([1-7])$/);
-  if (appsumoMatch) {
-    const tier = appsumoMatch[1];
-    return {
-      memberLimit: APPSUMO_MEMBER_LIMITS[tier] ?? null,
-      siteLimit: APPSUMO_SITE_LIMITS[tier] ?? null,
-    };
-  }
-
   if (subscription.source === "override") {
     // Override with a known stripe plan name already handled above.
     // For unknown override plans, default to unlimited.
@@ -98,7 +86,7 @@ export async function getSubscriptionInner(organizationId: string) {
     return null;
   }
 
-  // Get the best subscription (highest event limit from AppSumo or Stripe)
+  // Get the best subscription (custom plan / override / Stripe / free)
   const subscription = await getBestSubscription(organizationId, org.stripeCustomerId);
   const includesReplay = subscriptionIncludesReplay(subscription);
 
@@ -135,22 +123,6 @@ export async function getSubscriptionInner(organizationId: string) {
       interval: subscription.interval,
       cancelAtPeriodEnd: subscription.cancelAtPeriodEnd,
       isOverride: true,
-      includesReplay,
-      ...limits,
-    };
-  }
-
-  if (subscription.source === "appsumo") {
-    return {
-      id: null,
-      planName: subscription.planName,
-      status: subscription.status,
-      currentPeriodEnd: getStartOfNextMonth(),
-      currentPeriodStart: getStartOfMonth(),
-      eventLimit: subscription.eventLimit,
-      monthlyEventCount: org.monthlyEventCount || 0,
-      interval: subscription.interval,
-      cancelAtPeriodEnd: subscription.cancelAtPeriodEnd,
       includesReplay,
       ...limits,
     };
