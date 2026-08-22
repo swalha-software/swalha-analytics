@@ -4,39 +4,32 @@ import { AuthError } from "@/components/auth/AuthError";
 import { CheckoutModal } from "@/components/subscription/components/CheckoutModal";
 import { Check } from "lucide-react";
 import { useExtracted } from "next-intl";
-import { useRouter } from "next/navigation";
 import { parseAsInteger, useQueryState } from "nuqs";
 import React, { Suspense, useState } from "react";
-import { addSite } from "../../api/admin/endpoints";
+import { NoOrganization } from "../../components/NoOrganization";
 import { SwalhaTextLogo } from "../../components/SwalhaLogo";
 
 import { useSetPageTitle } from "../../hooks/useSetPageTitle";
 import { authClient } from "../../lib/auth";
 import { BACKEND_URL, IS_CLOUD } from "../../lib/const";
 import { trackAdEvent } from "../../lib/trackAdEvent";
-import { userStore } from "../../lib/userStore";
-import { cn, isValidDomain, normalizeDomain } from "../../lib/utils";
+import { cn } from "../../lib/utils";
 import { EVENT_TIERS, findPriceForTier } from "../subscribe/components/utils";
 import { AccountStep } from "./components/AccountStep";
 import { PlanStep } from "./components/PlanStep";
-import { SetupStep } from "./components/SetupStep";
 
 function SignupPageContent() {
   useSetPageTitle("Signup");
   const t = useExtracted();
 
-  const maxStep = IS_CLOUD ? 3 : 2;
-  const [stepParam, setStepParam] = useQueryState("step", parseAsInteger);
-  const [currentStep, setCurrentStepRaw] = useState(stepParam && stepParam >= 1 && stepParam <= maxStep ? stepParam : 1);
+  // Organizations are created in SWALHA Auth, so signup is just the account
+  // step; cloud adds a plan step for the user's active (mirrored) organization.
+  const maxStep = IS_CLOUD ? 2 : 1;
+  const [stepParam] = useQueryState("step", parseAsInteger);
+  const currentStep = stepParam && stepParam >= 1 && stepParam <= maxStep ? stepParam : 1;
 
-  // Wrap setCurrentStep to also update the URL param
-  const setCurrentStep = (step: number) => {
-    setCurrentStepRaw(step);
-    setStepParam(step);
-  };
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string>("");
-  const router = useRouter();
 
   // Step 1 (account creation) is SSO-only — see AccountStep.
 
@@ -46,80 +39,14 @@ function SignupPageContent() {
   const [selectedPlan, setSelectedPlan] = useState<"standard" | "pro">("pro");
   const [checkoutClientSecret, setCheckoutClientSecret] = useState<string | null>(null);
 
-  // Setup: Organization + website
-  const [orgName, setOrgName] = useState("");
-  const [orgSlug, setOrgSlug] = useState("");
-  const [referralSource, setReferralSource] = useState("");
-  const [domain, setDomain] = useState("");
+  // The subscription belongs to the active organization, which is mirrored
+  // from SWALHA Auth — Analytics never creates one.
+  const { data: activeOrganization, isPending: isPendingActiveOrganization } = authClient.useActiveOrganization();
 
-  const handleOrgNameChange = (value: string) => {
-    setOrgName(value);
-    if (value) {
-      const generatedSlug = value
-        .toLowerCase()
-        .replace(/\s+/g, "-")
-        .replace(/[^a-z0-9-]/g, "");
-      setOrgSlug(generatedSlug);
-    }
-  };
-
-  // Step 2: Setup submission — create org + site, then advance (cloud) or redirect (self-hosted)
-  const [siteId, setSiteId] = useState<number | null>(null);
-  const [organizationId, setOrganizationId] = useState<string | null>(null);
-
-  const handleSetupSubmit = async () => {
-    setIsLoading(true);
-    setError("");
-
-    try {
-      if (!isValidDomain(domain)) {
-        setError(t("Invalid domain format. Must be a valid domain like example.com or sub.example.com"));
-        setIsLoading(false);
-        return;
-      }
-
-      // Create organization
-      const { data, error } = await authClient.organization.create({
-        name: orgName,
-        slug: orgSlug,
-      });
-
-      if (error) {
-        throw new Error(error.message || t("Failed to create organization"));
-      }
-
-      if (!data?.id) {
-        throw new Error(t("No organization ID returned"));
-      }
-
-      await authClient.organization.setActive({ organizationId: data.id });
-
-      if (IS_CLOUD && referralSource && userStore.getState().user?.id) {
-        window.rybbit?.identify(userStore.getState().user?.id || "", {
-          source: referralSource,
-        });
-      }
-
-      // Add website
-      const normalizedDomain = normalizeDomain(domain);
-      const response = await addSite(normalizedDomain, normalizedDomain, data.id);
-
-      if (IS_CLOUD) {
-        setSiteId(response.siteId);
-        setOrganizationId(data.id);
-        setCurrentStep(3);
-      } else {
-        router.push(`/${response.siteId}`);
-      }
-    } catch (error) {
-      setError(String(error));
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Step 3 (cloud): Create checkout session and open modal
+  // Step 2 (cloud): Create checkout session and open modal
   const handleSubscribe = async () => {
+    if (!activeOrganization?.id) return;
+
     setIsLoading(true);
     setError("");
 
@@ -139,7 +66,7 @@ function SignupPageContent() {
       }
 
       const baseUrl = window.location.origin;
-      const returnUrl = `${baseUrl}/${siteId}?session_id={CHECKOUT_SESSION_ID}`;
+      const returnUrl = `${baseUrl}/?session_id={CHECKOUT_SESSION_ID}`;
 
       const checkoutResponse = await fetch(`${BACKEND_URL}/stripe/create-checkout-session`, {
         method: "POST",
@@ -148,7 +75,7 @@ function SignupPageContent() {
         body: JSON.stringify({
           priceId: selectedTierPrice.priceId,
           returnUrl,
-          organizationId,
+          organizationId: activeOrganization.id,
           referral: (window as any).Rewardful?.referral || undefined,
         }),
       });
@@ -171,13 +98,9 @@ function SignupPageContent() {
   const steps = IS_CLOUD
     ? [
       { step: 1, label: t("Account") },
-      { step: 2, label: t("Add site") },
-      { step: 3, label: t("Pick plan") },
+      { step: 2, label: t("Pick plan") },
     ]
-    : [
-      { step: 1, label: t("Account") },
-      { step: 2, label: t("Add site") },
-    ];
+    : [{ step: 1, label: t("Account") }];
 
   const renderStepContent = () => {
     switch (currentStep) {
@@ -186,20 +109,20 @@ function SignupPageContent() {
           <AccountStep setError={setError} />
         );
       case 2:
-        return (
-          <SetupStep
-            domain={domain}
-            setDomain={setDomain}
-            orgName={orgName}
-            orgSlug={orgSlug}
-            handleOrgNameChange={handleOrgNameChange}
-            referralSource={referralSource}
-            setReferralSource={setReferralSource}
-            isLoading={isLoading}
-            onSubmit={handleSetupSubmit}
-          />
-        );
-      case 3:
+        if (isPendingActiveOrganization) {
+          return (
+            <div className="flex justify-center py-8">
+              <div className="animate-pulse">{t("Loading organization...")}</div>
+            </div>
+          );
+        }
+        if (!activeOrganization) {
+          return (
+            <NoOrganization
+              message={t("You're not a member of any organization yet — manage organizations in SWALHA Auth.")}
+            />
+          );
+        }
         return (
           <PlanStep
             eventLimitIndex={eventLimitIndex}
@@ -240,44 +163,46 @@ function SignupPageContent() {
           </div>
 
           {/* Horizontal step indicator */}
-          <div className="flex items-center w-full mb-8">
-            {steps.map(({ step, label }, index, arr) => (
-              <React.Fragment key={step}>
-                <div className="flex flex-col items-center gap-2">
-                  <div
-                    className={cn(
-                      "flex items-center justify-center w-8 h-8 rounded-full text-xs font-medium transition-all duration-300",
-                      currentStep === step
-                        ? "bg-accent-600 text-accent-950 shadow-lg shadow-accent-600/30"
-                        : currentStep > step
-                          ? "bg-accent-600 text-accent-950"
-                          : "bg-neutral-200 dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400"
-                    )}
-                  >
-                    {currentStep > step ? <Check className="h-4 w-4" /> : step}
+          {steps.length > 1 && (
+            <div className="flex items-center w-full mb-8">
+              {steps.map(({ step, label }, index, arr) => (
+                <React.Fragment key={step}>
+                  <div className="flex flex-col items-center gap-2">
+                    <div
+                      className={cn(
+                        "flex items-center justify-center w-8 h-8 rounded-full text-xs font-medium transition-all duration-300",
+                        currentStep === step
+                          ? "bg-accent-600 text-accent-950 shadow-lg shadow-accent-600/30"
+                          : currentStep > step
+                            ? "bg-accent-600 text-accent-950"
+                            : "bg-neutral-200 dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400"
+                      )}
+                    >
+                      {currentStep > step ? <Check className="h-4 w-4" /> : step}
+                    </div>
+                    <span
+                      className={cn(
+                        "text-xs font-medium transition-colors duration-300",
+                        currentStep >= step
+                          ? "text-neutral-900 dark:text-neutral-100"
+                          : "text-neutral-400 dark:text-neutral-500"
+                      )}
+                    >
+                      {label}
+                    </span>
                   </div>
-                  <span
-                    className={cn(
-                      "text-xs font-medium transition-colors duration-300",
-                      currentStep >= step
-                        ? "text-neutral-900 dark:text-neutral-100"
-                        : "text-neutral-400 dark:text-neutral-500"
-                    )}
-                  >
-                    {label}
-                  </span>
-                </div>
-                {index < arr.length - 1 && (
-                  <div
-                    className={cn(
-                      "flex-1 h-0.5 mx-3 mb-6 transition-all duration-300 rounded-full",
-                      currentStep > step ? "bg-accent-600" : "bg-neutral-200 dark:bg-neutral-800"
-                    )}
-                  />
-                )}
-              </React.Fragment>
-            ))}
-          </div>
+                  {index < arr.length - 1 && (
+                    <div
+                      className={cn(
+                        "flex-1 h-0.5 mx-3 mb-6 transition-all duration-300 rounded-full",
+                        currentStep > step ? "bg-accent-600" : "bg-neutral-200 dark:bg-neutral-800"
+                      )}
+                    />
+                  )}
+                </React.Fragment>
+              ))}
+            </div>
+          )}
 
           {/* Content area */}
           <div className="flex flex-col gap-4">

@@ -1,10 +1,8 @@
 "use client";
 
-import { Plus } from "lucide-react";
 import { useExtracted } from "next-intl";
-import { Button } from "../../../components/ui/button";
+import { ManageInSwalhaAuthNotice } from "../../../components/ManageInSwalhaAuth";
 import { authClient } from "../../../lib/auth";
-import { CreateEditTeamDialog } from "./components/CreateEditTeamDialog";
 import { ExternalLink } from "../../../components/ExternalLink";
 
 export default function TeamsLayout({ children }: { children: React.ReactNode }) {
@@ -28,17 +26,11 @@ export default function TeamsLayout({ children }: { children: React.ReactNode })
             </ExternalLink>
           </p>
         </div>
-        {activeOrg?.id && !isMember && (
-          <CreateEditTeamDialog
-            trigger={
-              <Button size="sm">
-                <Plus className="h-4 w-4 mr-1" />
-                {t("Create Team")}
-              </Button>
-            }
-          />
-        )}
       </div>
+
+      <ManageInSwalhaAuthNotice
+        description={t("Teams and their members are managed in SWALHA Auth. Here you decide which sites each team can access.")}
+      />
 
       {isMember ? (
         <div className="rounded-lg border border-neutral-200 dark:border-neutral-800 p-6 text-center text-neutral-500 dark:text-neutral-400">

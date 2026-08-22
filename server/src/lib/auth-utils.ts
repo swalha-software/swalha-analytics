@@ -1,14 +1,8 @@
 import { and, eq, inArray } from "drizzle-orm";
 import { FastifyRequest } from "fastify";
-import NodeCache from "node-cache";
 import { db } from "../db/postgres/postgres.js";
 import { member, sites, user } from "../db/postgres/schema.js";
-import {
-  getOrgMembership,
-  memberCanAccessSite,
-  resolveMemberSiteGrants,
-  restrictedMemberSiteIds,
-} from "./access.js";
+import { getOrgMembership, memberCanAccessSite, resolveMemberSiteGrants, restrictedMemberSiteIds } from "./access.js";
 import type { RateLimitDecision } from "./apiRateLimit.js";
 import { consumeRateLimitForIdentity } from "./apiRateLimitPolicy.js";
 import { auth } from "./auth.js";
@@ -22,6 +16,7 @@ import {
 } from "./bearerAuth.js";
 import { hasScope, type ScopeRequirement, type ScopeStatements } from "./scopes.js";
 import { siteConfig } from "./siteConfig.js";
+import { invalidateSitesAccessCache, sitesAccessCache } from "./sitesAccessCache.js";
 import { logger } from "./logger/logger.js";
 
 // The MCP gate injects fakes; the REST layer always uses better-auth.
@@ -119,12 +114,6 @@ export async function getIsUserAdmin(req: FastifyRequest) {
   return userRecord.length > 0 && userRecord[0].role === "admin";
 }
 
-const sitesAccessCache = new NodeCache({
-  stdTTL: 15,
-  checkperiod: 30,
-  useClones: false, // Don't clone objects for better performance with promises
-});
-
 // All sites of an organization, for org-owned API keys. Cached under an
 // "org:"-prefixed key (org and user ids never collide, the prefix is hygiene).
 async function getSitesForOrganization(organizationId: string) {
@@ -219,9 +208,7 @@ export async function getSitesUserHasAccessTo(req: FastifyRequest, adminOnly = f
       }
 
       const memberOrgIds = Array.from(memberRowByOrgId.keys());
-      const restrictedMembers = Array.from(memberRowByOrgId.values()).filter(
-        record => record.hasRestrictedSiteAccess
-      );
+      const restrictedMembers = Array.from(memberRowByOrgId.values()).filter(record => record.hasRestrictedSiteAccess);
       const restrictedOrgIds = restrictedMembers.map(record => record.organizationId);
 
       // A restricted membership reaches a closed set of sites, so its
@@ -293,11 +280,7 @@ export async function getSitesUserHasAccessTo(req: FastifyRequest, adminOnly = f
   return promise;
 }
 
-// Cache invalidation helper - call this when member site access changes
-export function invalidateSitesAccessCache(userId: string) {
-  sitesAccessCache.del(`${userId}:true`);
-  sitesAccessCache.del(`${userId}:false`);
-}
+export { invalidateSitesAccessCache };
 
 /**
  * Resolve the organization a request is targeting: an explicit organization

@@ -8,30 +8,52 @@ import dotenv from "dotenv";
 import { and, asc, eq, inArray } from "drizzle-orm";
 import pg from "pg";
 import { dash } from "@better-auth/infra";
-import { apiKey } from "@better-auth/api-key"
+import { apiKey } from "@better-auth/api-key";
 
 import { db } from "../db/postgres/postgres.js";
 import * as schema from "../db/postgres/schema.js";
-import { invitation, member, memberSiteAccess, sites, user } from "../db/postgres/schema.js";
-import { siteIdsInOrganization } from "./access.js";
+import { member, user } from "../db/postgres/schema.js";
 import { apiKeyLimitForPlan, countApiKeysForReference } from "./apiKeyLimits.js";
-import { invalidateSitesAccessCache } from "./auth-utils.js";
 import { ORG_API_KEY_CONFIG_ID } from "./bearerAuth.js";
 import { IS_CLOUD } from "./const.js";
 import {
   addContactToAudience,
   sendChangeEmailVerification,
   sendEmailVerificationLink,
-  sendInvitationEmail,
   sendWelcomeEmail,
 } from "./email/email.js";
 import { onboardingTipsService } from "../services/onboardingTips/onboardingTipsService.js";
 import { getTrustedCorsOrigins } from "./cors.js";
 import { createServiceLogger } from "./logger/logger.js";
+import { applyLoginOrganizations } from "./orgSync/loginClaim.js";
+import { getDiscovery } from "./orgSync/provider.js";
+import type { UserinfoOrganization } from "./orgSync/types.js";
 
 dotenv.config();
 
 const authLogger = createServiceLogger("better-auth");
+
+// better-auth organization endpoints that would change identity data. Auth
+// owns it; manage at https://auth.swalha.com/account/organizations.
+const ORG_MUTATION_PATHS = new Set([
+  "/organization/create",
+  "/organization/update",
+  "/organization/delete",
+  "/organization/invite-member",
+  "/organization/cancel-invitation",
+  "/organization/accept-invitation",
+  "/organization/reject-invitation",
+  "/organization/remove-member",
+  "/organization/update-member-role",
+  "/organization/leave",
+  "/organization/create-team",
+  "/organization/update-team",
+  "/organization/remove-team",
+  "/organization/add-team-member",
+  "/organization/remove-team-member",
+]);
+const ORG_MANAGED_IN_AUTH_MESSAGE =
+  "Organizations, members and teams are managed in SWALHA Auth: https://auth.swalha.com/account/organizations";
 
 // The organization plugin's default access control, extended with an `apiKey`
 // resource. The @better-auth/api-key plugin consults it (via hasPermission)
@@ -102,91 +124,14 @@ const pluginList = [
   ]),
   dash(),
   organization({
-    allowUserToCreateOrganization: true,
+    // Organizations are created, membered and deleted in SWALHA Auth and
+    // mirrored here (lib/orgSync); every local mutation is refused in hooks.before.
+    allowUserToCreateOrganization: false,
     creatorRole: "owner",
     ac: orgAccessControl,
     roles: orgRoles,
     teams: {
       enabled: true,
-    },
-    organizationHooks: {
-      beforeDeleteOrganization: async ({ organization: org }) => {
-        // apikey.referenceId has no FK (it holds user OR org ids), so
-        // org-owned keys are purged explicitly. Runs BEFORE the deletion and
-        // lets failures propagate: a failed purge aborts the deletion instead
-        // of leaving live credentials for a dead organization. If the purge
-        // succeeds but the deletion then fails, keys are gone while the org
-        // survives — the safe direction (admins can mint new ones).
-        await db
-          .delete(schema.apiKey)
-          .where(and(eq(schema.apiKey.referenceId, org.id), eq(schema.apiKey.configId, ORG_API_KEY_CONFIG_ID)));
-      },
-      beforeCreateInvitation: async ({ invitation: newInvitation }) => {
-        const invite = newInvitation as typeof newInvitation & {
-          hasRestrictedSiteAccess?: boolean;
-          siteIds?: number[];
-        };
-        const hasRestrictedSiteAccess = invite.hasRestrictedSiteAccess === true;
-
-        if (!hasRestrictedSiteAccess) {
-          return {
-            data: {
-              hasRestrictedSiteAccess: false,
-              siteIds: [],
-            },
-          };
-        }
-
-        if (invite.role !== "member") {
-          throw new APIError("BAD_REQUEST", {
-            message: "Site access restrictions can only be applied to member invitations",
-          });
-        }
-
-        const uniqueSiteIds = Array.from(new Set(invite.siteIds ?? []));
-        if (uniqueSiteIds.length === 0) {
-          throw new APIError("BAD_REQUEST", {
-            message: "At least one site is required when restricting invitation access",
-          });
-        }
-
-        const validSiteIds = new Set(await siteIdsInOrganization(uniqueSiteIds, invite.organizationId));
-        const invalidSiteIds = uniqueSiteIds.filter(siteId => !validSiteIds.has(siteId));
-
-        if (invalidSiteIds.length > 0) {
-          throw new APIError("BAD_REQUEST", {
-            message: `Sites do not belong to organization: ${invalidSiteIds.join(", ")}`,
-          });
-        }
-
-        return {
-          data: {
-            hasRestrictedSiteAccess: true,
-            siteIds: uniqueSiteIds,
-          },
-        };
-      },
-      afterRemoveMember: async ({ member: removedMember, user: removedUser, organization: org }) => {
-        // Clear any pending/accepted invitations for this user+org so a stale
-        // invite can't be re-accepted and recreate access after removal.
-        try {
-          await db
-            .delete(invitation)
-            .where(and(eq(invitation.email, removedUser.email), eq(invitation.organizationId, org.id)));
-        } catch (error) {
-          authLogger.error({ err: error, organizationId: org.id }, "Error deleting invitations for removed member");
-        }
-        invalidateSitesAccessCache(removedMember.userId);
-      },
-    },
-    sendInvitationEmail: async invitationData => {
-      const inviteLink = `${process.env.BASE_URL}/invitation?invitationId=${invitationData.invitation.id}&organization=${invitationData.organization.name}&inviterEmail=${invitationData.inviter.user.email}`;
-      await sendInvitationEmail(
-        invitationData.email,
-        invitationData.inviter.user.email,
-        invitationData.organization.name,
-        inviteLink
-      );
     },
     schema: {
       invitation: {
@@ -236,11 +181,11 @@ const pluginList = [
   // Add Cloudflare Turnstile captcha (cloud only)
   ...(IS_CLOUD && process.env.TURNSTILE_SECRET_KEY && process.env.NODE_ENV === "production"
     ? [
-      captcha({
-        provider: "cloudflare-turnstile",
-        secretKey: process.env.TURNSTILE_SECRET_KEY,
-      }),
-    ]
+        captcha({
+          provider: "cloudflare-turnstile",
+          secretKey: process.env.TURNSTILE_SECRET_KEY,
+        }),
+      ]
     : []),
   // Single sign-on against the central SWALHA identity provider
   // (auth.swalha.com). Plain OIDC over the genericOAuth client — analytics
@@ -249,24 +194,55 @@ const pluginList = [
   // so the consent screen is skipped.
   ...(process.env.SWALHA_SSO_CLIENT_ID && process.env.SWALHA_SSO_CLIENT_SECRET
     ? [
-      genericOAuth({
-        config: [
-          {
-            providerId: "swalha",
-            clientId: process.env.SWALHA_SSO_CLIENT_ID,
-            clientSecret: process.env.SWALHA_SSO_CLIENT_SECRET,
-            discoveryUrl:
-              process.env.SWALHA_SSO_DISCOVERY_URL ??
-              "https://auth.swalha.com/.well-known/openid-configuration",
-            scopes: ["openid", "email", "profile"],
-            pkce: true,
-            // auth.swalha.com is the gate — reaching this callback already
-            // means approved, so provision on first login.
-            disableSignUp: false,
-          },
-        ],
-      }),
-    ]
+        genericOAuth({
+          config: [
+            {
+              providerId: "swalha",
+              clientId: process.env.SWALHA_SSO_CLIENT_ID,
+              clientSecret: process.env.SWALHA_SSO_CLIENT_SECRET,
+              discoveryUrl:
+                process.env.SWALHA_SSO_DISCOVERY_URL ?? "https://auth.swalha.com/.well-known/openid-configuration",
+              scopes: ["openid", "email", "profile", "organizations"],
+              pkce: true,
+              // better-auth's default reads the id_token and skips userinfo, but
+              // the `organizations` claim is userinfo-only: fetch it ourselves
+              // and sync the user's memberships before they are signed in.
+              getUserInfo: async tokens => {
+                const { userinfo_endpoint } = await getDiscovery();
+                const res = await fetch(userinfo_endpoint, {
+                  headers: { authorization: `Bearer ${tokens.accessToken}` },
+                });
+                if (!res.ok) {
+                  authLogger.error({ status: res.status }, "SSO userinfo request failed");
+                  return null;
+                }
+                const profile = (await res.json()) as {
+                  sub: string;
+                  email?: string;
+                  email_verified?: boolean;
+                  name?: string;
+                  picture?: string;
+                  organizations?: UserinfoOrganization[];
+                };
+                if (!profile.sub || !profile.email) return null;
+                await applyLoginOrganizations(profile).catch(err =>
+                  authLogger.error({ err, sub: profile.sub }, "Login-time organization sync failed")
+                );
+                return {
+                  id: profile.sub,
+                  email: profile.email,
+                  emailVerified: profile.email_verified ?? false,
+                  name: profile.name ?? profile.email,
+                  image: profile.picture,
+                };
+              },
+              // auth.swalha.com is the gate — reaching this callback already
+              // means approved, so provision on first login.
+              disableSignUp: false,
+            },
+          ],
+        }),
+      ]
     : []),
 ];
 
@@ -294,14 +270,7 @@ export const auth = betterAuth({
     enabled: false,
   },
   emailVerification: {
-    sendVerificationEmail: async ({
-      user,
-      url,
-    }: {
-      user: { email: string };
-      url: string;
-      token: string;
-    }) => {
+    sendVerificationEmail: async ({ user, url }: { user: { email: string }; url: string; token: string }) => {
       await sendEmailVerificationLink(user.email, url);
     },
   },
@@ -434,7 +403,13 @@ export const auth = betterAuth({
     },
   },
   hooks: {
-    before: createAuthMiddleware(async (ctx) => {
+    before: createAuthMiddleware(async ctx => {
+      // Organizations, members, teams and invitations live in SWALHA Auth;
+      // this app only mirrors them (lib/orgSync). Refuse local mutations.
+      if (ORG_MUTATION_PATHS.has(ctx.path)) {
+        throw new APIError("FORBIDDEN", { message: ORG_MANAGED_IN_AUTH_MESSAGE });
+      }
+
       // Gate API key creation on better-auth's own /api-key/create route. This
       // is the only choke point that covers direct client calls — the Fastify
       // endpoints (createUserApiKey / createOrgApiKey) do richer plan checks
@@ -501,131 +476,6 @@ export const auth = betterAuth({
           throw new APIError("FORBIDDEN", {
             message: `You have reached the limit of ${limit} API keys. Delete an unused key or upgrade your plan.`,
           });
-        }
-      }
-
-      if (IS_CLOUD && ctx.path === "/organization/invite-member") {
-        const body = ctx.body as { organizationId?: string } | undefined;
-        const organizationId = body?.organizationId;
-
-        if (organizationId) {
-          // Lazy import to avoid circular dependency
-          const { getSubscriptionInner } = await import("../api/stripe/getSubscription.js");
-          const subscription = await getSubscriptionInner(organizationId);
-          const memberLimit = subscription?.memberLimit ?? null;
-
-          if (memberLimit !== null) {
-            const members = await db
-              .select({ id: member.id })
-              .from(member)
-              .where(eq(member.organizationId, organizationId));
-
-            if (members.length >= memberLimit) {
-              throw new APIError("FORBIDDEN", {
-                message: `You have reached the limit of ${memberLimit} member${memberLimit === 1 ? "" : "s"} for your plan. Please upgrade to add more.`,
-              });
-            }
-          }
-        }
-      }
-    }),
-    after: createAuthMiddleware(async ctx => {
-      // Handle invitation acceptance - copy site access from invitation to member
-      if (ctx.path === "/organization/accept-invitation") {
-        const body = ctx.body as { invitationId?: string } | null;
-        const invitationId = body?.invitationId;
-        if (!invitationId) return;
-
-        try {
-          const invitationRecord = await db
-            .select({
-              organizationId: invitation.organizationId,
-              email: invitation.email,
-              hasRestrictedSiteAccess: invitation.hasRestrictedSiteAccess,
-              siteIds: invitation.siteIds,
-            })
-            .from(invitation)
-            .where(eq(invitation.id, invitationId))
-            .limit(1);
-
-          if (invitationRecord.length === 0) return;
-          const { organizationId, email, hasRestrictedSiteAccess, siteIds } = invitationRecord[0];
-          if (!hasRestrictedSiteAccess) return;
-
-          const userRecord = await db.select({ id: user.id }).from(user).where(eq(user.email, email)).limit(1);
-          if (userRecord.length === 0) return;
-
-          const memberRecord = await db
-            .select({ id: member.id })
-            .from(member)
-            .where(and(eq(member.organizationId, organizationId), eq(member.userId, userRecord[0].id)))
-            .limit(1);
-          if (memberRecord.length === 0) return;
-          const memberId = memberRecord[0].id;
-
-          // Fail-safe ordering: flip the member to restricted BEFORE inserting the
-          // granted-site rows. If the insert step then fails, the member is left
-          // with hasRestrictedSiteAccess=true and zero rows in memberSiteAccess —
-          // i.e. locked out, which is safe. The previous transaction-based
-          // implementation would silently leave the member unrestricted (full
-          // org access) on any failure.
-          await db.update(member).set({ hasRestrictedSiteAccess: true }).where(eq(member.id, memberId));
-
-          // The ids were validated when the invitation was written, but a site
-          // can move organizations or be deleted while the invite sits pending
-          // (applySiteMove clears live grants for a moved site; it cannot reach
-          // into unaccepted invitations). Re-check against the organization as
-          // it stands now, so acceptance can only grant sites it still owns.
-          const invitedSiteIds = (siteIds || []) as number[];
-          const grantableSiteIds = await siteIdsInOrganization(invitedSiteIds, organizationId);
-
-          if (grantableSiteIds.length !== invitedSiteIds.length) {
-            authLogger.warn(
-              {
-                organizationId,
-                memberId,
-                droppedSiteIds: invitedSiteIds.filter(siteId => !grantableSiteIds.includes(siteId)),
-              },
-              "Invitation named sites the organization no longer owns; those grants were dropped"
-            );
-          }
-
-          if (grantableSiteIds.length > 0) {
-            await db.insert(memberSiteAccess).values(
-              grantableSiteIds.map(siteId => ({
-                memberId,
-                siteId,
-              }))
-            );
-          }
-
-          invalidateSitesAccessCache(userRecord[0].id);
-        } catch (error) {
-          authLogger.error({ err: error }, "Error applying invitation Site restrictions");
-        }
-      }
-
-      // Handle self-removal via /organization/leave. Better-auth does NOT call
-      // organizationHooks.afterRemoveMember for this path, so the cleanup
-      // (invitation purge + access-cache invalidation) has to live here.
-      if (ctx.path === "/organization/leave") {
-        try {
-          const session = (ctx.context as any).session;
-          const userId = session?.user?.id;
-          const userEmail = session?.user?.email;
-          const body = ctx.body as { organizationId?: string } | null;
-          const organizationId = body?.organizationId;
-
-          if (userId && organizationId) {
-            if (userEmail) {
-              await db
-                .delete(invitation)
-                .where(and(eq(invitation.email, userEmail), eq(invitation.organizationId, organizationId)));
-            }
-            invalidateSitesAccessCache(userId);
-          }
-        } catch (error) {
-          authLogger.error({ err: error }, "Error cleaning up after organization leave");
         }
       }
     }),

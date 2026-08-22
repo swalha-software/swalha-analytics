@@ -1,27 +1,16 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { AdminUser } from "@/types/admin";
-import { Check, ChevronsUpDown, MoreVertical, User, UserMinus, UserPlus } from "lucide-react";
+import { MoreVertical, User } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import {
   ColumnDef,
   flexRender,
@@ -41,13 +30,6 @@ import { TableShell } from "../shared/Panel";
 import { Pagination } from "@/components/pagination";
 import { useDateTimeFormat } from "../../../../hooks/useDateTimeFormat";
 import { parseUtcTimestamp } from "../../../../lib/dateTimeUtils";
-import { AddToOrganizationDialog } from "./AddToOrganizationDialog";
-import { useRemoveUserFromOrganization } from "@/api/admin/hooks/useOrganizations";
-import { useAdminOrganizations } from "@/api/admin/hooks/useAdminOrganizations";
-import { toast } from "@/components/ui/sonner";
-import { Label } from "@/components/ui/label";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { CopyText } from "../../../../components/CopyText";
 import { cn } from "@/lib/utils";
 import { useExtracted } from "next-intl";
@@ -81,33 +63,9 @@ export function UsersTable({
   onImpersonate,
   hasActiveFilters = false,
 }: UsersTableProps) {
-  const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
-  const [showAddToOrgDialog, setShowAddToOrgDialog] = useState(false);
-  const [showRemoveConfirmDialog, setShowRemoveConfirmDialog] = useState(false);
-  const [selectedOrganizationId, setSelectedOrganizationId] = useState<string>("");
-  const [removeOrgComboboxOpen, setRemoveOrgComboboxOpen] = useState(false);
-
-  const { data: organizations } = useAdminOrganizations();
-  const removeUserFromOrganization = useRemoveUserFromOrganization();
   const t = useExtracted();
   const { formatRelative } = useDateTimeFormat();
 
-  const handleRemoveFromOrganization = async () => {
-    if (!selectedUser || !selectedOrganizationId) return;
-
-    try {
-      await removeUserFromOrganization.mutateAsync({
-        memberIdOrEmail: selectedUser.email,
-        organizationId: selectedOrganizationId,
-      });
-      toast.success(t("User removed from organization successfully"));
-      setShowRemoveConfirmDialog(false);
-      setSelectedUser(null);
-      setSelectedOrganizationId("");
-    } catch (error: any) {
-      toast.error(error.message || t("Failed to remove user from organization"));
-    }
-  };
 
   // Define columns for the table
   const columns = useMemo<ColumnDef<AdminUser>[]>(
@@ -176,26 +134,6 @@ export function UsersTable({
                 >
                   <User className="h-4 w-4" />
                   {t("Impersonate")}
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => {
-                    setSelectedUser(row.original);
-                    setShowAddToOrgDialog(true);
-                  }}
-                >
-                  <UserPlus className="h-4 w-4" />
-                  {t("Add to Organization")}
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  onClick={() => {
-                    setSelectedUser(row.original);
-                    setShowRemoveConfirmDialog(true);
-                  }}
-                  className="text-orange-500 focus:text-orange-600"
-                >
-                  <UserMinus className="h-4 w-4" />
-                  {t("Remove from Organization")}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -279,97 +217,6 @@ export function UsersTable({
         />
       </div>
 
-      {/* Add to Organization Dialog */}
-      {selectedUser && (
-        <AddToOrganizationDialog
-          userEmail={selectedUser.email}
-          userId={selectedUser.id}
-          open={showAddToOrgDialog}
-          onOpenChange={setShowAddToOrgDialog}
-        />
-      )}
-
-      {/* Remove from Organization Confirmation */}
-      <AlertDialog open={showRemoveConfirmDialog} onOpenChange={setShowRemoveConfirmDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{t("Remove user from organization?")}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {t(
-                "Select the organization to remove {email} from. They will lose access to all resources in that organization.",
-                { email: selectedUser?.email ?? "" }
-              )}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <div className="py-4">
-            <Label htmlFor="remove-org">{t("Organization")}</Label>
-            <Popover open={removeOrgComboboxOpen} onOpenChange={setRemoveOrgComboboxOpen}>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  role="combobox"
-                  aria-expanded={removeOrgComboboxOpen}
-                  className="w-full justify-between mt-2"
-                >
-                  {selectedOrganizationId
-                    ? organizations?.find(org => org.id === selectedOrganizationId)?.name
-                    : t("Select an organization...")}
-                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-full p-0" align="start">
-                <Command
-                  filter={(value, search) => {
-                    if (value.toLowerCase().includes(search.toLowerCase())) return 1;
-                    return 0;
-                  }}
-                >
-                  <CommandInput placeholder={t("Search organizations...")} />
-                  <CommandList>
-                    <CommandEmpty>{t("No organization found.")}</CommandEmpty>
-                    <CommandGroup>
-                      {organizations?.map(org => (
-                        <CommandItem
-                          key={org.id}
-                          value={`${org.name} ${org.id}`}
-                          onSelect={() => {
-                            setSelectedOrganizationId(org.id);
-                            setRemoveOrgComboboxOpen(false);
-                          }}
-                        >
-                          <Check
-                            className={cn(
-                              "mr-2 h-4 w-4",
-                              selectedOrganizationId === org.id ? "opacity-100" : "opacity-0"
-                            )}
-                          />
-                          {org.name}
-                        </CommandItem>
-                      ))}
-                    </CommandGroup>
-                  </CommandList>
-                </Command>
-              </PopoverContent>
-            </Popover>
-          </div>
-          <AlertDialogFooter>
-            <AlertDialogCancel
-              onClick={() => {
-                setSelectedOrganizationId("");
-              }}
-            >
-              {t("Cancel")}
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleRemoveFromOrganization}
-              className="bg-orange-500 hover:bg-orange-600"
-              disabled={!selectedOrganizationId}
-            >
-              {t("Remove from Organization")}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }

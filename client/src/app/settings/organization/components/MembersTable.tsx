@@ -17,28 +17,21 @@ import {
   TableHeader,
   TableRow,
 } from "../../../../components/ui/table";
-import { IS_CLOUD } from "../../../../lib/const";
 import { getTimezone } from "../../../../lib/store";
-import { CreateUserDialog } from "./CreateUserDialog";
 import { EditMemberDialog } from "./EditMemberDialog";
-import { InviteMemberDialog } from "./InviteMemberDialog";
 
 type MemberData = GetOrganizationMembersResponse["data"][0];
 
 interface MembersTableProps {
-  org: { id: string; name: string; slug: string; createdAt: Date };
   members: GetOrganizationMembersResponse | undefined;
   membersLoading: boolean;
-  isOwner: boolean;
   isAdmin: boolean;
   onRefresh: () => void;
 }
 
 export function MembersTable({
-  org,
   members,
   membersLoading,
-  isOwner,
   isAdmin,
   onRefresh,
 }: MembersTableProps) {
@@ -49,25 +42,7 @@ export function MembersTable({
     <>
       <Card className="w-full">
         <CardHeader className="pb-2">
-          <div className="flex items-center justify-between flex-wrap gap-2">
-            <CardTitle className="text-xl">{t("Members")}</CardTitle>
-
-            <div className="flex items-center gap-2">
-              {isOwner && (
-                <>
-                  {IS_CLOUD ? (
-                    <InviteMemberDialog
-                      organizationId={org.id}
-                      onSuccess={onRefresh}
-                      memberCount={members?.data?.length || 0}
-                    />
-                  ) : (
-                    <CreateUserDialog organizationId={org.id} onSuccess={onRefresh} />
-                  )}
-                </>
-              )}
-            </div>
-          </div>
+          <CardTitle className="text-xl">{t("Members")}</CardTitle>
         </CardHeader>
         <CardContent>
           <Table>
@@ -155,10 +130,11 @@ export function MembersTable({
                       </TableCell>
                       {isAdmin && (
                         <TableCell className="text-right">
-                          {(isOwner || member.role !== "owner") && (
+                          {member.role === "member" && (
                             <Button
                               size="smIcon"
                               variant="ghost"
+                              title={t("Edit site access")}
                               onClick={() => setSelectedMember(member)}
                             >
                               <Pencil className="h-4 w-4" />
@@ -190,7 +166,6 @@ export function MembersTable({
         open={!!selectedMember}
         onClose={() => setSelectedMember(null)}
         onSuccess={onRefresh}
-        isOwner={isOwner}
       />
     </>
   );

@@ -11,8 +11,7 @@ import { Button } from "@/components/ui/button";
 import { useSetPageTitle } from "@/hooks/useSetPageTitle";
 import { authClient } from "@/lib/auth";
 import { cn } from "@/lib/utils";
-import { CreateEditTeamDialog } from "./components/CreateEditTeamDialog";
-import { DeleteTeamDialog } from "./components/DeleteTeamDialog";
+import { EditTeamSitesDialog } from "./components/EditTeamSitesDialog";
 
 export default function TeamsPage() {
   useSetPageTitle("Organization Teams");
@@ -50,7 +49,7 @@ export default function TeamsPage() {
     return (
       <NoOrganization
         message={t(
-          "You need to create or be added to an organization before you can manage teams."
+          "You're not a member of any organization yet — manage organizations in SWALHA Auth."
         )}
       />
     );
@@ -74,9 +73,7 @@ export default function TeamsPage() {
           <Users2 className="h-10 w-10 mx-auto mb-3 opacity-50" />
           <p className="font-medium">{t("No teams yet")}</p>
           <p className="text-sm mt-1">
-            {t(
-              "Create a team to group sites and manage member access."
-            )}
+            {t("Teams are created in SWALHA Auth. Once a team exists here you can assign sites to it.")}
           </p>
         </div>
       ) : (
@@ -124,11 +121,11 @@ export default function TeamsPage() {
                         <Button
                           variant="ghost"
                           size="smIcon"
+                          title={t("Edit team sites")}
                           onClick={() => setEditingTeam(team)}
                         >
                           <Pencil className="h-3.5 w-3.5" />
                         </Button>
-                        <DeleteTeamDialog team={team} />
                       </div>
                     </div>
                     {isExpanded && (
@@ -192,8 +189,8 @@ export default function TeamsPage() {
             </div>
       )}
 
-      {/* Edit Team Dialog */}
-      <CreateEditTeamDialog
+      {/* Edit which sites belong to the team */}
+      <EditTeamSitesDialog
         team={editingTeam || undefined}
         open={!!editingTeam}
         onOpenChange={(open) => {

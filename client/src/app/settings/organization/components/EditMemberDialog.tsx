@@ -8,7 +8,6 @@ import { toast } from "@/components/ui/sonner";
 import { GetOrganizationMembersResponse, updateMemberSiteAccess } from "@/api/admin/endpoints/auth";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Input } from "@/components/ui/input";
 import {
   Dialog,
   DialogContent,
@@ -18,7 +17,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { authClient } from "@/lib/auth";
 
 import { SiteAccessMultiSelect } from "./SiteAccessMultiSelect";
@@ -30,7 +28,6 @@ interface EditMemberDialogProps {
   open: boolean;
   onClose: () => void;
   onSuccess: () => void;
-  isOwner: boolean;
 }
 
 export function EditMemberDialog({
@@ -38,23 +35,17 @@ export function EditMemberDialog({
   open,
   onClose,
   onSuccess,
-  isOwner,
 }: EditMemberDialogProps) {
   const { data: activeOrganization } = authClient.useActiveOrganization();
   const queryClient = useQueryClient();
   const t = useExtracted();
 
-  const [name, setName] = useState("");
-  const [role, setRole] = useState<string>("member");
   const [restrictSiteAccess, setRestrictSiteAccess] = useState(false);
   const [selectedSiteIds, setSelectedSiteIds] = useState<number[]>([]);
   const [isSaving, setIsSaving] = useState(false);
-  const [isRemoving, setIsRemoving] = useState(false);
 
   useEffect(() => {
     if (open && member) {
-      setName(member.user.name || "");
-      setRole(member.role);
       setRestrictSiteAccess(member.siteAccess?.hasRestrictedSiteAccess ?? false);
       setSelectedSiteIds(member.siteAccess?.siteIds ?? []);
     }
@@ -63,89 +54,43 @@ export function EditMemberDialog({
   const handleSave = async () => {
     if (!member || !activeOrganization?.id) return;
 
-    if (role === "member" && restrictSiteAccess && selectedSiteIds.length === 0) {
+    if (restrictSiteAccess && selectedSiteIds.length === 0) {
       toast.error(t("Please select at least one site or disable site restrictions"));
       return;
     }
 
     setIsSaving(true);
     try {
-      // Update name if changed
-      if (name !== (member.user.name || "")) {
-        await authClient.admin.updateUser({
-          userId: member.userId,
-          data: { name },
-        });
-      }
-
-      // If promoting from member to admin/owner, clear site restrictions first
-      // (must happen while still a member, since the API rejects updates for non-members)
-      if (member.role === "member" && role !== "member" && member.siteAccess?.hasRestrictedSiteAccess) {
-        await updateMemberSiteAccess(activeOrganization.id, member.id, {
-          hasRestrictedSiteAccess: false,
-          siteIds: [],
-        });
-      }
-
-      // Update role if changed
-      if (role !== member.role && isOwner) {
-        await authClient.organization.updateMemberRole({
-          memberId: member.id,
-          organizationId: activeOrganization.id,
-          role: role as "admin" | "member" | "owner",
-        });
-      }
-
-      // Update site access for members
-      if (role === "member") {
-        await updateMemberSiteAccess(activeOrganization.id, member.id, {
-          hasRestrictedSiteAccess: restrictSiteAccess,
-          siteIds: selectedSiteIds,
-        });
-      }
+      await updateMemberSiteAccess(activeOrganization.id, member.id, {
+        hasRestrictedSiteAccess: restrictSiteAccess,
+        siteIds: selectedSiteIds,
+      });
 
       queryClient.invalidateQueries({ queryKey: ["organization-members"] });
-      toast.success(t("Member updated successfully"));
+      toast.success(t("Site access updated successfully"));
       onSuccess();
       onClose();
     } catch (error: any) {
-      toast.error(error.message || t("Failed to update member"));
+      toast.error(error.message || t("Failed to update site access"));
     } finally {
       setIsSaving(false);
     }
   };
 
-  const handleRemove = async () => {
-    if (!member || !activeOrganization?.id) return;
-
-    setIsRemoving(true);
-    try {
-      await authClient.organization.removeMember({
-        memberIdOrEmail: member.id,
-        organizationId: activeOrganization.id,
-      });
-
-      toast.success(t("Member removed successfully"));
-      onSuccess();
-      onClose();
-    } catch (error: any) {
-      toast.error(error.message || t("Failed to remove member"));
-    } finally {
-      setIsRemoving(false);
-    }
-  };
-
   if (!member) return null;
 
-  const isRestrictable = role === "member";
+  // Only plain members can be restricted; roles are managed in SWALHA Auth.
+  const isRestrictable = member.role === "member";
 
   return (
     <Dialog open={open} onOpenChange={() => onClose()}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>{t("Edit Member")}</DialogTitle>
+          <DialogTitle>{t("Site Access")}</DialogTitle>
           <DialogDescription>
-            {t("Edit settings for {name}", { name: member.user.name || member.user.email })}
+            {t("Choose which sites {name} can access in Analytics.", {
+              name: member.user.name || member.user.email,
+            })}
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
@@ -155,30 +100,11 @@ export function EditMemberDialog({
           </div>
 
           <div className="grid gap-2">
-            <Label htmlFor="name">{t("Name")}</Label>
-            <Input
-              id="name"
-              value={name}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setName(e.target.value)}
-              placeholder={t("Name")}
-            />
-          </div>
-
-          {isOwner && (
-            <div className="grid gap-2">
-              <Label htmlFor="role">{t("Role")}</Label>
-              <Select value={role} onValueChange={setRole}>
-                <SelectTrigger>
-                  <SelectValue placeholder={t("Select a role")} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="owner">{t("Owner")}</SelectItem>
-                  <SelectItem value="admin">{t("Admin")}</SelectItem>
-                  <SelectItem value="member">{t("Member")}</SelectItem>
-                </SelectContent>
-              </Select>
+            <Label>{t("Role")}</Label>
+            <div className="text-sm text-neutral-500 dark:text-neutral-300 capitalize">
+              {member.role === "admin" ? t("Admin") : member.role === "owner" ? t("Owner") : t("Member")}
             </div>
-          )}
+          </div>
 
           {isRestrictable ? (
             <>
@@ -198,7 +124,7 @@ export function EditMemberDialog({
                 </Label>
               </div>
               {restrictSiteAccess ? (
-                <div className="pl-6">
+                <div className="ps-6">
                   <SiteAccessMultiSelect selectedSiteIds={selectedSiteIds} onChange={setSelectedSiteIds} />
                   <p className="text-xs text-neutral-500 dark:text-neutral-300 mt-2">
                     {member.teams?.length
@@ -210,7 +136,7 @@ export function EditMemberDialog({
                   </p>
                 </div>
               ) : (
-                <p className="text-sm text-neutral-500 dark:text-neutral-300 pl-6">
+                <p className="text-sm text-neutral-500 dark:text-neutral-300 ps-6">
                   {member.teams?.length
                     ? t(
                         "This member has access to sites granted through their teams ({teams}), plus any site not assigned to a team.",
@@ -222,26 +148,16 @@ export function EditMemberDialog({
             </>
           ) : (
             <p className="text-sm text-neutral-500 dark:text-neutral-300">
-              {role === "owner" ? t("Organization owners") : t("Admins")}{" "}
+              {member.role === "owner" ? t("Organization owners") : t("Admins")}{" "}
               {t("automatically have access to all sites.")}
             </p>
           )}
-
-          <div className="pt-4 border-t mt-2">
-            <h4 className="text-sm font-medium text-destructive">{t("Remove Member")}</h4>
-            <p className="text-xs text-neutral-500 dark:text-neutral-300 mt-1">
-              {t("Remove this member from the organization.")}
-            </p>
-            <Button variant="destructive" size="sm" className="mt-2" onClick={handleRemove} disabled={isRemoving}>
-              {isRemoving ? t("Removing...") : t("Remove Member")}
-            </Button>
-          </div>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
             {t("Cancel")}
           </Button>
-          <Button onClick={handleSave} disabled={isSaving} variant="success">
+          <Button onClick={handleSave} disabled={isSaving || !isRestrictable} variant="success">
             {isSaving ? t("Saving...") : t("Save Changes")}
           </Button>
         </DialogFooter>

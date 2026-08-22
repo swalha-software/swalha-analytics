@@ -103,7 +103,9 @@ import {
   selectGSCProperty,
 } from "./api/gsc/index.js";
 import { updateMemberSiteAccess } from "./api/memberAccess/index.js";
-import { listTeams, createTeam, updateTeam, deleteTeam } from "./api/teams/index.js";
+import { listTeams, updateTeamSites } from "./api/teams/index.js";
+import { handleOrganizationSyncWebhook } from "./api/orgSync/webhook.js";
+import { startOrgSyncReconcile } from "./lib/orgSync/reconcile.js";
 import {
   deleteSessionReplay,
   getSessionReplayEvents,
@@ -147,10 +149,8 @@ import {
   updateSubscription,
 } from "./api/stripe/index.js";
 import {
-  addUserToOrganization,
   createOrgApiKey,
   createUserApiKey,
-  createUserInOrganization,
   getMyOrganizations,
   getOrgApiUsage,
   getUserOrganizations,
@@ -256,7 +256,6 @@ const orgSqlRead = orgMemberScoped("sql", "read");
 const orgOrgRead = orgMemberScoped("org", "read");
 const orgAdminSitesWrite = orgAdminScoped("sites", "write");
 const orgAdminOrgWrite = orgAdminScoped("org", "write");
-const authOrgWrite = authOnlyScoped("org", "write");
 
 // Scope-exempt / non-bearer chains. "deny-scoped" rejects scoped credentials
 // on surfaces with no taxonomy resource (account settings, billing).
@@ -466,8 +465,6 @@ async function organizationsRoutes(fastify: FastifyInstance) {
   fastify.get("/organizations/:organizationId/sites", orgOrgRead, getSitesFromOrg);
   fastify.post("/organizations/:organizationId/sites", orgAdminSitesWrite, addSite);
   fastify.get("/organizations/:organizationId/members", orgOrgRead, listOrganizationMembers);
-  fastify.post("/organizations/:organizationId/members", authOrgWrite, addUserToOrganization);
-  fastify.post("/organizations/:organizationId/users", authOrgWrite, createUserInOrganization);
 
   // Member site access management (admin/owner only)
   fastify.put("/organizations/:organizationId/members/:memberId/sites", orgAdminOrgWrite, updateMemberSiteAccess);
@@ -476,9 +473,14 @@ async function organizationsRoutes(fastify: FastifyInstance) {
 async function teamsRoutes(fastify: FastifyInstance) {
   // Teams
   fastify.get("/organizations/:organizationId/teams", orgOrgRead, listTeams);
-  fastify.post("/organizations/:organizationId/teams", orgAdminOrgWrite, createTeam);
-  fastify.put("/organizations/:organizationId/teams/:teamId", orgAdminOrgWrite, updateTeam);
-  fastify.delete("/organizations/:organizationId/teams/:teamId", orgAdminOrgWrite, deleteTeam);
+  fastify.put("/organizations/:organizationId/teams/:teamId/sites", orgAdminOrgWrite, updateTeamSites);
+}
+
+// Organization sync webhook from SWALHA Auth. Own scope: JSON is kept as the
+// raw buffer so the signature can be verified over the exact bytes.
+async function orgSyncRoutes(fastify: FastifyInstance) {
+  fastify.addContentTypeParser("application/json", { parseAs: "buffer" }, (_request, body, done) => done(null, body));
+  fastify.post("/sync/organizations", handleOrganizationSyncWebhook); // Public - signed by Auth
 }
 
 async function userRoutes(fastify: FastifyInstance) {
@@ -542,6 +544,7 @@ async function apiRoutes(fastify: FastifyInstance) {
   await fastify.register(sitesRoutes);
   await fastify.register(organizationsRoutes);
   await fastify.register(teamsRoutes);
+  await fastify.register(orgSyncRoutes);
   await fastify.register(userRoutes);
   await fastify.register(gscRoutes);
   await fastify.register(stripeAdminRoutes);
@@ -568,6 +571,7 @@ const start = async () => {
     if (!cluster.isWorker) {
       telemetryService.startTelemetryCron();
       usageService.startUsageCheckCron();
+      startOrgSyncReconcile();
       if (process.env.NODE_ENV !== "development") {
         // Weekly reports follow the mail key; reengagement stays cloud-only.
         weeklyReportService.startWeeklyReportCron();

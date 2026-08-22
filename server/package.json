@@ -26,7 +26,9 @@
     "format": "prettier --write \"src/**/*.{js,ts,json,md}\"",
     "format:check": "prettier --check \"src/**/*.{js,ts,json,md}\"",
     "backfill:lite-mvs": "tsc && node dist/scripts/backfillLiteDashboardMVs.js",
-    "replays:disable-unentitled": "tsc && node dist/scripts/disableUnentitledReplays.js"
+    "replays:disable-unentitled": "tsc && node dist/scripts/disableUnentitledReplays.js",
+    "orgs:export-for-auth": "tsc && node dist/scripts/exportOrganizationsForAuth.js",
+    "test:integration": "vitest run --config vitest.integration.config.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1106.0",
@@ -51,6 +53,7 @@
     "i18n-iso-countries": "^7.14.0",
     "ioredis": "^5.8.2",
     "ip-address": "^10.0.1",
+    "jose": "^6.2.10",
     "luxon": "3.7.2",
     "nanoid": "^5.1.6",
     "node-cache": "^5.1.2",

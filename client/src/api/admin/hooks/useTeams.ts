@@ -1,10 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   fetchTeams,
-  createTeam,
-  updateTeam,
-  deleteTeam,
-  CreateTeamInput,
+  updateTeamSites,
   UpdateTeamInput,
   ListTeamsResponse,
 } from "../endpoints/teams";
@@ -19,25 +16,7 @@ export function useTeams(organizationId?: string) {
   });
 }
 
-export function useCreateTeam() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: ({
-      organizationId,
-      data,
-    }: {
-      organizationId: string;
-      data: CreateTeamInput;
-    }) => createTeam(organizationId, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [TEAMS_QUERY_KEY] });
-      queryClient.invalidateQueries({ queryKey: ["get-sites-from-org"] });
-    },
-  });
-}
-
-export function useUpdateTeam() {
+export function useUpdateTeamSites() {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -49,7 +28,7 @@ export function useUpdateTeam() {
       organizationId: string;
       teamId: string;
       data: UpdateTeamInput;
-    }) => updateTeam(organizationId, teamId, data),
+    }) => updateTeamSites(organizationId, teamId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [TEAMS_QUERY_KEY] });
       queryClient.invalidateQueries({ queryKey: ["get-sites-from-org"] });
@@ -57,20 +36,3 @@ export function useUpdateTeam() {
   });
 }
 
-export function useDeleteTeam() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: ({
-      organizationId,
-      teamId,
-    }: {
-      organizationId: string;
-      teamId: string;
-    }) => deleteTeam(organizationId, teamId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [TEAMS_QUERY_KEY] });
-      queryClient.invalidateQueries({ queryKey: ["get-sites-from-org"] });
-    },
-  });
-}
