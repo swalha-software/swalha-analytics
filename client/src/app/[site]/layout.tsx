@@ -2,13 +2,12 @@
 import { useWindowSize } from "@uidotdev/usehooks";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
-import { AppSidebar } from "../../components/AppSidebar";
 import { getMainDashboardPath, getSiteRouteContext } from "../../lib/siteRoute";
 import { useStore } from "../../lib/store";
 import { useSyncStateWithUrl } from "../../lib/urlParams";
 import { Footer } from "../components/Footer";
 import { Header } from "./components/Header/Header";
-import { Sidebar } from "./components/Sidebar/Sidebar";
+import { AppShellSidebar } from "../../components/sidebar/AppShellSidebar";
 import { useEmbedPageOptions } from "./utils";
 
 function isMainDashboardPath(pathname: string) {
@@ -53,26 +52,18 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
   }
 
   return (
-    <div className="flex flex-row h-dvh">
-      <AppSidebar />
-      <div className="flex flex-1 overflow-hidden">
-        {!hideSidebar && (
-          <div className="hidden md:flex">
-            <Sidebar />
-          </div>
-        )}
-        <div className="flex-1 overflow-auto">
-          <div className="min-h-full flex flex-col">
-            {/* <div className="px-4 py-2 max-w-[1400px] mx-auto w-full mb-4"> */}
-            <Header />
-            <div className="flex-1">{children}</div>
-            {!pathname.includes("/map") &&
-              !pathname.includes("/realtime") &&
-              !pathname.includes("/replay") &&
-              !pathname.includes("/globe") &&
-              !pathname.includes("/api-playground") &&
-              !pathname.includes("/query") && <Footer disabled={embed} />}
-          </div>
+    <div className="flex h-dvh flex-row overflow-hidden">
+      {!hideSidebar && <AppShellSidebar className="hidden md:flex" />}
+      <div className="flex-1 overflow-auto">
+        <div className="min-h-full flex flex-col">
+          <Header />
+          <div className="flex-1">{children}</div>
+          {!pathname.includes("/map") &&
+            !pathname.includes("/realtime") &&
+            !pathname.includes("/replay") &&
+            !pathname.includes("/globe") &&
+            !pathname.includes("/api-playground") &&
+            !pathname.includes("/query") && <Footer disabled={embed} />}
         </div>
       </div>
     </div>

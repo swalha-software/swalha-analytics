@@ -1,10 +1,9 @@
 "use client";
 
 import { useWindowSize } from "@uidotdev/usehooks";
-import { AppSidebar } from "../../components/AppSidebar";
+import { AppShellSidebar } from "../../components/sidebar/AppShellSidebar";
 import { MobileSidebar } from "./monitors/components/Sidebar/MobileSidebar";
 import { StandardPage } from "../../components/StandardPage";
-import { UptimeSidebar } from "./monitors/components/Sidebar/UptimeSidebar";
 
 export default function UptimeLayout({ children }: { children: React.ReactNode }) {
   const { width } = useWindowSize();
@@ -20,8 +19,7 @@ export default function UptimeLayout({ children }: { children: React.ReactNode }
 
   return (
     <div className="flex h-full">
-      <AppSidebar />
-      <UptimeSidebar />
+      <AppShellSidebar />
       <StandardPage showSidebar={false}>
         <div className="flex-1 overflow-auto mt-4">{children}</div>
       </StandardPage>

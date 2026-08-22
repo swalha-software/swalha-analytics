@@ -1,4 +1,4 @@
-import { AppSidebar } from "./AppSidebar";
+import { AppShellSidebar } from "./sidebar/AppShellSidebar";
 import { cn } from "../lib/utils";
 
 export function StandardPage({
@@ -12,7 +12,7 @@ export function StandardPage({
 }) {
   return (
     <div className="h-full flex w-full">
-      {showSidebar && <AppSidebar />}
+      {showSidebar && <AppShellSidebar className="hidden md:flex" />}
       <main className="flex flex-col items-center p-4 w-full h-dvh overflow-y-auto">
         <div className={cn("w-full", fullWidth ? "max-w-full" : "max-w-6xl")}>{children}</div>
       </main>

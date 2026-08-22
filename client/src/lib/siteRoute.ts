@@ -45,3 +45,11 @@ export function getMainDashboardPath(pathname: string | null | undefined) {
 
   return privateKey ? `/${siteId}/${privateKey}/main` : `/${siteId}/main`;
 }
+
+/** The numeric site id a pathname points at, or null on org-level routes. */
+export function getCurrentSiteId(pathname: string | null | undefined): number | null {
+  const { siteId } = getSiteRouteContext(pathname);
+  if (!siteId) return null;
+  const parsed = Number(siteId);
+  return Number.isNaN(parsed) ? null : parsed;
+}

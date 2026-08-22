@@ -2,14 +2,11 @@
 
 import { StandardPage } from "@/components/StandardPage";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
-import { Menu } from "lucide-react";
 import { useExtracted } from "next-intl";
 import { notFound } from "next/navigation";
 import { parseAsStringLiteral, useQueryState } from "nuqs";
-import { AppSidebar } from "../../components/AppSidebar";
-import { Button } from "../../components/ui/button";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "../../components/ui/sheet";
+import { AppShellSidebar } from "../../components/sidebar/AppShellSidebar";
+import { MobileSidebarTrigger } from "../../components/sidebar/MobileSidebarSheet";
 import { DEPLOYMENT, IS_CLOUD } from "../../lib/const";
 import { Database } from "./components/database/Database";
 import { Email } from "./components/email/Email";
@@ -21,25 +18,9 @@ import { Users } from "./components/users/Users";
 const ADMIN_TABS = ["organizations", "sites", "users", "database", "email"] as const;
 
 function MobileSidebar() {
-  const t = useExtracted();
-
   return (
     <div className="md:hidden">
-      <Sheet>
-        <SheetTrigger asChild>
-          <Button size="icon" variant="outline">
-            <Menu />
-          </Button>
-        </SheetTrigger>
-        <VisuallyHidden>
-          <SheetHeader>
-            <SheetTitle>{t("Swalha Analytics Sidebar")}</SheetTitle>
-          </SheetHeader>
-        </VisuallyHidden>
-        <SheetContent side="left" className="p-0 w-[40px] flex gap-0" showClose={false}>
-          <AppSidebar />
-        </SheetContent>
-      </Sheet>
+      <MobileSidebarTrigger />
     </div>
   );
 }
@@ -52,9 +33,7 @@ export default function AdminPage() {
 
   return (
     <div className="flex h-full">
-      <div className="hidden md:block">
-        <AppSidebar />
-      </div>
+      <AppShellSidebar className="hidden md:flex" />
       <StandardPage showSidebar={false} fullWidth>
         <AdminLayout>
           <div className="mb-4 flex items-center gap-3">
