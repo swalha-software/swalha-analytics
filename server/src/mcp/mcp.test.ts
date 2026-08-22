@@ -41,11 +41,11 @@ function rpc(method: string, params?: unknown, id = 1) {
 // Exercises the real authenticator logic with fake better-auth verifiers.
 const authenticate = createMcpAuthenticator({
   verifyApiKey: async apiKey => {
-    if (apiKey === "rb_test_key") return { valid: true, key: { referenceId: "user_1" } };
+    if (apiKey === "rb_test_key") return { valid: true, key: { referenceId: "org_1", configId: "org" } };
     if (apiKey === "rb_scoped_key") {
       return {
         valid: true,
-        key: { referenceId: "user_1", permissions: { goals: ["read", "write"], sites: ["read"] } },
+        key: { referenceId: "org_1", configId: "org", permissions: { goals: ["read", "write"], sites: ["read"] } },
       };
     }
     if (apiKey === "rb_limited_key") return { valid: false, error: { code: "RATE_LIMITED" } };
@@ -155,7 +155,16 @@ describe("mcp endpoint", () => {
           captured.query = request.query as Record<string, unknown>;
           // The API returns `sessions` plus the deprecated `visitors` alias.
           return {
-            data: [{ step_number: 1, step_name: "Step 1", sessions: 10, visitors: 10, conversion_rate: 100, dropoff_rate: 0 }],
+            data: [
+              {
+                step_number: 1,
+                step_name: "Step 1",
+                sessions: 10,
+                visitors: 10,
+                conversion_rate: 100,
+                dropoff_rate: 0,
+              },
+            ],
           };
         });
 

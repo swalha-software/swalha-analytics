@@ -102,7 +102,6 @@ import {
   gscCallback,
   selectGSCProperty,
 } from "./api/gsc/index.js";
-import { updateMemberSiteAccess } from "./api/memberAccess/index.js";
 import { listTeams, updateTeamSites } from "./api/teams/index.js";
 import { handleOrganizationSyncWebhook } from "./api/orgSync/webhook.js";
 import { startOrgSyncReconcile } from "./lib/orgSync/reconcile.js";
@@ -150,14 +149,13 @@ import {
 } from "./api/stripe/index.js";
 import {
   createOrgApiKey,
-  createUserApiKey,
   getMyOrganizations,
   getOrgApiUsage,
   getUserOrganizations,
   listOrganizationMembers,
   oneClickUnsubscribeMarketing,
+  unsubscribeWeeklyReports,
   unsubscribeMarketing,
-  updateAccountSettings,
 } from "./api/user/index.js";
 import { validateHttpTimeParams } from "./api/analytics/utils/query-validation.js";
 import { initializeClickhouse } from "./db/clickhouse/clickhouse.js";
@@ -464,9 +462,6 @@ async function organizationsRoutes(fastify: FastifyInstance) {
   fastify.get("/organizations/:organizationId/sites", orgOrgRead, getSitesFromOrg);
   fastify.post("/organizations/:organizationId/sites", orgAdminSitesWrite, addSite);
   fastify.get("/organizations/:organizationId/members", orgOrgRead, listOrganizationMembers);
-
-  // Member site access management (admin/owner only)
-  fastify.put("/organizations/:organizationId/members/:memberId/sites", orgAdminOrgWrite, updateMemberSiteAccess);
 }
 
 async function teamsRoutes(fastify: FastifyInstance) {
@@ -487,11 +482,11 @@ async function userRoutes(fastify: FastifyInstance) {
   fastify.get("/config", getConfig); // Public - returns app config
   fastify.get("/version", getVersion); // Public - returns app version
   fastify.get("/user/organizations", authOrgRead, getUserOrganizations);
-  fastify.post("/user/account-settings", authOnlyNoScopedKeys, updateAccountSettings);
   fastify.post("/user/unsubscribe-marketing", authOnlyNoScopedKeys, unsubscribeMarketing);
   fastify.get("/user/unsubscribe-marketing-oneclick", oneClickUnsubscribeMarketing); // Public - for link clicks
   fastify.post("/user/unsubscribe-marketing-oneclick", oneClickUnsubscribeMarketing); // Public - for List-Unsubscribe header
-  fastify.post("/user/api-keys", authOnlyNoScopedKeys, createUserApiKey);
+  fastify.get("/user/unsubscribe-weekly-reports", unsubscribeWeeklyReports); // Public - link in the weekly report email
+  fastify.post("/user/unsubscribe-weekly-reports", unsubscribeWeeklyReports); // Public - List-Unsubscribe-Post
   fastify.post("/organizations/:organizationId/api-keys", orgAdminNoScopedKeys, createOrgApiKey);
   fastify.get("/organizations/:organizationId/api-usage", orgOrgRead, getOrgApiUsage);
 }

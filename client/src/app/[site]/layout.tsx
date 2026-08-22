@@ -2,6 +2,8 @@
 import { useWindowSize } from "@uidotdev/usehooks";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
+import { authClient } from "../../lib/auth";
+import { rememberLastSiteId } from "../../lib/lastSite";
 import { getMainDashboardPath, getSiteRouteContext } from "../../lib/siteRoute";
 import { useStore } from "../../lib/store";
 import { useSyncStateWithUrl } from "../../lib/urlParams";
@@ -19,6 +21,7 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
   const router = useRouter();
   const { setSiteContext, site, privateKey } = useStore();
   const { embed, hideSidebar } = useEmbedPageOptions();
+  const { data: activeOrganization } = authClient.useActiveOrganization();
 
   // Sync store state with URL parameters
   useSyncStateWithUrl();
@@ -30,6 +33,14 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
 
     setSiteContext(routeContext.siteId, routeContext.privateKey);
   }, [pathname, privateKey, setSiteContext, site]);
+
+  // "/" forwards to whichever site was open last in this organization.
+  useEffect(() => {
+    const siteId = Number(getSiteRouteContext(pathname).siteId);
+    if (!Number.isInteger(siteId)) return;
+
+    rememberLastSiteId(activeOrganization?.id, siteId);
+  }, [activeOrganization?.id, pathname]);
 
   useEffect(() => {
     if (!hideSidebar || isMainDashboardPath(pathname)) return;

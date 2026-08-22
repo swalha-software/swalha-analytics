@@ -32,20 +32,43 @@ describe("extractBearerToken", () => {
 });
 
 describe("resolveBearerIdentity", () => {
-  it("resolves a valid API key to its user and statements", async () => {
+  it("resolves an organization API key to its organization and statements", async () => {
     const identity = await resolveBearerIdentity(
       "k",
-      deps({ verifyApiKey: async () => ({ valid: true, key: { referenceId: "u1", permissions: { goals: ["read"] } } }) })
+      deps({
+        verifyApiKey: async () => ({
+          valid: true,
+          key: { referenceId: "org1", permissions: { goals: ["read"] }, configId: "org" },
+        }),
+      })
     );
-    expect(identity).toEqual({ status: "valid", userId: "u1", statements: { goals: ["read"] } });
+    expect(identity).toEqual({ status: "valid", organizationId: "org1", statements: { goals: ["read"] } });
   });
 
   it("treats a null-permission key as unrestricted", async () => {
     const identity = await resolveBearerIdentity(
       "k",
-      deps({ verifyApiKey: async () => ({ valid: true, key: { referenceId: "u1", permissions: null } }) })
+      deps({
+        verifyApiKey: async () => ({ valid: true, key: { referenceId: "org1", permissions: null, configId: "org" } }),
+      })
     );
-    expect(identity).toEqual({ status: "valid", userId: "u1", statements: null });
+    expect(identity).toEqual({ status: "valid", organizationId: "org1", statements: null });
+  });
+
+  it("rejects personal and legacy keys, which are no longer issued", async () => {
+    const getOAuthSession = vi.fn(async () => null);
+    for (const configId of [undefined, "default"]) {
+      const identity = await resolveBearerIdentity(
+        "k",
+        deps({
+          verifyApiKey: async () => ({ valid: true, key: { referenceId: "u1", permissions: null, configId } }),
+          getOAuthSession,
+        })
+      );
+      expect(identity).toEqual({ status: "invalid", statements: null });
+    }
+    // A key that verified is never retried as an OAuth token.
+    expect(getOAuthSession).not.toHaveBeenCalled();
   });
 
   it("surfaces rate limiting without falling through to OAuth", async () => {
@@ -61,7 +84,13 @@ describe("resolveBearerIdentity", () => {
   it("falls back to a valid OAuth token, honoring its scopes", async () => {
     const identity = await resolveBearerIdentity(
       "t",
-      deps({ getOAuthSession: async () => ({ userId: "u2", accessTokenExpiresAt: future(), scopes: "openid analytics:read" }) })
+      deps({
+        getOAuthSession: async () => ({
+          userId: "u2",
+          accessTokenExpiresAt: future(),
+          scopes: "openid analytics:read",
+        }),
+      })
     );
     expect(identity).toEqual({ status: "valid", userId: "u2", statements: { analytics: ["read"] } });
   });
@@ -132,14 +161,14 @@ describe("resolveBearerIdentity rate limiting", () => {
     const identity = await resolveBearerIdentity(
       "k",
       deps({
-        verifyApiKey: async () => ({ valid: true, key: { referenceId: "u1", permissions: null } }),
+        verifyApiKey: async () => ({ valid: true, key: { referenceId: "org1", permissions: null, configId: "org" } }),
         consumeRateLimit: async () =>
           decision({ allowed: false, wouldHaveDenied: true, scope: "daily", retryAfterSeconds: 3600 }),
       })
     );
 
     expect(identity.status).toBe("rate_limited");
-    expect(identity.userId).toBeUndefined();
+    expect(identity.organizationId).toBeUndefined();
     expect(identity.rateLimit?.scope).toBe("daily");
     expect(identity.rateLimit?.retryAfterSeconds).toBe(3600);
   });
@@ -148,7 +177,7 @@ describe("resolveBearerIdentity rate limiting", () => {
     const identity = await resolveBearerIdentity(
       "k",
       deps({
-        verifyApiKey: async () => ({ valid: true, key: { referenceId: "u1", permissions: null } }),
+        verifyApiKey: async () => ({ valid: true, key: { referenceId: "org1", permissions: null, configId: "org" } }),
         consumeRateLimit: async () => {
           throw new Error("redis down");
         },

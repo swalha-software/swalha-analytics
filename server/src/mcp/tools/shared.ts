@@ -66,7 +66,7 @@ export function fail(message: string): ToolResult {
 }
 
 const ERROR_HINTS: Record<number, string> = {
-  401: "The API key is missing or invalid. Create one under Settings > Account > Personal API Keys and send it as 'Authorization: Bearer <key>'.",
+  401: "The API key is missing or invalid. Create one under Settings > API keys and send it as 'Authorization: Bearer <key>'.",
   403: "The API key's user does not have access to this site or organization, or the tool requires an org admin/owner role for the key's user. Check the site_id with list_sites; its role field shows the key's role per organization. If the message says 'Insufficient scope', the credential was created without the scope this tool needs — use a key or OAuth grant that has it.",
   429: "Rate limited. Wait before retrying, and prefer fewer, more aggregated queries.",
 };
@@ -99,8 +99,18 @@ export function createGuard(log?: (message: string) => void): ToolGuard {
 // when omitted, so every hint is set explicitly.
 export const readOnly = { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false };
 export const writeTool = { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false };
-export const idempotentWrite = { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false };
-export const destructiveTool = { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: false };
+export const idempotentWrite = {
+  readOnlyHint: false,
+  destructiveHint: false,
+  idempotentHint: true,
+  openWorldHint: false,
+};
+export const destructiveTool = {
+  readOnlyHint: false,
+  destructiveHint: true,
+  idempotentHint: true,
+  openWorldHint: false,
+};
 
 export function siteQuery(args: TimeArgs & { filters?: FilterArgs }) {
   return { ...toTimeQuery(args), ...toFiltersQuery(args.filters) };

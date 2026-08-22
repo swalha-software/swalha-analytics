@@ -68,7 +68,7 @@ export function createMcpAuthenticator(dependencies: McpAuthenticatorDependencie
     const bearerToken = extractBearerToken(request.headers.authorization);
     if (!bearerToken) {
       throw new McpAuthenticationError(
-        "Unauthorized: send a Rybbit API key as 'Authorization: Bearer <key>' (Settings > Account > Personal API Keys), or connect with an OAuth-capable MCP client.",
+        "Unauthorized: send an organization API key as 'Authorization: Bearer <key>' (Settings > API keys), or connect with an OAuth-capable MCP client.",
         401
       );
     }
@@ -89,11 +89,7 @@ export function createMcpAuthenticator(dependencies: McpAuthenticatorDependencie
         const detail = limit?.scope
           ? ` (${limit.scope} limit${limit.scope === "daily" ? ` of ${limit.dailyLimit}/day` : ""})`
           : "";
-        throw new McpAuthenticationError(
-          `API key rate limit exceeded${detail}`,
-          429,
-          limit?.retryAfterSeconds
-        );
+        throw new McpAuthenticationError(`API key rate limit exceeded${detail}`, 429, limit?.retryAfterSeconds);
       }
       case "verify_error":
         throw new McpAuthenticationError("Rybbit could not verify the API key", 503);

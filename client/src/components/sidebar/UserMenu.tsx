@@ -1,7 +1,7 @@
 "use client";
 
 import { useWindowSize } from "@uidotdev/usehooks";
-import { BookOpen, Building2, ChevronsUpDown, HelpCircle, LogOut, Moon, ShieldUser, Sun, User } from "lucide-react";
+import { BookOpen, ChevronsUpDown, ExternalLink, HelpCircle, LogOut, Moon, ShieldUser, Sun, User } from "lucide-react";
 import { useExtracted } from "next-intl";
 import { useTheme } from "next-themes";
 import { useRouter } from "next/navigation";
@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useSignout } from "@/hooks/useSignout";
 import { authClient } from "@/lib/auth";
-import { DEPLOYMENT, IS_CLOUD } from "@/lib/const";
+import { AUTH_ACCOUNT_URL, DEPLOYMENT, IS_CLOUD } from "@/lib/const";
 import { useStripeSubscription } from "@/lib/subscription/useStripeSubscription";
 import { InitialsAvatar, SwitcherLabel, SwitcherSkeleton, switcherRowClass } from "./parts";
 
@@ -89,13 +89,13 @@ export function UserMenu() {
             </span>
           </div>
           <DropdownMenuSeparator />
-          <DropdownMenuItem className="text-[13px]" onSelect={() => router.push("/settings/account")}>
+          <DropdownMenuItem
+            className="text-[13px]"
+            onSelect={() => window.open(AUTH_ACCOUNT_URL, "_blank", "noopener,noreferrer")}
+          >
             <User />
-            {t("Account")}
-          </DropdownMenuItem>
-          <DropdownMenuItem className="text-[13px]" onSelect={() => router.push("/settings/organization")}>
-            <Building2 />
-            {t("Organization")}
+            {t("Manage account")}
+            <ExternalLink className="ms-auto size-3.5 text-neutral-400 dark:text-neutral-500" />
           </DropdownMenuItem>
           {showAdmin && (
             <DropdownMenuItem className="text-[13px]" onSelect={() => router.push("/admin")}>

@@ -1,36 +1,12 @@
 "use client";
 
-import {
-  Activity,
-  AlertCircle,
-  AppWindow,
-  Building2,
-  Combine,
-  CreditCard,
-  Globe,
-  Plug2,
-  UserCircle,
-  Users,
-} from "lucide-react";
+import { Activity, AlertCircle, CreditCard, Globe, KeyRound, Plug2, Users } from "lucide-react";
 import { useExtracted } from "next-intl";
 import { usePathname } from "next/navigation";
 import { useUserOrganizations } from "@/api/admin/hooks/useOrganizations";
 import { authClient } from "@/lib/auth";
 import { IS_CLOUD } from "@/lib/const";
 import { NavGroup, NavItem } from "./parts";
-
-/** Getting back up a level: the org's site list and the cross-site rollup. */
-export function WorkspaceGroup() {
-  const t = useExtracted();
-  const pathname = usePathname();
-
-  return (
-    <NavGroup label={t("Workspace")}>
-      <NavItem label={t("Properties")} href="/" icon={AppWindow} active={pathname === "/"} />
-      <NavItem label={t("Rollup")} href="/rollup" icon={Combine} active={pathname.startsWith("/rollup")} />
-    </NavGroup>
-  );
-}
 
 export function SettingsGroup() {
   const t = useExtracted();
@@ -41,37 +17,26 @@ export function SettingsGroup() {
   const currentMember = userOrganizations?.find(org => org.id === activeOrganization?.id);
   const isAdminOrOwner = currentMember?.role === "admin" || currentMember?.role === "owner";
 
+  // Every entry is admin-only, so a plain member gets no group at all rather
+  // than an empty "Settings" heading.
+  if (!isAdminOrOwner) return null;
+
   return (
     <NavGroup label={t("Settings")}>
+      <NavItem label={t("Teams")} href="/settings/teams" icon={Users} active={pathname.startsWith("/settings/teams")} />
       <NavItem
-        label={t("Account")}
-        href="/settings/account"
-        icon={UserCircle}
-        active={pathname.startsWith("/settings/account")}
+        label={t("API keys")}
+        href="/settings/api-keys"
+        icon={KeyRound}
+        active={pathname.startsWith("/settings/api-keys")}
       />
-      {isAdminOrOwner && (
-        <>
-          <NavItem
-            label={t("Organization")}
-            href="/settings/organization"
-            icon={Building2}
-            active={pathname === "/settings/organization"}
-          />
-          <NavItem
-            label={t("Teams")}
-            href="/settings/teams"
-            icon={Users}
-            active={pathname.startsWith("/settings/teams")}
-          />
-          {IS_CLOUD && (
-            <NavItem
-              label={t("Billing")}
-              href="/settings/billing"
-              icon={CreditCard}
-              active={pathname.startsWith("/settings/billing")}
-            />
-          )}
-        </>
+      {IS_CLOUD && (
+        <NavItem
+          label={t("Billing")}
+          href="/settings/billing"
+          icon={CreditCard}
+          active={pathname.startsWith("/settings/billing")}
+        />
       )}
     </NavGroup>
   );
