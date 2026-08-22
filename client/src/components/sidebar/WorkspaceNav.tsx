@@ -1,6 +1,6 @@
 "use client";
 
-import { Activity, AlertCircle, CreditCard, Globe, KeyRound, Plug2 } from "lucide-react";
+import { CreditCard, KeyRound } from "lucide-react";
 import { useExtracted } from "next-intl";
 import { usePathname } from "next/navigation";
 import { useUserOrganizations } from "@/api/admin/hooks/useOrganizations";
@@ -37,40 +37,6 @@ export function SettingsGroup() {
           active={pathname.startsWith("/settings/billing")}
         />
       )}
-    </NavGroup>
-  );
-}
-
-export function UptimeGroup() {
-  const t = useExtracted();
-  const pathname = usePathname();
-
-  return (
-    <NavGroup label={t("Uptime")}>
-      <NavItem
-        label={t("Monitors")}
-        href="/uptime/monitors"
-        icon={Activity}
-        active={pathname.startsWith("/uptime/monitors")}
-      />
-      <NavItem
-        label={t("Incidents")}
-        href="/uptime/incidents"
-        icon={AlertCircle}
-        active={pathname.startsWith("/uptime/incidents")}
-      />
-      <NavItem
-        label={t("Notifications")}
-        href="/uptime/notifications"
-        icon={Plug2}
-        active={pathname.startsWith("/uptime/notifications")}
-      />
-      <NavItem
-        label={t("Status Page")}
-        href="/uptime/status-page"
-        icon={Globe}
-        active={pathname.startsWith("/uptime/status-page")}
-      />
     </NavGroup>
   );
 }

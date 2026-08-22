@@ -16,7 +16,7 @@ import { SidebarCollapsedProvider } from "./parts";
 import { SiteNav } from "./SiteNav";
 import { SiteSwitcher } from "./SiteSwitcher";
 import { UserMenu } from "./UserMenu";
-import { SettingsGroup, UptimeGroup } from "./WorkspaceNav";
+import { SettingsGroup } from "./WorkspaceNav";
 
 const toggleButtonClass = cn(
   "flex size-8 shrink-0 items-center justify-center rounded-md transition-colors",
@@ -69,7 +69,6 @@ function AppShellSidebarContent({ className, forceExpanded }: { className?: stri
   if (hideSidebar) return null;
 
   const isSitePage = getCurrentSiteId(pathname) !== null;
-  const isUptimePage = pathname.startsWith("/uptime");
 
   return (
     <SidebarCollapsedProvider collapsed={collapsed}>
@@ -158,17 +157,8 @@ function AppShellSidebarContent({ className, forceExpanded }: { className?: stri
             collapsed ? "gap-3 p-2 [&>.nav-divider:first-child]:hidden" : "gap-4 p-3"
           )}
         >
-          {isSitePage ? (
-            <>
-              <SiteNav />
-              <SettingsGroup />
-            </>
-          ) : (
-            <>
-              {isUptimePage && <UptimeGroup />}
-              <SettingsGroup />
-            </>
-          )}
+          {isSitePage && <SiteNav />}
+          <SettingsGroup />
         </nav>
 
         {!embed && <UserMenu />}

@@ -93,8 +93,8 @@ describe("logging runtime", () => {
   it("creates background children from the shared root", async () => {
     const { loggerModule } = await importLogger("test");
 
-    expect(loggerModule.createServiceLogger("uptime")).toBe(childLogger);
-    expect(childMock).toHaveBeenCalledWith({ service: "uptime" });
+    expect(loggerModule.createServiceLogger("replay")).toBe(childLogger);
+    expect(childMock).toHaveBeenCalledWith({ service: "replay" });
   });
 
   it("keeps request and response serialization in the shared runtime", async () => {

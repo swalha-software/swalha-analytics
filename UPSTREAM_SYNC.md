@@ -40,7 +40,7 @@ Five upstream commits since the baseline. No upstream release since `v2.8.0`
 
 | Upstream | Why |
 | --- | --- |
-| `0ae17319` — `refactor(uptime)`: remove uptime monitoring components and API (#1114) | Upstream product-scope removal, not a fix. Deletes the entire uptime feature (~14k lines: monitors, incidents, notifications, regions, Twilio) plus the referrer-spam blocklist, and carries a destructive Drizzle migration (`0014_huge_dagger.sql`) that drops the uptime tables. Uptime is part of this fork's documented product surface (`PRODUCT.md`), and `CLAUDE.md` forbids running migrations. Not ported; revisit only as a deliberate Swalha product decision. |
+| `0ae17319` — `refactor(uptime)`: remove uptime monitoring components and API (#1114) | Upstream product-scope removal, not a fix. Deletes the entire uptime feature (~14k lines: monitors, incidents, notifications, regions, Twilio) plus the referrer-spam blocklist, and carries a destructive Drizzle migration (`0014_huge_dagger.sql`) that drops the uptime tables. Uptime was part of this fork's documented product surface (`PRODUCT.md`), and `CLAUDE.md` forbids running migrations. Not ported at sync time. **Superseded:** uptime has since been removed from this fork as a deliberate Swalha product decision (its own removal, not this port) — see the `drop_uptime` Drizzle migration. |
 
 **Adaptations required:** none beyond the automatic merge in `server/src/lib/auth.ts`,
 where upstream's `siteIdsInOrganization` import and invitation-acceptance re-validation

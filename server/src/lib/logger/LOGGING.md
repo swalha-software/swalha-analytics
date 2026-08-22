@@ -65,13 +65,13 @@ Use the shared `logger` for process-wide work such as cluster startup. Use `serv
 Prefer stable structured fields over interpolation:
 
 ```typescript
-logger.info({ monitorId, region }, "Running monitor check");
+logger.info({ siteId, jobId }, "Running scheduled report");
 ```
 
 For exceptions, use Pino's canonical `err` key:
 
 ```typescript
-logger.error({ err: error, monitorId }, "Monitor check failed");
+logger.error({ err: error, siteId }, "Scheduled report failed");
 ```
 
 The runtime also normalizes legacy direct `Error` arguments and `{ error }` objects to `err`, so stack and message data survive. If code throws a non-`Error` value, the runtime emits a safe `NonErrorThrown` error with only the thrown value's type; it does not serialize the unknown value.

@@ -140,7 +140,7 @@ The workhorse. A 21-step pure-grayscale ramp (`--neutral-0` at 97% L through `--
 - **Border** (`#262626`, `--border` dark / `#ebebeb` light): Hairline seams and dividers, always 1px. Mirrors swalha.com's `oklch(1 0 0 / 10%)` composited over the canvas.
 
 ### Tertiary (semantic state only)
-- **Success Green** (`#10b981`, `--emerald-500` / `--green-500`): Success badges, positive deltas, live/realtime pulses, uptime-OK, copy-confirm checks. Green no longer carries the brand — it carries *only* the meaning "this went well" — but it stays green so the green/red delta pairing survives.
+- **Success Green** (`#10b981`, `--emerald-500` / `--green-500`): Success badges, positive deltas, live/realtime pulses, copy-confirm checks. Green no longer carries the brand — it carries *only* the meaning "this went well" — but it stays green so the green/red delta pairing survives.
 - **Destructive Red** (`#ef4444`, `--red-500`): Errors, delete actions, negative deltas.
 - **Warning Yellow** (`#eab308`, `--yellow-500`): Warnings, caution thresholds.
 - **Info Blue** (`#3b82f6`, `--blue-500`): Informational badges only.
