@@ -43,7 +43,18 @@ export async function ensureLocalUser(
     .from(account)
     .where(and(eq(account.providerId, SSO_PROVIDER_ID), eq(account.accountId, u.userId)))
     .limit(1);
-  if (linked) return linked.userId;
+  if (linked) {
+    // Profile lives in Auth; keep the mirrored name/image current.
+    const [local] = await tx
+      .select({ name: user.name, image: user.image })
+      .from(user)
+      .where(eq(user.id, linked.userId));
+    const name = u.name || u.email;
+    if (local && (local.name !== name || (local.image ?? null) !== (u.image ?? null))) {
+      await tx.update(user).set({ name, image: u.image, updatedAt: now() }).where(eq(user.id, linked.userId));
+    }
+    return linked.userId;
+  }
 
   const [byEmail] = await tx.select({ id: user.id }).from(user).where(eq(user.email, u.email)).limit(1);
   const localId = byEmail?.id ?? generateId();

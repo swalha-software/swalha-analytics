@@ -71,6 +71,17 @@ describe("applyOrganizationSnapshot", () => {
     ]);
   });
 
+  it("refreshes a linked user's name and image from a newer snapshot", async () => {
+    await applyOrganizationSnapshot(snapshot(), 1);
+    const ownerId = (await localUserBySub("sub_owner"))!;
+    await applyOrganizationSnapshot(
+      snapshot({ members: [{ ...owner, name: "Muhammad Swalha", image: "https://img.test/me.png" }, dev] }),
+      2
+    );
+    const [u] = await db.select().from(user).where(eq(user.id, ownerId));
+    expect(u).toMatchObject({ name: "Muhammad Swalha", image: "https://img.test/me.png" });
+  });
+
   it("ignores versions that are not newer", async () => {
     await applyOrganizationSnapshot(snapshot(), 5);
     expect(await applyOrganizationSnapshot(snapshot({ name: "Older" }), 5)).toEqual({

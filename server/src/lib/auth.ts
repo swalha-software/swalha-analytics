@@ -211,6 +211,8 @@ const pluginList = [
                 process.env.SWALHA_SSO_DISCOVERY_URL ?? "https://auth.swalha.com/.well-known/openid-configuration",
               scopes: ["openid", "email", "profile", "organizations"],
               pkce: true,
+              // Auth owns the profile: refresh name/image locally on every sign-in.
+              overrideUserInfo: true,
               // better-auth's default reads the id_token and skips userinfo, but
               // the `organizations` claim is userinfo-only: fetch it ourselves
               // and sync the user's memberships before they are signed in.
