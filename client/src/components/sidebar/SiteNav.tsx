@@ -56,6 +56,12 @@ export function SiteNav() {
 
   return (
     <>
+      {/* The organization-wide view. It shares the dashboard glyph with "Main"
+          on purpose: same page, one scope up. */}
+      <NavGroup label={t("Organization")}>
+        <NavItem label={t("Overview")} href="/" icon={LayoutDashboard} active={pathname === "/"} />
+      </NavGroup>
+
       <NavGroup label={isMobileSite ? t("App Analytics") : t("Web Analytics")}>
         {tab(t("Main"), "main", LayoutDashboard)}
         {tab(t("Dashboards"), "dashboards", LayoutGrid)}

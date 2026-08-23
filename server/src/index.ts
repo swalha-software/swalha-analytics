@@ -50,6 +50,7 @@ import {
   getLiveUsercount,
   getMetric,
   getMetricLite,
+  getOrganizationOverview,
   getOrgEventCount,
   getOutboundLinks,
   getOverview,
@@ -410,6 +411,7 @@ async function analyticsRoutes(fastify: FastifyInstance) {
   fastify.get("/sites/:siteId/events/autocapture-values", publicEventsRead, getAutocaptureValues);
   fastify.get("/sites/:siteId/events/outbound", publicEventsRead, getOutboundLinks);
   fastify.get("/org-event-count/:organizationId", orgAnalyticsRead, getOrgEventCount);
+  fastify.get("/organizations/:organizationId/overview", orgAnalyticsRead, getOrganizationOverview);
   fastify.post("/organizations/:organizationId/analytics/query", orgSqlRead, runCustomQuery);
   fastify.post("/organizations/:organizationId/analytics/query/generate", orgSqlRead, generateCustomQuery);
   fastify.get("/sites/:siteId/performance/overview", publicAnalyticsRead, getPerformanceOverview);

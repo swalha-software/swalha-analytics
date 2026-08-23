@@ -7,7 +7,7 @@ import type { GetOverviewBucketedResponse } from "../../../../../api/analytics/e
 import { ChartTooltip } from "../../../../../components/charts/ChartTooltip";
 import { TimeSeriesChart } from "../../../../../components/charts/TimeSeriesChart";
 import type { TimeSeriesChartPoint } from "../../../../../components/charts/TimeSeriesChart";
-import { getChartTimeBounds } from "../../../../../components/charts/timeSeriesChartUtils";
+import { getChartTimeBounds, shouldDashLastSegment } from "../../../../../components/charts/timeSeriesChartUtils";
 import { formatChartDateTime } from "../../../../../lib/dateTimeUtils";
 import { getTimezone, useStore } from "../../../../../lib/store";
 import type { StatType } from "../../../../../lib/store";
@@ -40,7 +40,6 @@ export function Chart({
 }) {
   const { time, bucket, selectedStat, previousTime } = useStore();
   const timezone = getTimezone();
-  const isExactRange = time.mode === "range" && Boolean(time.startTime && time.endTime);
 
   const { current, previous, chartMin, chartMax, displayDashed } = useMemo(() => {
     const { min: cMin, max: boundsMax } = getChartTimeBounds(time, bucket, timezone);
@@ -97,18 +96,7 @@ export function Chart({
       });
     });
 
-    const currentDayStr = DateTime.now().toISODate();
-    const currentMonthStr = DateTime.now().toFormat("yyyy-MM-01");
-    const shouldNotDisplay =
-      time.mode === "all-time" ||
-      isExactRange ||
-      time.mode === "year" ||
-      (time.mode === "month" && time.month !== currentMonthStr) ||
-      (time.mode === "day" && time.day !== currentDayStr) ||
-      (time.mode === "range" && time.endDate !== currentDayStr) ||
-      (time.mode === "day" && (bucket === "minute" || bucket === "five_minutes")) ||
-      (time.mode === "past-minutes" && (bucket === "minute" || bucket === "five_minutes"));
-    const dashed = currentPoints.length >= 2 && !shouldNotDisplay;
+    const dashed = currentPoints.length >= 2 && shouldDashLastSegment(time, bucket);
 
     return {
       current: currentPoints,
@@ -117,7 +105,7 @@ export function Chart({
       chartMax: effChartMax,
       displayDashed: dashed,
     };
-  }, [data, previousData, selectedStat, time, previousTime, bucket, timezone, chartXMax, isExactRange]);
+  }, [data, previousData, selectedStat, time, previousTime, bucket, timezone, chartXMax]);
 
   return (
     <TimeSeriesChart

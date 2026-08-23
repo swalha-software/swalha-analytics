@@ -9,6 +9,16 @@ export type {
   LiveUserCountResponse,
 } from "./overview";
 
+// Organization overview endpoint
+export { fetchOrganizationOverview } from "./organizationOverview";
+export type {
+  GetOrganizationOverviewResponse,
+  OrganizationOverviewMetrics,
+  OrganizationOverviewPoint,
+  OrganizationOverviewSite,
+  OrganizationOverviewTotals,
+} from "./organizationOverview";
+
 // Events endpoints
 export { fetchSiteEventCount } from "./events";
 export type {

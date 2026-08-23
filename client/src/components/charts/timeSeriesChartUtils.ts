@@ -242,3 +242,22 @@ export const getChartTimeBounds = (time: Time, bucket: TimeBucket, timezone: str
 
   return { min: undefined, max: undefined };
 };
+
+/**
+ * Whether the final segment of the current line is still filling up, and so
+ * should be drawn dashed: the period runs up to now, and its last bucket is
+ * coarse enough for the partial reading to be worth flagging.
+ */
+export const shouldDashLastSegment = (time: Time, bucket: TimeBucket): boolean => {
+  const isExactRange = time.mode === "range" && Boolean(time.startTime && time.endTime);
+  const isMinuteScale = bucket === "minute" || bucket === "five_minutes";
+  const today = DateTime.now().toISODate();
+
+  if (time.mode === "all-time" || time.mode === "year" || isExactRange) return false;
+  if (time.mode === "month") return time.month === DateTime.now().toFormat("yyyy-MM-01");
+  // Minute-scale buckets close fast enough that the dash would read as noise.
+  if (time.mode === "day") return time.day === today && !isMinuteScale;
+  if (time.mode === "past-minutes") return !isMinuteScale;
+  if (time.mode === "range") return time.endDate === today;
+  return true;
+};

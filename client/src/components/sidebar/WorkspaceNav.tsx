@@ -1,12 +1,28 @@
 "use client";
 
-import { CreditCard, KeyRound } from "lucide-react";
+import { CreditCard, KeyRound, LayoutDashboard } from "lucide-react";
 import { useExtracted } from "next-intl";
 import { usePathname } from "next/navigation";
 import { useUserOrganizations } from "@/api/admin/hooks/useOrganizations";
 import { authClient } from "@/lib/auth";
 import { IS_CLOUD } from "@/lib/const";
 import { NavGroup, NavItem } from "./parts";
+
+/**
+ * The organization-level nav shown on pages that are not scoped to a site
+ * (the overview itself, settings). On a site page `SiteNav` carries the same
+ * Overview entry, so the two never appear at once.
+ */
+export function OrganizationGroup() {
+  const t = useExtracted();
+  const pathname = usePathname();
+
+  return (
+    <NavGroup label={t("Organization")}>
+      <NavItem label={t("Overview")} href="/" icon={LayoutDashboard} active={pathname === "/"} />
+    </NavGroup>
+  );
+}
 
 export function SettingsGroup() {
   const t = useExtracted();

@@ -10,7 +10,7 @@ import { SidebarNav, SidebarShell, useSidebarCollapsed } from "./parts";
 import { SiteNav } from "./SiteNav";
 import { SiteSwitcher } from "./SiteSwitcher";
 import { UserMenu } from "./UserMenu";
-import { SettingsGroup } from "./WorkspaceNav";
+import { OrganizationGroup, SettingsGroup } from "./WorkspaceNav";
 
 function AppShellSections() {
   const pathname = usePathname();
@@ -32,7 +32,7 @@ function AppShellSections() {
       </div>
 
       <SidebarNav>
-        {isSitePage && <SiteNav />}
+        {isSitePage ? <SiteNav /> : <OrganizationGroup />}
         <SettingsGroup />
       </SidebarNav>
 

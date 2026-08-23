@@ -52,6 +52,7 @@ export { generateCustomQuery } from "./generateCustomQuery.js";
 export { getJourneys } from "./getJourneys.js";
 export { getLiveUsercount } from "./getLiveUsercount.js";
 export { getMetric } from "./getMetric.js";
+export { getOrganizationOverview } from "./getOrganizationOverview.js";
 export { getOrgEventCount } from "./getOrgEventCount.js";
 export { getOverview } from "./getOverview.js";
 export { getOverviewBucketed } from "./getOverviewBucketed.js";
