@@ -1,6 +1,6 @@
 "use client";
 
-import { CreditCard, KeyRound, LayoutDashboard } from "lucide-react";
+import { CreditCard, KeyRound, Layers } from "lucide-react";
 import { useExtracted } from "next-intl";
 import { usePathname } from "next/navigation";
 import { useUserOrganizations } from "@/api/admin/hooks/useOrganizations";
@@ -19,7 +19,7 @@ export function OrganizationGroup() {
 
   return (
     <NavGroup label={t("Organization")}>
-      <NavItem label={t("Overview")} href="/" icon={LayoutDashboard} active={pathname === "/"} />
+      <NavItem label={t("Overview")} href="/" icon={Layers} active={pathname === "/"} />
     </NavGroup>
   );
 }

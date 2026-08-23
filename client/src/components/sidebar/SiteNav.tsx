@@ -8,6 +8,7 @@ import {
   Funnel,
   Gauge,
   Globe2,
+  Layers,
   LayoutDashboard,
   LayoutGrid,
   MousePointerClick,
@@ -59,7 +60,7 @@ export function SiteNav() {
       {/* The organization-wide view. It shares the dashboard glyph with "Main"
           on purpose: same page, one scope up. */}
       <NavGroup label={t("Organization")}>
-        <NavItem label={t("Overview")} href="/" icon={LayoutDashboard} active={pathname === "/"} />
+        <NavItem label={t("Overview")} href="/" icon={Layers} active={pathname === "/"} />
       </NavGroup>
 
       <NavGroup label={isMobileSite ? t("App Analytics") : t("Web Analytics")}>
