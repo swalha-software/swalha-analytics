@@ -110,7 +110,9 @@ export function TrackingTab({ siteMetadata, disabled = false }: TrackingTabProps
           } as ToggleConfig,
         ]
       : []),
-    ...(IS_CLOUD && !isMobileSite
+    // Web Vitals feed the Performance tab, which self-hosted deployments serve
+    // from their own ClickHouse — the toggle is not a hosted-plan feature.
+    ...(!isMobileSite
       ? [
           {
             id: "webVitals",

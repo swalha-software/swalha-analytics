@@ -24,7 +24,6 @@ import { useGetSite } from "@/api/admin/hooks/useSites";
 import { useEmbedPageOptions } from "@/app/[site]/utils";
 import { SiteSettings } from "@/components/SiteSettings/SiteSettings";
 import { useAppEnv } from "@/hooks/useIsProduction";
-import { IS_CLOUD } from "@/lib/const";
 import { getCurrentSiteId, getSiteRouteContext } from "@/lib/siteRoute";
 import { useStripeSubscription } from "@/lib/subscription/useStripeSubscription";
 import { NavActionRow, NavGroup, NavItem } from "./parts";
@@ -61,9 +60,10 @@ export function SiteNav() {
         {tab(t("Main"), "main", LayoutDashboard)}
         {tab(t("Dashboards"), "dashboards", LayoutGrid)}
         {tab(t("Globe"), "globe", Globe2)}
-        {IS_CLOUD && tab(t("Pages"), "pages", File)}
-        {IS_CLOUD && !isMobileSite && tab(t("Performance"), "performance", Gauge)}
-        {IS_CLOUD && tab(t("Bots"), "bots", Bot)}
+        {tab(t("Pages"), "pages", File)}
+        {/* Web vitals are a web-only signal; the mobile SDK sends none. */}
+        {!isMobileSite && tab(t("Performance"), "performance", Gauge)}
+        {tab(t("Bots"), "bots", Bot)}
         {tab(t("Goals"), "goals", Target)}
       </NavGroup>
 
