@@ -1,9 +1,12 @@
 "use client";
 
-import { type LucideIcon, User } from "lucide-react";
+import { type LucideIcon, PanelLeft, User } from "lucide-react";
+import { useExtracted } from "next-intl";
 import Link from "next/link";
-import { createContext, useContext } from "react";
+import { createContext, useContext, useEffect } from "react";
+import { SwalhaLogo } from "@/components/SwalhaLogo";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { useSidebarStore } from "@/lib/sidebarStore";
 import { cn } from "@/lib/utils";
 
 // The mobile sheet renders the same tree but always expanded, so the icon-rail
@@ -82,7 +85,7 @@ export function InitialsAvatar({
       ) : initials ? (
         initials
       ) : (
-        <User className="size-4" />
+        <User className="size-[18px]" />
       )}
     </span>
   );
@@ -171,7 +174,7 @@ export function navRowClass(active: boolean, collapsed = false) {
 
 export function navIconClass(active: boolean) {
   return cn(
-    "size-4 shrink-0",
+    "size-[18px] shrink-0",
     active ? "text-accent-600 dark:text-accent-400" : "text-neutral-500 dark:text-neutral-400"
   );
 }
@@ -217,5 +220,156 @@ export function NavActionRow({ label, icon: Icon }: { label: string; icon: Lucid
         {!collapsed && <span className="truncate">{label}</span>}
       </div>
     </CollapsedTooltip>
+  );
+}
+
+const toggleButtonClass = cn(
+  "flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-md transition-colors",
+  "text-neutral-500 hover:bg-neutral-150 hover:text-neutral-900",
+  "dark:text-neutral-400 dark:hover:bg-neutral-800/70 dark:hover:text-white",
+  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-500/60"
+);
+
+function isTypingTarget(target: EventTarget | null) {
+  if (!(target instanceof HTMLElement)) return false;
+  return target.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName);
+}
+
+/** Reads the stored preference once, and wires the "[" shortcut. */
+function useCollapseControls(enabled: boolean) {
+  const hydrateCollapsed = useSidebarStore(state => state.hydrateCollapsed);
+  const toggleCollapsed = useSidebarStore(state => state.toggleCollapsed);
+
+  useEffect(() => {
+    if (!enabled) return;
+    hydrateCollapsed();
+  }, [enabled, hydrateCollapsed]);
+
+  useEffect(() => {
+    if (!enabled) return;
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "[" || event.metaKey || event.ctrlKey || event.altKey) return;
+      if (isTypingTarget(event.target)) return;
+      event.preventDefault();
+      toggleCollapsed();
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [enabled, toggleCollapsed]);
+
+  return toggleCollapsed;
+}
+
+/**
+ * The frame and brand header both sidebars share: fixed widths, the collapse
+ * toggle, and the collapsed flag on context for every row below.
+ */
+export function SidebarShell({
+  className,
+  forceExpanded,
+  children,
+}: {
+  className?: string;
+  forceExpanded?: boolean;
+  children: React.ReactNode;
+}) {
+  const t = useExtracted();
+  const storedCollapsed = useSidebarStore(state => state.collapsed);
+  // The mobile sheet is a full-width drawer: the rail would make no sense there.
+  const collapsed = forceExpanded ? false : storedCollapsed;
+  const toggleCollapsed = useCollapseControls(!forceExpanded);
+
+  return (
+    <SidebarCollapsedProvider collapsed={collapsed}>
+      <div
+        className={cn(
+          "flex h-dvh shrink-0 flex-col overflow-hidden border-e border-neutral-150 bg-neutral-50 transition-[width] duration-200 dark:border-neutral-850 dark:bg-neutral-900",
+          collapsed ? "w-14" : "w-60",
+          className
+        )}
+      >
+        <div
+          className={cn(
+            "flex h-14 shrink-0 items-center border-b border-neutral-150 dark:border-neutral-850",
+            collapsed ? "justify-center px-2" : "gap-1 px-3"
+          )}
+        >
+          {collapsed ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  onClick={toggleCollapsed}
+                  aria-label={t("Expand sidebar")}
+                  className={cn(toggleButtonClass, "group size-10 p-1")}
+                >
+                  <span className="flex items-center group-hover:hidden group-focus-visible:hidden">
+                    <SwalhaLogo width={24} height={24} />
+                  </span>
+                  <PanelLeft className="hidden size-4 group-hover:block group-focus-visible:block" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="right" sideOffset={8}>
+                {t("Expand sidebar")}
+              </TooltipContent>
+            </Tooltip>
+          ) : (
+            <>
+              <Link
+                href="/"
+                aria-label="Swalha Analytics"
+                className="flex h-10 min-w-0 flex-1 items-center gap-2 rounded-md p-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-500/60"
+              >
+                <SwalhaLogo width={24} height={24} />
+                <span className="flex min-w-0 items-baseline gap-1.5 truncate">
+                  <span className="text-sm font-semibold tracking-tight text-neutral-900 dark:text-white">Swalha</span>
+                  <span className="truncate text-[13px] font-normal tracking-wide text-neutral-500 dark:text-neutral-400">
+                    Analytics
+                  </span>
+                </span>
+              </Link>
+              {!forceExpanded && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      onClick={toggleCollapsed}
+                      aria-label={t("Collapse sidebar")}
+                      className={cn(toggleButtonClass, "ms-auto")}
+                    >
+                      <PanelLeft className="size-4" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" sideOffset={8}>
+                    {t("Collapse sidebar")}
+                  </TooltipContent>
+                </Tooltip>
+              )}
+            </>
+          )}
+        </div>
+
+        {children}
+      </div>
+    </SidebarCollapsedProvider>
+  );
+}
+
+/** The scrolling nav column both sidebars share. */
+export function SidebarNav({ children }: { children: React.ReactNode }) {
+  const collapsed = useSidebarCollapsed();
+
+  return (
+    <nav
+      className={cn(
+        "flex min-h-0 flex-1 flex-col overflow-y-auto",
+        // The rail's leading divider would double up on the border above it.
+        collapsed ? "gap-3 p-2 [&>.nav-divider:first-child]:hidden" : "gap-4 p-3"
+      )}
+    >
+      {children}
+    </nav>
   );
 }

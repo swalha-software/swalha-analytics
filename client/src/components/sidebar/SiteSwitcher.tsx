@@ -218,7 +218,7 @@ function SiteSwitcherInner() {
   ) : (
     <>
       <span className="flex size-7 shrink-0 items-center justify-center rounded-md bg-neutral-200 text-neutral-500 dark:bg-neutral-800 dark:text-neutral-400">
-        <AppWindow className="size-4" />
+        <AppWindow className="size-[18px]" />
       </span>
       {!collapsed && (
         <span className="min-w-0 flex-1 truncate text-[13px] text-neutral-500 dark:text-neutral-400">{label}</span>

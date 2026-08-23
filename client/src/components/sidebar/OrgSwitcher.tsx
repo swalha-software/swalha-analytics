@@ -81,7 +81,7 @@ export function OrgSwitcher() {
     return (
       <div className={cn(switcherRowClass(collapsed), "pointer-events-none")}>
         <span className="flex size-7 shrink-0 items-center justify-center rounded-md bg-neutral-200 text-neutral-500 dark:bg-neutral-800 dark:text-neutral-400">
-          <Building2 className="size-4" />
+          <Building2 className="size-[18px]" />
         </span>
         {!collapsed && <SwitcherLabel primary={t("No organizations")} secondary={t("Organization")} />}
       </div>
