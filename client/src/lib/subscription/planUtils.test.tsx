@@ -139,15 +139,6 @@ describe("planIncludesReplay", () => {
     expect(planIncludesReplay({ planName: "custom" })).toBe(true);
   });
 
-  it("includes AppSumo tiers 4 through 7 only", () => {
-    for (const tier of [4, 5, 6, 7]) {
-      expect(planIncludesReplay({ planName: `appsumo-${tier}` }), `appsumo-${tier}`).toBe(true);
-    }
-    for (const tier of [1, 2, 3, 8]) {
-      expect(planIncludesReplay({ planName: `appsumo-${tier}` }), `appsumo-${tier}`).toBe(false);
-    }
-  });
-
   it("excludes large pro trials but keeps small ones", () => {
     expect(planIncludesReplay({ planName: "pro500k", isTrial: true, eventLimit: 500_000 })).toBe(false);
     expect(planIncludesReplay({ planName: "pro1m", isTrial: true, eventLimit: 1_000_000 })).toBe(false);

@@ -3,7 +3,6 @@ import { describe, expect, it } from "vitest";
 import { Time } from "@/components/DateSelector/types";
 import {
   analyticsParsers,
-  appSumoCallbackParsers,
   invitationParsers,
   parseAsFilters,
   parseAsStatType,
@@ -177,11 +176,5 @@ describe("callback parsers", () => {
     expect(invitationParsers.organization.parse("acme")).toBe("acme");
     expect(invitationParsers.inviterEmail.parse("a@b.com")).toBe("a@b.com");
     expect(invitationParsers.invitationId.parse("inv_1")).toBe("inv_1");
-  });
-
-  it("reads the AppSumo step as an integer", () => {
-    expect(appSumoCallbackParsers.code.parse("abc123")).toBe("abc123");
-    expect(appSumoCallbackParsers.step.parse("2")).toBe(2);
-    expect(appSumoCallbackParsers.step.parse("two")).toBeNull();
   });
 });
