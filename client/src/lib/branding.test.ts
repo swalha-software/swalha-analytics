@@ -158,7 +158,7 @@ const APP_ORIGIN = "https://analytics.swalha.com";
  * Copy that names Rybbit on purpose, to credit the upstream project rather
  * than let the SWALHA mark imply we publish its docs and policy pages.
  */
-const UPSTREAM_ATTRIBUTION = /built on the open-source Rybbit project/;
+const UPSTREAM_ATTRIBUTION = /built on the open-source Rybbit project/i;
 
 // ── Retired Rybbit logo artwork ─────────────────────────────────────────────
 
@@ -296,10 +296,11 @@ describe("product branding links to this deployment", () => {
   });
 
   it("no logo or wordmark click target still points at rybbit.com", () => {
-    // Files where the SWALHA lockup is itself the link. Documentation, release,
-    // and package links elsewhere stay on their upstream hosts on purpose.
-    const surfaces = [
-      "src/app/login/page.tsx",
+    // Surfaces that carry the SWALHA lockup. Where the lockup is a link it must
+    // point at this deployment; where it is decorative — the login page shows it
+    // to a visitor already on the origin — only the "never upstream" rule holds.
+    // Documentation, release and package links elsewhere stay upstream on purpose.
+    const linkedSurfaces = [
       "src/app/signup/page.tsx",
       "src/app/widget/[siteId]/route.ts",
       "src/app/[site]/bots/components/BotChart.tsx",
@@ -307,14 +308,17 @@ describe("product branding links to this deployment", () => {
       "src/app/[site]/main/components/MainSection/MainSectionLite.tsx",
       "src/app/[site]/performance/components/PerformanceChart.tsx",
     ];
+    const decorativeSurfaces = ["src/app/login/page.tsx"];
 
-    for (const rel of surfaces) {
+    for (const rel of [...linkedSurfaces, ...decorativeSurfaces]) {
       const source = readFileSync(path.join(CLIENT, rel), "utf8");
       const brandHrefs = [...source.matchAll(/href=(?:"([^"]+)"|\{[^}]*?"(https?:\/\/[^"]+)"[^}]*\})/g)]
         .flatMap(match => [match[1], match[2]])
         .filter((href): href is string => Boolean(href) && /rybbit\.(com|io)\/?$/.test(href));
       expect(brandHrefs, `${rel} links its logo at the upstream site`).toEqual([]);
-      expect(source, `${rel} should link the deployment origin`).toContain(APP_ORIGIN);
+      if (linkedSurfaces.includes(rel)) {
+        expect(source, `${rel} should link the deployment origin`).toContain(APP_ORIGIN);
+      }
     }
   });
 
