@@ -56,7 +56,13 @@ export default function Home() {
       );
     }
 
-    return <OrganizationOverview organizationId={organizationId} organizationName={activeOrganization?.name} />;
+    return (
+      <OrganizationOverview
+        organizationId={organizationId}
+        organizationName={activeOrganization?.name}
+        canAddSite={!isUserMember}
+      />
+    );
   };
 
   return (

@@ -1,11 +1,13 @@
 "use client";
 
-import { ArrowDownWideNarrow, Search } from "lucide-react";
+import { ArrowDownWideNarrow, Plus, Search } from "lucide-react";
 import { useExtracted } from "next-intl";
 import { useMemo, useState } from "react";
 import type { OrganizationOverviewSite } from "@/api/analytics/endpoints";
 import { NothingFound } from "@/components/NothingFound";
 import { Card, CardLoader } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { AddSite } from "@/app/components/AddSite";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useStore } from "@/lib/store";
@@ -42,11 +44,14 @@ export function SiteTrafficList({
   metric,
   isLoading,
   isFetching,
+  canAddSite,
 }: {
   sites: OrganizationOverviewSite[] | undefined;
   metric: OverviewMetric;
   isLoading: boolean;
   isFetching: boolean;
+  /** Members cannot add sites; the trigger stays visible but disabled. */
+  canAddSite: boolean;
 }) {
   const t = useExtracted();
   const time = useStore(state => state.time);
@@ -117,6 +122,15 @@ export function SiteTrafficList({
               ))}
             </SelectContent>
           </Select>
+          <AddSite
+            disabled={!canAddSite}
+            trigger={
+              <Button size="sm" variant="success" className="h-8" disabled={!canAddSite}>
+                <Plus className="size-3.5" />
+                <span className="hidden sm:inline">{t("Add Site")}</span>
+              </Button>
+            }
+          />
         </div>
       </div>
 

@@ -20,9 +20,12 @@ import type { OverviewMetric } from "./overviewUtils";
 export function OrganizationOverview({
   organizationId,
   organizationName,
+  canAddSite,
 }: {
   organizationId: string | undefined;
   organizationName: string | undefined;
+  /** Members cannot add sites; the action stays visible but disabled. */
+  canAddSite: boolean;
 }) {
   const t = useExtracted();
   // The chart's metric also picks which shape the per-site sparklines draw, so
@@ -67,7 +70,13 @@ export function OrganizationOverview({
             onMetricChange={setMetric}
             isFetching={isFetching && !isLoading}
           />
-          <SiteTrafficList sites={data?.sites} metric={metric} isLoading={isLoading} isFetching={isFetching} />
+          <SiteTrafficList
+            sites={data?.sites}
+            metric={metric}
+            isLoading={isLoading}
+            isFetching={isFetching}
+            canAddSite={canAddSite}
+          />
         </>
       )}
     </div>
