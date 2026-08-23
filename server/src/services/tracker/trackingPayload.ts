@@ -1,14 +1,18 @@
 import { ALL_CLIENT_BOT_SIGNAL_BITS, MAX_CLIENT_BOT_SCORE } from "@rybbit/shared";
 import { z } from "zod";
 
+// Screen dimensions feed the bot-detection cohort key, which mints Redis keys;
+// an unbounded value lets one client inflate that key space at will.
+const MAX_SCREEN_DIMENSION = 65_535;
+
 // Shared fields for all event types
 const baseEventFields = {
   site_id: z.string().min(1),
   hostname: z.string().max(253).optional(),
   pathname: z.string().max(2048).optional(),
   querystring: z.string().max(2048).optional(),
-  screenWidth: z.number().int().nonnegative().optional(),
-  screenHeight: z.number().int().nonnegative().optional(),
+  screenWidth: z.number().int().nonnegative().max(MAX_SCREEN_DIMENSION).optional(),
+  screenHeight: z.number().int().nonnegative().max(MAX_SCREEN_DIMENSION).optional(),
   language: z.string().max(35).optional(),
   page_title: z.string().max(512).optional(),
   referrer: z.string().max(2048).optional(),

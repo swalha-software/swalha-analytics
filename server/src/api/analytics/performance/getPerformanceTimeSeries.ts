@@ -1,5 +1,5 @@
 import { FastifyReply, FastifyRequest } from "fastify";
-import { resolveTimeWindow } from "../utils/timeWindow.js";
+import { isTimeBucket, resolveTimeWindow } from "../utils/timeWindow.js";
 import { TimeBucket, PerformanceTimeSeriesPoint } from "../types.js";
 import { FilterParams } from "@rybbit/shared";
 import { getFilterStatement } from "../utils/getFilterStatement.js";
@@ -59,6 +59,10 @@ interface GetPerformanceTimeSeriesRequest {
 export const getPerformanceTimeSeries = analyticsRoute<GetPerformanceTimeSeriesRequest>(
   "performance time series",
   async (req: FastifyRequest<GetPerformanceTimeSeriesRequest>, res: FastifyReply) => {
+    if (req.query.bucket !== undefined && !isTimeBucket(req.query.bucket)) {
+      return res.status(400).send({ error: "Invalid bucket parameter" });
+    }
+
     const siteId = Number(req.params.siteId);
 
     const data = await runAnalyticsQuery<PerformanceTimeSeriesPoint>({

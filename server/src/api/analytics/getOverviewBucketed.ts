@@ -1,6 +1,6 @@
 import { FilterParams } from "@rybbit/shared";
 import { FastifyReply, FastifyRequest } from "fastify";
-import { resolveTimeWindow } from "./utils/timeWindow.js";
+import { isTimeBucket, resolveTimeWindow } from "./utils/timeWindow.js";
 import { getFilterStatement } from "./utils/getFilterStatement.js";
 import { TimeBucket } from "./types.js";
 import { analyticsRoute, runAnalyticsQuery } from "./utils/analyticsQuery.js";
@@ -97,6 +97,10 @@ interface GetOverviewBucketedRequest {
 export const getOverviewBucketed = analyticsRoute<GetOverviewBucketedRequest>(
   "pageviews",
   async (req: FastifyRequest<GetOverviewBucketedRequest>, res: FastifyReply) => {
+    if (req.query.bucket !== undefined && !isTimeBucket(req.query.bucket)) {
+      return res.status(400).send({ error: "Invalid bucket parameter" });
+    }
+
     const {
       start_date,
       end_date,

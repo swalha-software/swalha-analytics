@@ -3,6 +3,7 @@ import { TimeBucket } from "../types.js";
 import {
   bucketIntervalMap,
   getTimeStatement,
+  isTimeBucket,
   normalizeDatetimeForClickhouse,
   resolveTimeWindow,
   TimeBucketToFn,
@@ -258,9 +259,9 @@ describe("fill()", () => {
     });
 
     it("should not fill past an upper bound already on a bucket boundary", () => {
-      expect(
-        fillOf({ start_datetime: "2024-01-01 00:00:00", end_datetime: "2024-01-01 04:00:00" }, "hour")
-      ).toContain("TO if(");
+      expect(fillOf({ start_datetime: "2024-01-01 00:00:00", end_datetime: "2024-01-01 04:00:00" }, "hour")).toContain(
+        "TO if("
+      );
     });
   });
 
@@ -451,5 +452,21 @@ describe("SQL injection", () => {
     // line of defence rather than the only one.
     expect(getTime({ ...DATE_RANGE, time_zone: "UTC'; DROP TABLE events;--" })).toBe("");
     expect(fillOf({ ...DATE_RANGE, time_zone: "UTC'; DROP TABLE events;--" }, "day")).toBe("");
+  });
+});
+
+describe("isTimeBucket", () => {
+  it("accepts every bucket the SQL builder knows", () => {
+    for (const bucket of Object.keys(TimeBucketToFn)) {
+      expect(isTimeBucket(bucket)).toBe(true);
+    }
+  });
+
+  it("rejects unknown bucket values and inherited properties", () => {
+    // TimeBucket is erased at runtime, so an unvalidated querystring value would
+    // index TimeBucketToFn to undefined and be interpolated into SQL as such.
+    for (const value of ["quarter", "", "constructor", "__proto__", "toString", 5, null, undefined]) {
+      expect(isTimeBucket(value)).toBe(false);
+    }
   });
 });

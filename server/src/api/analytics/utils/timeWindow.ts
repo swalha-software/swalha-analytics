@@ -56,6 +56,14 @@ export const TimeBucketToFn = {
   year: "toStartOfYear",
 } as const;
 
+/**
+ * Whether a caller-supplied value names a bucket. `TimeBucket` is a type, so it
+ * is erased at runtime: an unvalidated querystring value would index
+ * `TimeBucketToFn` to `undefined` and be interpolated into SQL as such.
+ */
+export const isTimeBucket = (value: unknown): value is TimeBucket =>
+  typeof value === "string" && Object.prototype.hasOwnProperty.call(TimeBucketToFn, value);
+
 export const bucketIntervalMap = {
   minute: "1 MINUTE",
   five_minutes: "5 MINUTES",

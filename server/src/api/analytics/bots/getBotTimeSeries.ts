@@ -1,7 +1,7 @@
 import { FilterParams } from "@rybbit/shared";
 import { FastifyReply, FastifyRequest } from "fastify";
 import { TimeBucket } from "../types.js";
-import { resolveTimeWindow } from "../utils/timeWindow.js";
+import { isTimeBucket, resolveTimeWindow } from "../utils/timeWindow.js";
 import { analyticsRoute, runAnalyticsQuery } from "../utils/analyticsQuery.js";
 import { type BotLayerKey, getBotFilterStatement, getBotLayerStatement } from "./utils.js";
 
@@ -45,6 +45,10 @@ export const buildBotTimeSeriesQuery = (query: BotTimeSeriesRequest["Querystring
 export const getBotTimeSeries = analyticsRoute<BotTimeSeriesRequest>(
   "bot time series",
   async (req: FastifyRequest<BotTimeSeriesRequest>, res: FastifyReply) => {
+    if (req.query.bucket !== undefined && !isTimeBucket(req.query.bucket)) {
+      return res.status(400).send({ error: "Invalid bucket parameter" });
+    }
+
     const data = await runAnalyticsQuery<BotTimeSeriesPoint>({
       query: buildBotTimeSeriesQuery(req.query),
       params: { siteId: Number(req.params.siteId) },

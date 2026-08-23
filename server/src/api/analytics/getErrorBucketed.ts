@@ -1,6 +1,6 @@
 import { FilterParams } from "@rybbit/shared";
 import { FastifyReply, FastifyRequest } from "fastify";
-import { resolveTimeWindow } from "./utils/timeWindow.js";
+import { isTimeBucket, resolveTimeWindow } from "./utils/timeWindow.js";
 import { TimeBucket } from "./types.js";
 import { getFilterStatement } from "./utils/getFilterStatement.js";
 import { AnalyticsQueryError, runAnalyticsQuery } from "./utils/analyticsQuery.js";
@@ -50,6 +50,10 @@ export async function getErrorBucketed(req: FastifyRequest<GetErrorBucketedReque
 
   if (!errorMessage) {
     return res.status(400).send({ error: "errorMessage parameter is required" });
+  }
+
+  if (req.query.bucket !== undefined && !isTimeBucket(req.query.bucket)) {
+    return res.status(400).send({ error: "Invalid bucket parameter" });
   }
 
   const numericSiteId = Number(site);
