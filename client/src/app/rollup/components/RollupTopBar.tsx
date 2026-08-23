@@ -2,7 +2,7 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { DateSelector } from "@/components/DateSelector/DateSelector";
 import { Button } from "@/components/ui/button";
-import { canGoForward, goBack, goForward, useStore } from "@/lib/store";
+import { canGoBack, canGoForward, goBack, goForward, useStore } from "@/lib/store";
 
 export function RollupTopBar() {
   const { time, setTime } = useStore();
@@ -16,7 +16,7 @@ export function RollupTopBar() {
             variant="secondary"
             size="icon"
             onClick={goBack}
-            disabled={time.mode === "past-minutes"}
+            disabled={!canGoBack(time)}
             className="rounded-r-none h-8 w-8"
           >
             <ChevronLeft />

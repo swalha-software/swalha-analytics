@@ -15,11 +15,109 @@ Swalha-specific behavior that must survive every sync:
 
 ## Last reviewed upstream SHA
 
-`b858276fc8a7806f8ab4c6d1e7684217a8c1e88a` (2026-08-15)
+`64f8c4fb7f394bdfe9379717de8e6c21758b1ac2` (2026-08-20)
 
 Baseline before the first recorded sync: `0d0437cf1536`.
 
 ## Log
+
+### 2026-W34 — reviewed `b858276f..64f8c4fb`
+
+Nineteen upstream commits. Still no upstream release since `v2.8.0` (2026-07-27,
+already in this fork) and no open GitHub security advisories on `rybbit-io/rybbit`.
+
+**Ported (13)**
+
+| Upstream | Why |
+| --- | --- |
+| `9c66672b` — `refactor(analytics)`: one time window, one fill, for every bucketed query (#1119) | Analytics accuracy. The time window and bucket fill were re-derived in `lite/utils`, `getPerformanceTimeSeries`, `runDashboardCardQuery` and `query-validation`, each with its own rounding and gap-filling. One `timeWindow` module now serves every bucketed query, so a period's first and last buckets are computed the same way whichever surface asks. |
+| `4e9f5166` — `refactor(sites)`: one module for every read of a Site's tracking configuration (#1122) | Ingestion correctness. Excluded IPs, excluded countries, the private-link config and the tracking config were four independent reads of the same Site row that could disagree. Collapsed into `lib/siteConfig`, with `getSiteExclusions` covered by tests. |
+| `7dcce6fa` — `feat(bots)`: detect for every site, and catch the paced distributed crawler (#1123) | Bot detection accuracy. Detection now runs for every site, not only those opting into blocking: unenforced detections track the event normally and write a forensic row to `bot_observations` (30-day TTL), so a site that opted out is no longer invisible in the data used to tune the rules. The cohort key gains the browser family — without it Chrome/Safari/Firefox version numbers pooled into one distribution and manufactured the exact conditions the uniformity rule fires on, the only rule that catches a crawler pacing itself under every per-identity threshold. Adds the `missingScreenDimensions` signal (bit 12). |
+| `b9dc8143` — `test(userIdService)` + `normalizeUserAgent` | Analytics accuracy. A browser auto-update changed the user agent and so changed the derived user id, splitting one returning visitor into two. Normalising the version out of the UA before hashing keeps the id stable across updates while still separating different browsers. |
+| `613cd015` — `fix(analytics)`: `processResults` whitespace and non-finite strings | Data correctness. Result post-processing coerced anything numeric-looking, so `"Infinity"`/`"NaN"` dimension values became non-finite numbers and whitespace-only strings collapsed to empty. Both are legitimate values in event properties. |
+| `c65b3931` — `perf(clickhouse)`: cut mutation-driven parts-lock contention on the hot ingest path (#1131) | Performance, ingestion reliability and replay data loss. **Carries a manual cutover — see below.** Four parts: replay metadata moves to an `AggregatingMergeTree` so a batch no longer re-reads the whole session (818 billion rows scanned in six days, 76% of all cluster reads, 2.5M single-row parts); replay timestamps from devices with broken clocks are shifted by a median offset instead of writing rows dated 2032–2090 into partitions a 30-day TTL never expires; identity backfill mutations are batched so N identifies cost one mutation per table instead of N, with failed assignments requeued rather than silently dropped; and the dashboard stops polling "does this site have data yet?" every 5s forever. |
+| `8dbed0d7` — `refactor(client)`: collapse the analytics query layer onto one descriptor-driven seam (#1121) | Correctness and performance in the client read path. Analytics hooks hand-assembled queryKeys listing store inputs, so a key could drift from the request actually sent and serve another period's data. `useAnalyticsQuery` now builds the key from the same request object it sends, and reads the store through selectors so a `selectedStat` change no longer re-renders every analytics hook. |
+| `ff45fb4c` — `test(timeSeriesChartUtils)` | Covers `getChartTimeBounds` across time modes and DST transitions. |
+| `3fca2772` — `fix(api)`: past-minutes date ranges in GSC and PDF exports | Reporting accuracy. Both derived the start from `pastMinutesStart` but always ended today, which is right only while the newer edge is pinned to now. A stepped-back window now ends on its own edge instead of covering days the dashboard is not showing. |
+| `64f8c4fb` — Fix period chart axes ending a bucket early, add past-minutes time navigation (#1130) | Analytics accuracy. Weekly buckets are floored two ways at once — analytics queries via ClickHouse `toStartOfWeek` (Sunday), dashboard cards via `toStartOfInterval(.., INTERVAL 1 WEEK)` (Monday). Flooring the axis max to Sunday put a card's final Monday bucket outside the domain, where the plot clips it and a whole week disappears for any period not ending on a Sunday. Also enables back/forward navigation on past-minutes windows. |
+| `f96317e2` — `fix(geoStore)`: handle empty region input | Avoids a lookup throwing on sessions with no region. |
+| `9ec40e2c` — `test`: cover authorization, billing and SQL-generation paths, run the suites in CI (#1125) | Test coverage across access control, usage, GSC, funnels, goals, event/user conditions, feature-flag regex and IP utils, plus the client suites and `.github/workflows/test.yml`. |
+| `37baf329` — `chore`: upgrade Node.js to 24 | Self-hosting maintenance. Node 20 is end-of-life; the client and server Dockerfiles, the CI workflows, and `@types/node` move to 24. |
+
+**Skipped (6)**
+
+| Upstream | Why |
+| --- | --- |
+| `3f9d7bd2` / `d80c26ce` — `feat(avatars)`/`fix(avatars)`: generated frog avatars (#1127, #1128) | Upstream mascot branding. The frog is Rybbit's brand personality; this fork uses neutral initials avatars in the sidebar (`ae556381`). Porting would reintroduce Rybbit branding the fork deliberately replaced. |
+| `39a5677f` — `feat(company)`: Company Information page and footer link | Marketing-only, and describes the upstream company. |
+| `98e5dd92` — Update docs translations | Marketing/docs-site translations for pages this fork does not publish. |
+| `c6ee0ac9` — `docs`: fix the star history chart provider (#1124) | Upstream README marketing badge. |
+| `88b5a37b` — Forward `.well-known` to backend in custom Nginx configuration (#1107) | Docs-only change to a self-hosting guide for an Nginx layout this fork does not ship — it deploys behind the repo's own `Caddyfile` / `docker-compose.yml`. |
+
+**Adaptations required**
+
+- `client/src/app/(home)/page.tsx` and `client/src/app/(home)/SiteCard.tsx` (#1130, #1121):
+  this fork's `/` is a doorway that forwards to a site dashboard, with no site list
+  and no time navigation, so upstream's `canGoBack` wiring and the `SiteCard` edits
+  have nothing to apply to. Resolved to the fork's version; the other four toolbars
+  that do carry the control took the fix.
+- `client/src/api/gsc/gscDateRange.ts` (#1130 before #1121): the past-minutes fix
+  landed on a module #1121 had not yet extracted. Applied to the fork's inline
+  `getGSCDateRange`, then carried onto the extracted module when #1121 followed.
+- AppSumo tests from #1125 (`server/src/lib/subscriptionUtils.test.ts`,
+  `server/src/services/admin/subscriptionService.test.ts`, and cases in
+  `client/src/lib/parsers.test.ts` / `client/src/lib/subscription/planUtils.test.tsx`):
+  this fork removed the AppSumo integration (#18), so these cover symbols that no
+  longer exist. The two server files are AppSumo-threaded throughout and were
+  dropped; the two client files lost one import and two `it` blocks each.
+- `docs/messages/*.json` from `37baf329`: dropped, since the only addition is
+  the `Company information` key for the marketing page that was not ported.
+- `server/public/script.js` / `script-full.js` regenerated — #1123 added a bot-signal
+  bit without rebuilding the bundles this fork commits. The `_bsm` ingest bound is
+  derived from `ALL_CLIENT_BOT_SIGNAL_BITS`, so bit 12 needed no schema change.
+
+All four Swalha behaviors verified intact: `server/src/lib/auth.ts`,
+`server/src/services/storage/`, `.github/workflows/docker-publish.yml`,
+`docker-compose.yml` and `server/src/lib/email/` are byte-identical to `master`.
+
+**Operational note — `session_replay_metadata_v2` needs a manual backfill**
+
+`c65b3931` repoints replay metadata reads and writes at a new
+`session_replay_metadata_v2` table. The application creates the table on boot, but
+**does not migrate the existing rows**. Until an operator runs the backfill in
+`clickhouse/REPLAY_METADATA_V2.md`, replays recorded before the deploy will have no
+metadata (they will not appear in the session replay list). The backfill requires
+`FINAL` and is **not idempotent** — running it twice doubles `event_count` and
+`compressed_size_bytes` for every session. Plan the deploy and the backfill together.
+
+**Gates run** (Node 24, matching the version this sync moves the images to):
+
+- `shared`: `npm run build` — pass
+- `server`: `npx tsc --noEmit` — pass
+- `server`: `npx vitest run` — 102 files / 1592 tests pass (base `origin/master`: 87 files / 1223 tests)
+- `server`: `npm run build` (tsc + analytics bundle) — pass; the regenerated bundles are
+  committed, and a second build produces no further drift
+- `client`: `npx tsc --noEmit` — pass
+- `client`: `npm run lint` — pass
+- `client`: `npx vitest run` — 14 files / 318 tests, 313 pass and 5 fail, all 5 in
+  `src/lib/branding.test.ts` (base `origin/master`: 2 files / 50 tests, 43 pass and
+  7 fail — the same 5 branding failures plus 2 in `src/lib/time.test.ts` that this
+  sync fixes)
+
+Two known failures, both **pre-existing on `origin/master`** and unrelated to this sync:
+
+- `client/src/lib/branding.test.ts` — the same 5 assertions fail identically on
+  `origin/master`. The fork's own branding guard is out of date with the recent
+  footer/sidebar/SSO-login rework (`#19`, `#20`, `f3c2de7c`): the footer's upstream
+  attribution string moved, and `src/app/login/page.tsx` no longer carries the
+  deployment-origin link the test looks for. Worth a separate fix; not touched here.
+- `client`: `npm run build` fails to resolve `@rybbit/shared` from
+  `src/api/admin/hooks/useOrgApiKeys.ts` under Turbopack. Reproduced identically on
+  `origin/master` with a clean `.next`, so it is not a regression from this sync.
+
+The server suite also emits four unhandled `socket.destroySoon is not a function`
+teardown errors from `@hono/node-server` in `src/mcp/mcp.test.ts`. Pre-existing noise;
+the file passes in isolation.
 
 ### 2026-W33 — reviewed `0d0437cf1536..b858276f`
 
