@@ -65,6 +65,7 @@ export type UpdateSiteConfigurationInput = {
   trackButtonClicks?: boolean;
   trackCopy?: boolean;
   trackFormInteractions?: boolean;
+  overviewLayout?: { id: string; width: "half" | "full"; hidden?: boolean }[] | null;
 };
 
 export type SiteLifecycleErrorCode =
@@ -128,6 +129,7 @@ const DIRECT_UPDATE_FIELDS = [
   "trackButtonClicks",
   "trackCopy",
   "trackFormInteractions",
+  "overviewLayout",
 ] as const satisfies ReadonlyArray<keyof UpdateSiteConfigurationInput>;
 
 function normalizeSiteType(type: SiteType | null | undefined): SiteType {

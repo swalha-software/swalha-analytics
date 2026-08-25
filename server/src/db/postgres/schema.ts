@@ -101,6 +101,8 @@ export const sites = pgTable(
     apiKey: text("api_key"), // Format: rb_{64_hex_chars} = 67 chars total
     privateLinkKey: text("private_link_key"),
     tags: jsonb("tags").default([]).$type<string[]>(),
+    // Ordered block layout for the site overview page; null = code default.
+    overviewLayout: jsonb("overview_layout").$type<{ id: string; width: "half" | "full"; hidden?: boolean }[]>(),
   },
   table => [check("sites_type_check", sql`${table.type} IS NULL OR ${table.type} IN ('web', 'mobile')`)]
 );
