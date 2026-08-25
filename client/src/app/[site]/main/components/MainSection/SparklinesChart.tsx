@@ -76,7 +76,7 @@ export function SparklinesChart({
           ],
         },
       ]}
-      curve="step"
+      curve="linear"
       fill={[{ match: d => d.id === "1", id: "gradient" }]}
       sliceTooltip={() => null}
       enableCrosshair={false}
