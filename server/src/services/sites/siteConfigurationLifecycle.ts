@@ -65,7 +65,7 @@ export type UpdateSiteConfigurationInput = {
   trackButtonClicks?: boolean;
   trackCopy?: boolean;
   trackFormInteractions?: boolean;
-  overviewLayout?: { id: string; width: "half" | "full"; hidden?: boolean }[] | null;
+  overviewLayout?: { id: string; width: "half" | "full"; hidden?: boolean; panes?: string[] }[] | null;
 };
 
 export type SiteLifecycleErrorCode =

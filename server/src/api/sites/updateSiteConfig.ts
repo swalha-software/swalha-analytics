@@ -68,6 +68,7 @@ const updateSiteConfigSchema = z.object({
         id: z.string().min(1).max(50),
         width: z.enum(["half", "full"]),
         hidden: z.boolean().optional(),
+        panes: z.array(z.string().min(1).max(50)).max(40).optional(),
       })
     )
     .max(30)
