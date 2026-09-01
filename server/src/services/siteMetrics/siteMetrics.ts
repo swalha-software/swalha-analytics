@@ -120,7 +120,14 @@ export function buildOverviewQuery(spec: SiteMetricsSpec): string {
 
 /** The dimensions a report can be broken down by. */
 export type BreakdownDimension =
-  "browser" | "city" | "country" | "device_type" | "operating_system" | "pathname" | "referrer" | "region";
+  | "browser"
+  | "city"
+  | "country"
+  | "device_type"
+  | "operating_system"
+  | "pathname"
+  | "referrer"
+  | "region";
 
 interface DimensionDefinition {
   /** The expression rows are grouped by and reported as `value`. */

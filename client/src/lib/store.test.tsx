@@ -1,7 +1,6 @@
 // The .tsx suffix selects Vitest's jsdom project for localStorage and window.history coverage.
 import { Filter } from "@rybbit/shared";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { DEFAULT_COMPARISON } from "../components/DateSelector/types";
 import { addFilter, getFilteredFilters, getTimezone, removeFilter, updateFilter, useStore } from "./store";
 
 const chrome: Filter = { parameter: "browser", type: "equals", value: ["Chrome"] };
@@ -18,7 +17,6 @@ beforeEach(() => {
     privateKey: null,
     time: { mode: "day", day: "2026-08-14" },
     previousTime: { mode: "day", day: "2026-08-13" },
-    comparison: DEFAULT_COMPARISON,
     bucket: "hour",
     selectedStat: "users",
     filters: [],
@@ -68,7 +66,7 @@ describe("filter state", () => {
   });
 });
 
-describe("time and comparison state", () => {
+describe("time state", () => {
   it("derives the comparison window and bucket whenever time changes", () => {
     useStore.getState().setTime({ mode: "range", startDate: "2026-08-01", endDate: "2026-08-07" });
 
@@ -90,14 +88,6 @@ describe("time and comparison state", () => {
     });
   });
 
-  it("keeps comparison disabled as the selected period changes", () => {
-    useStore.getState().setComparison({ mode: "none" });
-    expect(useStore.getState().previousTime).toBeNull();
-
-    useStore.getState().setTime({ mode: "month", month: "2026-07-01" });
-    expect(useStore.getState()).toMatchObject({ comparison: { mode: "none" }, previousTime: null });
-  });
-
   it("resolves explicit and system timezones through the public helper", () => {
     useStore.getState().setTimezone("America/Los_Angeles");
     expect(getTimezone()).toBe("America/Los_Angeles");
@@ -113,7 +103,6 @@ describe("site context", () => {
       selectedStat: "bounce_rate",
       filters: [chrome],
       bucket: "month",
-      comparison: { mode: "none" },
     });
 
     useStore.getState().setSiteContext("84", "abcdef123456");
@@ -124,18 +113,15 @@ describe("site context", () => {
     expect(state.selectedStat).toBe("users");
     expect(state.filters).toEqual([]);
     expect(state.time.wellKnown).toBe("today");
-    expect(state.comparison).toEqual(DEFAULT_COMPARISON);
   });
 
   it("preserves selections whose URL parameters are waiting to hydrate", () => {
     window.history.replaceState({}, "", "/84/main?timeMode=day&bucket=month&stat=bounce_rate&filters=%5B%5D");
     useStore.setState({
       time: { mode: "day", day: "2026-08-14" },
-      previousTime: null,
       selectedStat: "bounce_rate",
       filters: [chrome],
       bucket: "month",
-      comparison: { mode: "none" },
     });
 
     useStore.getState().setSite("84");
@@ -143,11 +129,9 @@ describe("site context", () => {
     expect(useStore.getState()).toMatchObject({
       site: "84",
       time: { mode: "day", day: "2026-08-14" },
-      previousTime: null,
       selectedStat: "bounce_rate",
       filters: [chrome],
       bucket: "month",
-      comparison: { mode: "none" },
     });
   });
 });

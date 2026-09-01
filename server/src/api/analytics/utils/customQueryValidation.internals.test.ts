@@ -57,9 +57,7 @@ describe("stripSqlLiteralsAndComments", () => {
 
   describe("line comments (--)", () => {
     it("blanks a -- comment but keeps the terminating newline and following SQL", () => {
-      expect(stripSqlLiteralsAndComments("SELECT 1 -- FROM secret\nFROM t")).toBe(
-        "SELECT 1               \nFROM t"
-      );
+      expect(stripSqlLiteralsAndComments("SELECT 1 -- FROM secret\nFROM t")).toBe("SELECT 1               \nFROM t");
     });
   });
 
@@ -239,7 +237,7 @@ describe("hasUnsupportedSyntax", () => {
   });
 
   it("does NOT flag a double quote inside a line or block comment", () => {
-    expect(hasUnsupportedSyntax("SELECT 1 -- a \" b\nFROM t")).toBe(false);
+    expect(hasUnsupportedSyntax('SELECT 1 -- a " b\nFROM t')).toBe(false);
     expect(hasUnsupportedSyntax('SELECT 1 /* a " b */ FROM t')).toBe(false);
   });
 

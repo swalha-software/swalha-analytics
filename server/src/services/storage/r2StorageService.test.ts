@@ -94,15 +94,11 @@ afterEach(() => {
 });
 
 describe("r2Storage initialization", () => {
-  it("stays disabled outside cloud and performs no storage I/O", async () => {
+  it("enables storage outside cloud when R2 credentials are present", async () => {
     const storage = await loadStorage({ cloud: false });
 
-    expect(storage.isEnabled()).toBe(false);
-    await expect(storage.storeBatch(1, "session", [{ type: "pageview" }])).resolves.toBeNull();
-    await expect(storage.getBatch("1/session/batch.json.zst")).rejects.toThrow("R2 storage is not enabled");
-    await expect(storage.deleteBatch("1/session/batch.json.zst")).resolves.toBeUndefined();
-    expect(mocks.clientConfigs).toHaveLength(0);
-    expect(mocks.send).not.toHaveBeenCalled();
+    expect(storage.isEnabled()).toBe(true);
+    expect(mocks.clientConfigs).toHaveLength(1);
   });
 
   it.each([

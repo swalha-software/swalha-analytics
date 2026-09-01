@@ -8,11 +8,11 @@ Detection runs for **every** site. Only trusted server-side ingestion skips it, 
 
 Site-level `blockBots` decides what happens to a detection, not whether one is looked for. `checkBotBlocking()` returns `enforced` alongside the detection, and ingestion routes on it:
 
-| detection | `blockBots` | event lands in | audit row |
-| --- | --- | --- | --- |
-| yes | on | — (kept out of `events`) | `bot_events` |
-| yes | off | `events`, as normal | `bot_observations` |
-| no | either | `events`, as normal | — |
+| detection | `blockBots` | event lands in           | audit row          |
+| --------- | ----------- | ------------------------ | ------------------ |
+| yes       | on          | — (kept out of `events`) | `bot_events`       |
+| yes       | off         | `events`, as normal      | `bot_observations` |
+| no        | either      | `events`, as normal      | —                  |
 
 Enforced detections are still not inserted into `events`, so dashboard, report, replay-list, and usage queries need no bot filter.
 
@@ -89,7 +89,7 @@ The table keeps only the columns needed to inspect bot traffic:
 - one boolean column for each detection layer
 - UA classification fields: `matched_ua_pattern`, `bot_category`
 - client evidence: `client_bot_score`, `client_signal_mask`
-- anomaly evidence: `anomaly_reasons` (the rules that fired, comma-separated) and `anomaly_score`. The boolean layer columns say *that* the anomaly layer convicted; these say which of its dozen rules did, which is the only form in which the row can be argued with.
+- anomaly evidence: `anomaly_reasons` (the rules that fired, comma-separated) and `anomaly_score`. The boolean layer columns say _that_ the anomaly layer convicted; these say which of its dozen rules did, which is the only form in which the row can be argued with.
 
 Both tables are healed by `ensureBotEventsColumns` at init, so a column added here reaches tables created by earlier versions.
 
@@ -134,8 +134,8 @@ Five rules deserve their own note:
 - **Site flood** (`site_flood_oneshot_cohort_10m`, `site_flood_actor_1d`) is the only site-relative logic in the layer. Every other threshold is absolute, so a fleet of disposable identities — one event each, a fresh address per hit, a real browser — can push a four-events-an-hour site to four thousand and trip nothing (measured: 14% caught in such hours versus 48% at rest). The gate is the site's 10-minute volume against its own padded weekly median, computed every 15 minutes from ClickHouse by `siteBaseline.ts` and shared through Redis; a site with no baseline or under a week old is never in flood. The gate alone never convicts. Inside a flood, a device cohort convicts when it is at least a quarter of the site's traffic, at least 60% distinct actors, and at least 95% direct — a launch is many devices, several events per visitor and referrers set, and a campaign spreads over real devices so no cohort reaches a quarter. An actor convicts inside a flood at 200 events a day from a hosting address only — a residential address never convicts on volume, because a person working in a small internal tool all day is that site's whole flood (two were blocked this way on the rule's first day).
 - **Hosting actor volume** (`hosting_actor_events_1d`) convicts a hosting/datacenter address at 1,000 events a day on its own. The supporting-only daily rule below exists because a residential or office address can be hundreds of people; a datacenter address is not. SASE egress (Cato, Zscaler, Netskope) is exempt by ASN, on top of the many-user-agents guard.
 - **Cohort version uniformity** convicts, and is the only rule that can catch a paced distributed crawler — one that stays under every per-identity threshold by design. Its key must carry the browser family: without it, Chrome, Safari and Firefox version numbers pool into one distribution, which inflates the distinct-version count and depresses the modal share, i.e. manufactures exactly the two conditions the rule fires on. Its bucket is an hour: the crawler paces itself, and in a one-minute bucket its busiest cohort never came near the volume gate, so the rule did not fire once in two weeks of production.
-- **Events per actor per day** is supporting-only and scores 1. Its actor is the exact request IP, deliberately *not* the /24 identity bucket the per-visitor rules use — bucketing merges a datacenter range or a SASE egress pool into one actor, and a day is long enough for that to reach any threshold on legitimate traffic. It is additionally dropped outright for an address showing more than three user agents in five minutes, which is what a shared gateway looks like.
-- **Enumeration** (`enumerationObserver.ts`) is in shadow mode: it measures path novelty, events per actor, and direct share per cohort, requires two consecutive qualifying buckets, and **never scores**. It logs. Promoting it should follow from reading those logs, not from a threshold nudge. Its direct share is measured on the raw referrer, before self-referrers are cleared for storage — a stored empty referrer means "direct *or* internal navigation", which most ordinary browsing satisfies.
+- **Events per actor per day** is supporting-only and scores 1. Its actor is the exact request IP, deliberately _not_ the /24 identity bucket the per-visitor rules use — bucketing merges a datacenter range or a SASE egress pool into one actor, and a day is long enough for that to reach any threshold on legitimate traffic. It is additionally dropped outright for an address showing more than three user agents in five minutes, which is what a shared gateway looks like.
+- **Enumeration** (`enumerationObserver.ts`) is in shadow mode: it measures path novelty, events per actor, and direct share per cohort, requires two consecutive qualifying buckets, and **never scores**. It logs. Promoting it should follow from reading those logs, not from a threshold nudge. Its direct share is measured on the raw referrer, before self-referrers are cleared for storage — a stored empty referrer means "direct _or_ internal navigation", which most ordinary browsing satisfies.
 
 ## Trust Boundaries
 

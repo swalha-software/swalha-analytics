@@ -154,11 +154,7 @@ function buildBotEventProperties(
   };
 }
 
-function getClientSignalResult(
-  payload: BotBlockingPayload,
-  userAgent: string,
-  hasReportableScreen: boolean
-) {
+function getClientSignalResult(payload: BotBlockingPayload, userAgent: string, hasReportableScreen: boolean) {
   const hasClientScore = typeof payload.clientBotScore === "number" && Number.isFinite(payload.clientBotScore);
   const hasClientMask = typeof payload.clientBotSignalMask === "number" && Number.isFinite(payload.clientBotSignalMask);
   const rawMask = hasClientMask ? payload.clientBotSignalMask! : 0;
