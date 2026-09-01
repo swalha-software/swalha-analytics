@@ -33,10 +33,10 @@ describe("where()", () => {
           toStartOfDay(toDateTime('2024-01-01', 'America/New_York')),
           'UTC'
           )
-          AND timestamp < if(
+          AND if(
             toDate('2024-01-31') = toDate(now(), 'America/New_York'),
-            toTimeZone(now(), 'UTC'),
-            toTimeZone(
+            timestamp <= toTimeZone(now64(3), 'UTC'),
+            timestamp < toTimeZone(
               toStartOfDay(toDateTime('2024-01-31', 'America/New_York')) + INTERVAL 1 DAY,
               'UTC'
             )
@@ -56,7 +56,10 @@ describe("where()", () => {
       const result = getTime({ start_date: "2024-06-15", end_date: "2024-06-15", time_zone: "UTC" });
 
       expect(normalize(result)).toContain("toDate('2024-06-15') = toDate(now(), 'UTC')");
-      expect(normalize(result)).toContain("toTimeZone(now(), 'UTC')");
+      expect(normalize(result)).toContain("timestamp <= toTimeZone(now64(3), 'UTC')");
+      expect(normalize(result)).toContain(
+        "timestamp < toTimeZone( toStartOfDay(toDateTime('2024-06-15', 'UTC')) + INTERVAL 1 DAY, 'UTC' )"
+      );
     });
 
     it("should take precedence over datetime range and past minutes", () => {

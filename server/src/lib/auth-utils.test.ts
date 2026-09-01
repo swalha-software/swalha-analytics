@@ -1,4 +1,5 @@
-import { eq } from "drizzle-orm";
+import { readFile } from "node:fs/promises";
+import { eq, getTableColumns } from "drizzle-orm";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 // Better-auth pulls in email, stripe, and env config at import time — stub the
@@ -142,6 +143,8 @@ CREATE TABLE "sites" (
 );
 `;
 
+const SITE_SCHEMA_MIGRATIONS = ["0016_marvelous_forgotten_one.sql"];
+
 const ORG = "org_1";
 const NOW = "2026-01-01 00:00:00";
 
@@ -157,6 +160,21 @@ async function siteIdsFor(userId: string): Promise<number[]> {
 
 beforeAll(async () => {
   await (sql as any).exec(DDL);
+
+  for (const migration of SITE_SCHEMA_MIGRATIONS) {
+    const migrationSql = await readFile(new URL(`../../drizzle/${migration}`, import.meta.url), "utf8");
+    await (sql as any).exec(migrationSql);
+  }
+
+  const result = (await (sql as any).query(`
+    SELECT column_name
+    FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'sites'
+  `)) as { rows: { column_name: string }[] };
+  const databaseColumns = result.rows.map(({ column_name }: { column_name: string }) => column_name);
+  const schemaColumns = Object.values(getTableColumns(sites)).map(column => column.name);
+
+  expect(databaseColumns).toEqual(expect.arrayContaining(schemaColumns));
 });
 
 beforeEach(async () => {
