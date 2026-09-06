@@ -62,18 +62,6 @@ const updateSiteConfigSchema = z.object({
   trackButtonClicks: z.boolean().optional(),
   trackCopy: z.boolean().optional(),
   trackFormInteractions: z.boolean().optional(),
-  overviewLayout: z
-    .array(
-      z.object({
-        id: z.string().min(1).max(50),
-        width: z.enum(["half", "full"]),
-        hidden: z.boolean().optional(),
-        panes: z.array(z.string().min(1).max(50)).max(40).optional(),
-      })
-    )
-    .max(30)
-    .nullable()
-    .optional(),
 });
 
 type UpdateSiteConfigRequest = z.infer<typeof updateSiteConfigSchema>;

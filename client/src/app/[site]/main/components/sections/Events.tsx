@@ -8,12 +8,11 @@ import { AutocaptureTargetType } from "../../../../../lib/events";
 import { AutocaptureEventsList } from "../../../events/components/AutocaptureEventsList";
 import { EventList } from "../../../events/components/EventList";
 import { OutboundLinksList } from "../../../events/components/OutboundLinksList";
-import {
-  StandardSectionTabs,
-  type StandardSectionTab,
-} from "../../../components/shared/StandardSection/StandardSectionTabs";
+import { TabbedSectionCard, type TabbedSectionItem } from "../../../components/shared/TabbedSectionCard";
 import { AutocaptureEventsDialogBody } from "./AutocaptureEventsDialog";
 import { OutboundLinksDialogBody } from "./OutboundLinksDialog";
+
+type Tab = "events" | "outbound" | "buttons" | "forms" | "copies";
 
 function EventsContent() {
   const { data: eventNamesData, isLoading: isLoadingEventNames } = useGetEventNames();
@@ -118,10 +117,10 @@ function AutocaptureDialogContent({
   );
 }
 
-export function useEventsTabs(): StandardSectionTab<string>[] {
+export function Events() {
   const t = useExtracted();
 
-  return [
+  const tabs: TabbedSectionItem<Tab>[] = [
     {
       value: "events",
       label: t("Custom Events"),
@@ -177,8 +176,6 @@ export function useEventsTabs(): StandardSectionTab<string>[] {
       dialogTitle: t("Copies"),
     },
   ];
-}
 
-export function Events() {
-  return <StandardSectionTabs defaultValue="events" tabs={useEventsTabs()} className="h-[483px]" />;
+  return <TabbedSectionCard defaultValue="events" tabs={tabs} className="h-[483px]" />;
 }

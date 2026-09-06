@@ -10,6 +10,8 @@ import {
 } from "../../../components/shared/StandardSection/StandardSectionTabs";
 import { CountryFlag } from "../../../components/shared/icons/CountryFlag";
 
+type Tab = "countries" | "regions" | "languages" | "cities" | "map" | "timezones";
+
 function getCountryCity(value: string) {
   if (value.split("-").length === 2) {
     const [country, city] = value.split("-");
@@ -28,11 +30,11 @@ const getCountryFromLanguage = (languageCode: string): string | null => {
   return null;
 };
 
-export function useCountriesTabs(): StandardSectionTab<string>[] {
+export function Countries() {
   const t = useExtracted();
   const { data: subdivisions } = useSubdivisions();
 
-  return [
+  const tabs: StandardSectionTab<Tab>[] = [
     {
       value: "countries",
       label: t("Countries"),
@@ -150,8 +152,6 @@ export function useCountriesTabs(): StandardSectionTab<string>[] {
       },
     },
   ];
-}
 
-export function Countries() {
-  return <StandardSectionTabs defaultValue="countries" tabs={useCountriesTabs()} />;
+  return <StandardSectionTabs defaultValue="countries" tabs={tabs} />;
 }

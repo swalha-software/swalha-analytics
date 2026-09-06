@@ -1,4 +1,3 @@
-import { OverviewLayoutBlock } from "../../../app/[site]/main/overviewLayout";
 import { authedFetch } from "../../utils";
 
 export type SiteResponse = {
@@ -30,7 +29,6 @@ export type SiteResponse = {
   trackCopy?: boolean;
   trackFormInteractions?: boolean;
   tags?: string[];
-  overviewLayout?: OverviewLayoutBlock[] | null;
 };
 
 export type GetSitesFromOrgResponse = {
@@ -168,7 +166,6 @@ export function updateSiteConfig(
     trackCopy?: boolean;
     trackFormInteractions?: boolean;
     tags?: string[];
-    overviewLayout?: OverviewLayoutBlock[] | null;
   }
 ) {
   return authedFetch(`/sites/${siteId}/config`, undefined, {

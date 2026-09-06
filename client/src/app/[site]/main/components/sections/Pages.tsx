@@ -8,11 +8,13 @@ import {
 } from "../../../components/shared/StandardSection/StandardSectionTabs";
 import { truncateString } from "../../../../../lib/utils";
 
-export function usePagesTabs(): StandardSectionTab<string>[] {
+type Tab = "pages" | "page_title" | "entry_pages" | "exit_pages" | "hostname";
+
+export function Pages() {
   const { data: siteMetadata } = useGetSite();
   const t = useExtracted();
 
-  return [
+  const tabs: StandardSectionTab<Tab>[] = [
     {
       value: "pages",
       label: t("Pages"),
@@ -81,8 +83,6 @@ export function usePagesTabs(): StandardSectionTab<string>[] {
       },
     },
   ];
-}
 
-export function Pages() {
-  return <StandardSectionTabs defaultValue="pages" tabs={usePagesTabs()} />;
+  return <StandardSectionTabs defaultValue="pages" tabs={tabs} />;
 }
