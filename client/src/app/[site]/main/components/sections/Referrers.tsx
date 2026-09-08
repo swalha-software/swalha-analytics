@@ -14,12 +14,10 @@ import {
   type StandardSectionTab,
 } from "../../../components/shared/StandardSection/StandardSectionTabs";
 
-type Tab = "referrers" | "channels" | "utm_source" | "utm_medium" | "utm_campaign" | "utm_term" | "utm_content";
-
-export function Referrers() {
+export function useReferrerTabs(): StandardSectionTab<string>[] {
   const t = useExtracted();
 
-  const tabs: StandardSectionTab<Tab>[] = [
+  return [
     {
       value: "referrers",
       label: t("Referrers"),
@@ -52,6 +50,13 @@ export function Referrers() {
         ),
       },
     },
+  ];
+}
+
+export function useUtmTabs(): StandardSectionTab<string>[] {
+  const t = useExtracted();
+
+  return [
     {
       value: "utm_source",
       label: t("Source"),
@@ -113,8 +118,12 @@ export function Referrers() {
       },
     },
   ];
+}
 
-  const renderUtmMenu = (value: Tab, setValue: (value: Tab) => void) => (
+export function UtmMenu({ value, setValue }: { value: string; setValue: (value: string) => void }) {
+  const t = useExtracted();
+
+  return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild unstyled>
         <div
@@ -142,12 +151,17 @@ export function Referrers() {
       </DropdownMenuContent>
     </DropdownMenu>
   );
+}
+
+export function Referrers() {
+  const referrerTabs = useReferrerTabs();
+  const utmTabs = useUtmTabs();
 
   return (
     <StandardSectionTabs
       defaultValue="referrers"
-      tabs={tabs}
-      renderTabsListEnd={({ value, setValue }) => renderUtmMenu(value, setValue)}
+      tabs={[...referrerTabs, ...utmTabs]}
+      renderTabsListEnd={({ value, setValue }) => <UtmMenu value={value} setValue={setValue} />}
     />
   );
 }

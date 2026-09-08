@@ -1,0 +1,1 @@
+ALTER TABLE "sites" ADD COLUMN "overview_layout" jsonb;

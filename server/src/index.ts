@@ -1,5 +1,6 @@
 import cluster from "node:cluster";
 import cors from "@fastify/cors";
+import rateLimit from "@fastify/rate-limit";
 import fastifyStatic from "@fastify/static";
 import { toNodeHandler } from "better-auth/node";
 import Fastify, { type FastifyInstance, type FastifyReply, type FastifyRequest } from "fastify";
@@ -160,6 +161,7 @@ import {
 } from "./api/user/index.js";
 import { validateHttpTimeParams } from "./api/analytics/utils/query-validation.js";
 import { initializeClickhouse } from "./db/clickhouse/clickhouse.js";
+import { apiRateLimitRedis } from "./db/redis/redis.js";
 import { initPostgres } from "./db/postgres/initPostgres.js";
 import {
   allowPublicSiteAccess,
@@ -185,6 +187,7 @@ import { reengagementService } from "./services/reengagement/reengagementService
 import { telemetryService } from "./services/telemetryService.js";
 import { handleIdentify } from "./services/tracker/identifyService.js";
 import { trackEvent } from "./services/tracker/trackEvent.js";
+import { startSiteBaselineRefresh } from "./services/tracker/botBlocking/siteBaseline.js";
 import { usageService } from "./services/usageService.js";
 import { weeklyReportService } from "./services/weekyReports/weeklyReportService.js";
 
@@ -257,6 +260,15 @@ const adminSitesWrite = adminSiteScoped("sites", "write");
 const adminGscWrite = adminSiteScoped("gsc", "write");
 const orgAnalyticsRead = orgMemberScoped("analytics", "read");
 const orgSqlRead = orgMemberScoped("sql", "read");
+
+// User-authored SQL fans out real ClickHouse work per call (a dashboard runs
+// one query per card), and /generate spends OpenRouter credit. Cap per user.
+const customQueryRateLimit = { max: 60, timeWindow: "1 minute" };
+const generateQueryRateLimit = { max: 20, timeWindow: "1 minute" };
+const withRateLimit = <T extends { preHandler: unknown }>(opts: T, limit: { max: number; timeWindow: string }) => ({
+  ...opts,
+  config: { rateLimit: limit },
+});
 const orgOrgRead = orgMemberScoped("org", "read");
 const orgAdminSitesWrite = orgAdminScoped("sites", "write");
 
@@ -283,6 +295,27 @@ server.register(cors, {
   delegator: createCorsOptionsDelegate(),
 });
 server.addHook("onRequest", createRejectUntrustedOriginHook());
+
+// @fastify/rate-limit types FastifyContextConfig, which makes the homegrown
+// `rawBody` route flag (read by the Stripe webhook body parser) a type error
+// unless it is declared alongside.
+declare module "fastify" {
+  interface FastifyContextConfig {
+    rawBody?: boolean;
+  }
+}
+
+// Opt-in per-route rate limiting (routes declare config.rateLimit). Runs in
+// preHandler so authenticated routes can key on the user instead of the IP.
+server.register(rateLimit, {
+  global: false,
+  hook: "preHandler",
+  keyGenerator: (request: FastifyRequest) => request.user?.id ?? request.ip,
+  // Shared store so the limit holds across cluster workers; fall open if Redis
+  // is unreachable rather than blocking the request.
+  redis: apiRateLimitRedis,
+  skipOnError: true,
+});
 
 // Serve static files
 server.register(fastifyStatic, {
@@ -393,7 +426,11 @@ async function analyticsRoutes(fastify: FastifyInstance) {
   fastify.post("/sites/:siteId/dashboards", authDashboardsWrite, createDashboard);
   fastify.put("/sites/:siteId/dashboards/:dashboardId", authDashboardsWrite, updateDashboard);
   fastify.delete("/sites/:siteId/dashboards/:dashboardId", authDashboardsWrite, deleteDashboard);
-  fastify.post("/sites/:siteId/dashboards/run-card", authDashboardsRead, runDashboardCardQuery);
+  fastify.post(
+    "/sites/:siteId/dashboards/run-card",
+    withRateLimit(authDashboardsRead, customQueryRateLimit),
+    runDashboardCardQuery
+  );
   fastify.get("/sites/:siteId/feature-flags", authFlagsRead, getFeatureFlags);
   fastify.post("/sites/:siteId/feature-flags", adminFlagsWrite, createFeatureFlag);
   fastify.put("/sites/:siteId/feature-flags/:flagId", adminFlagsWrite, updateFeatureFlag);
@@ -412,8 +449,16 @@ async function analyticsRoutes(fastify: FastifyInstance) {
   fastify.get("/sites/:siteId/events/outbound", publicEventsRead, getOutboundLinks);
   fastify.get("/org-event-count/:organizationId", orgAnalyticsRead, getOrgEventCount);
   fastify.get("/organizations/:organizationId/overview", orgAnalyticsRead, getOrganizationOverview);
-  fastify.post("/organizations/:organizationId/analytics/query", orgSqlRead, runCustomQuery);
-  fastify.post("/organizations/:organizationId/analytics/query/generate", orgSqlRead, generateCustomQuery);
+  fastify.post(
+    "/organizations/:organizationId/analytics/query",
+    withRateLimit(orgSqlRead, customQueryRateLimit),
+    runCustomQuery
+  );
+  fastify.post(
+    "/organizations/:organizationId/analytics/query/generate",
+    withRateLimit(orgSqlRead, generateQueryRateLimit),
+    generateCustomQuery
+  );
   fastify.get("/sites/:siteId/performance/overview", publicAnalyticsRead, getPerformanceOverview);
   fastify.get("/sites/:siteId/performance/time-series", publicAnalyticsRead, getPerformanceTimeSeries);
   fastify.get("/sites/:siteId/performance/by-dimension", publicAnalyticsRead, getPerformanceByDimension);
@@ -557,6 +602,10 @@ const start = async () => {
     if (!cluster.isWorker) {
       await Promise.all([initializeClickhouse(), initPostgres()]);
     }
+
+    // Every process runs this: the ClickHouse refresh is elected through Redis,
+    // and each worker mirrors the shared result for the site-flood rules.
+    startSiteBaselineRefresh();
 
     // Cron jobs should only run on the primary process (or in single-process mode)
     if (!cluster.isWorker) {

@@ -9,12 +9,10 @@ import { Browser } from "../../../components/shared/icons/Browser";
 import { OperatingSystem } from "../../../components/shared/icons/OperatingSystem";
 import { DeviceIcon } from "../../../components/shared/icons/Device";
 
-type Tab = "devices" | "browsers" | "os" | "dimensions";
-
-export function Devices() {
+export function useDevicesTabs(): StandardSectionTab<string>[] {
   const t = useExtracted();
 
-  const tabs: StandardSectionTab<Tab>[] = [
+  return [
     {
       value: "browsers",
       label: t("Browsers"),
@@ -95,6 +93,8 @@ export function Devices() {
       },
     },
   ];
+}
 
-  return <StandardSectionTabs defaultValue="browsers" tabs={tabs} />;
+export function Devices() {
+  return <StandardSectionTabs defaultValue="browsers" tabs={useDevicesTabs()} />;
 }

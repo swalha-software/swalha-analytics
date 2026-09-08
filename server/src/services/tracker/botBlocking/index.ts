@@ -154,11 +154,7 @@ function buildBotEventProperties(
   };
 }
 
-function getClientSignalResult(
-  payload: BotBlockingPayload,
-  userAgent: string,
-  hasReportableScreen: boolean
-) {
+function getClientSignalResult(payload: BotBlockingPayload, userAgent: string, hasReportableScreen: boolean) {
   const hasClientScore = typeof payload.clientBotScore === "number" && Number.isFinite(payload.clientBotScore);
   const hasClientMask = typeof payload.clientBotSignalMask === "number" && Number.isFinite(payload.clientBotSignalMask);
   const rawMask = hasClientMask ? payload.clientBotSignalMask! : 0;
@@ -314,9 +310,11 @@ export async function checkBotBlocking({
   const ipForAsn = payload.ipAddress;
   let asnInfo: AsnInfo | null = null;
   let supportingHostingAsnDetection: BotBlockingDetection | null = null;
+  let isHostingAsn = false;
   if (ipForAsn) {
     asnInfo = asnLookup(ipForAsn);
     const botAsnMatch = classifyBotAsn(asnInfo?.asn);
+    isHostingAsn = asnInfo !== null && botAsnMatch.isBotInfrastructure;
     if (asnInfo && botAsnMatch.isBotInfrastructure) {
       const asnDetection: BotBlockingDetection = {
         layer: "bot_asn",
@@ -349,6 +347,8 @@ export async function checkBotBlocking({
     screenWidth: payload.screenWidth,
     screenHeight: payload.screenHeight,
     language: payload.language,
+    isHostingAsn,
+    asn: asnInfo?.asn,
   });
   if (anomaly.isAnomalous) {
     addDetection("Bot detected using rate anomaly", {
