@@ -79,7 +79,10 @@ object Analytics {
         val host = config.analyticsHost.trimEnd('/')
         if (host.isEmpty() || config.siteId.isEmpty()) {
             // Not thrown: a misconfigured build should report nothing, not die.
-            log("analyticsHost and siteId are required; analytics stays off")
+            // Logged from the configuration being offered rather than through
+            // log(), which reads the accepted one — still null on a first call,
+            // which would make this silence itself.
+            if (config.debug) android.util.Log.w(TAG, "analyticsHost and siteId are required; analytics stays off")
             return
         }
 
@@ -416,8 +419,10 @@ object Analytics {
 
     private fun log(message: String, failure: Throwable? = null) {
         if (config?.debug != true) return
-        android.util.Log.w("SwalhaAnalytics", message, failure)
+        android.util.Log.w(TAG, message, failure)
     }
+
+    private const val TAG = "SwalhaAnalytics"
 
     // Mirrors the server's own limits (services/tracker/trackingPayload.ts and
     // identifyService.ts). A value over one of these fails validation and the
