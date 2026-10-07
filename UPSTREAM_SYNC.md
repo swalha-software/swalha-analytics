@@ -15,11 +15,84 @@ Swalha-specific behavior that must survive every sync:
 
 ## Last reviewed upstream SHA
 
-`64f8c4fb7f394bdfe9379717de8e6c21758b1ac2` (2026-08-20)
+`5b94f2ff39f32cda14541d07f97e0717b0674a0b` (2026-08-31)
 
 Baseline before the first recorded sync: `0d0437cf1536`.
 
 ## Log
+
+### 2026-W36 — reviewed `64f8c4fb..5b94f2ff`
+
+Twenty-nine upstream commits. No upstream release since `v2.8.0` (2026-07-27)
+and no open GitHub security advisories on `rybbit-io/rybbit` at review time.
+
+**Ported (13)**
+
+| Upstream | Why |
+| --- | --- |
+| `f307375a` / `a0b34258` | Access-cache correctness after site creation; analytics accuracy by retaining untitled pages. |
+| `1404cb1c` | Session-level filters now select sessions once and consistently constrain analytics, funnels, goals, experiments, reports, and site metrics. |
+| `b5a93f8a` / `7a97e468` | Replaces the key-dependent CARTO map with OpenFreeMap; resolves replay click labels against the snapshot active when the click occurred. |
+| `66e0cffa` / `5b94f2ff` | Preserves millisecond event ordering across ingestion, funnels, sessions, goals, and metric queries. |
+| `e7ef9790` | Hardens custom SQL validation, uses a least-privilege ClickHouse query user, and rate-limits user-authored/generated queries. |
+| `05ee87a7` | Prevents stale dashboard state and lost edits with optimistic updates and rollback. |
+| `9aacb4f2` / `534f3f42` | Adds site-relative flood detection while excluding residential-volume false positives. |
+| `6c73cc8d` | Refreshes the committed GeoLite2 City and ASN databases. |
+| `efd3e80c` | Adds coverage for client query utilities, onboarding, and R2 replay storage; normalizes onboarding schedule milliseconds. The deleted member-access endpoint/test and absent teams API tests were not restored because organization synchronization is Auth-owned in this fork. |
+
+**Skipped (16)**
+
+| Upstream | Why |
+| --- | --- |
+| `04da28fb`, `1d06afbf`, `73b2bf8b` | Upstream docs-site/agent-readiness, hosted privacy-copy, and documentation cleanup; not runtime fixes for the fork. |
+| `873009a6` | Rybbit frog-avatar branding, intentionally excluded from Swalha. |
+| `15050fa7`, `6e6618ed` | Bulk translations coupled to excluded upstream UI and hosted admin/subscription management. |
+| `02d6caa5`, `e2cdffef`, `30d98e11`, `6c3a980f` | Product/UI feature work (trait editor and date/comparison redesign), outside this sync's security/correctness scope. |
+| `5ab683c6` | Hosted subscription-source presentation. |
+| `47929755` | Large AI-bot dashboard/product expansion; useful but not required for the ingestion fixes selected this week and too broad for a correctness-only port. |
+| `71b0f30d` | Cosmetic sidebar refactor with no fork-relevant fix. |
+| `940eb108` | Upstream deployment branding/config flag; the fork already owns deployment and branding behavior. |
+| `98aabf8d` | Upstream marketing landing-page experiments and pricing content. |
+| `0e700aa2` | Lockfile-only cleanup with no runtime or security change. |
+
+**Adaptations required**
+
+- `getOverviewBucketed.ts` retains the fork's invalid-bucket `400` validation while
+  adopting the session-filter CTE.
+- The OpenFreeMap port keeps the fork's newer OpenLayers `^10.10.0` dependency.
+- `pageviewQueue.ts` retains the fork's ASN diagnostic fields while combining the
+  flood-detection error boundary with the new `timestamp_ms` column.
+- Query hardening retains the Swalha organization-overview route. The least-privilege
+  query-user configuration is additive and does not alter R2 credential activation.
+- The member-access update and its test from `efd3e80c` were dropped because that
+  endpoint was deliberately removed when organization membership became Auth-owned;
+  its tests for the absent upstream teams API were dropped for the same reason. The
+  R2 initialization test now asserts the fork's credential-gated behavior.
+
+The R2 credential-gated storage path, organization-scoped GHCR names, SSO/Auth-owned
+organization behavior, and Swalha branding were reviewed after the ports and remain
+fork-owned.
+
+**Gates run**
+
+- `shared`: `npm run build` — pass.
+- `server`: `npx tsc --noEmit` — pass.
+- `server`: targeted Vitest command for analytics/session filters, ClickHouse query
+  hardening, flood detection, pageview ingestion, site metrics, and R2 storage —
+  12 files / 193 tests pass.
+- `server`: `npm run test:run` — 115 files / 1,678 tests pass; 40 assertions in the
+  unchanged `src/lib/auth-utils.test.ts` fail because its PGlite fixture lacks the
+  pre-existing `sites.overview_layout` column already present on `origin/master`.
+- `server`: `npm run build` — pass; analytics bundles have no resulting drift.
+- `server`: Prettier check over every changed server source file — pass. The repository-wide
+  `npm run format:check` also reports unchanged pre-existing formatting failures.
+- `client`: `npx tsc --noEmit` and `npm run lint` — pass (ESLint warns that the repo's
+  config is empty).
+- `client`: targeted Vitest command — 6 files / 50 tests pass; `npm test` — 21 files /
+  370 tests pass.
+- `client`: `npm run build` reaches Turbopack and fails on the unchanged
+  `src/api/admin/hooks/useOrgApiKeys.ts` import of the local `@rybbit/shared` package,
+  the same pre-existing failure documented in 2026-W34.
 
 ### 2026-W34 — reviewed `b858276f..64f8c4fb`
 
