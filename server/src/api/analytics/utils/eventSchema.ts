@@ -39,4 +39,16 @@ scoped_events columns:
 - timezone String: Visitor timezone from geolocation, usually an IANA timezone like America/New_York; empty when unknown.
 - tag String: Optional site/script tag used to segment traffic; empty when unset.
 - import_id Nullable(String): Import job id for rows loaded from imported analytics data; null for native Rybbit tracking.
+
+scoped_users columns (one row per site_id + user_id over the site's whole history; never limited to the selected time range, unlike scoped_events):
+- site_id UInt16: Numeric Rybbit site id.
+- user_id String: Same anonymous id as scoped_events.user_id. Join on it.
+- first_seen DateTime: Timestamp of the first event this site ever received from the user.
+- last_seen DateTime: Timestamp of the latest event from the user.
+- session_count UInt64: Distinct sessions over the user's whole history.
+- event_count UInt64: Events over the user's whole history.
+- first_country LowCardinality(FixedString(2)): Country of the user's first event; empty when unknown.
+- first_operating_system LowCardinality(String): Operating system of the user's first event.
+- first_device_type LowCardinality(String): Device class of the user's first event.
+New users in the selected range are the scoped_users rows whose first_seen lies between (SELECT min(timestamp) FROM scoped_events) and (SELECT max(timestamp) FROM scoped_events).
 `;

@@ -4,6 +4,7 @@ import { z } from "zod";
 import { clickhouse } from "../../db/clickhouse/clickhouse.js";
 import { MAX_CUSTOM_QUERY_LENGTH, normalizeCustomQuery, validateScopedQuery } from "./utils/customQueryValidation.js";
 import { validateHttpTimeParams } from "./utils/query-validation.js";
+import { SCOPED_USERS_CTE } from "./utils/scopedTables.js";
 import { bucketIntervalMap, getTimeStatement } from "./utils/timeWindow.js";
 
 const MAX_EXECUTION_TIME_SECONDS = 10;
@@ -95,7 +96,7 @@ export async function runDashboardCardQuery(
       FROM events
       PREWHERE site_id IN {siteIds:Array(UInt16)}
       WHERE 1=1 ${timeStatement}
-    )
+    ),${SCOPED_USERS_CTE}
     SELECT *
     FROM (
       ${normalizeCustomQuery(substitutedQuery)}

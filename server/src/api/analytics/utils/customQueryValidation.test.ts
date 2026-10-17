@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { validateScopedQuery } from "./customQueryValidation.js";
 
-const SCOPED_ONLY_ERROR = "Queries can only read from scoped_events";
+const SCOPED_ONLY_ERROR = "Queries can only read from scoped_events and scoped_users";
 const QUOTED_IDENTIFIER_ERROR = "Quoted identifiers are not allowed in custom analytics queries";
 
 describe("validateScopedQuery — table reference scoping", () => {
@@ -109,7 +109,47 @@ describe("validateScopedQuery — table reference scoping", () => {
     expect(validateScopedQuery("SELECT 'quoted \"text\" and `ticks`' AS label FROM scoped_events")).toBeNull();
   });
 
-  it("requires the query to reference scoped_events at all", () => {
-    expect(validateScopedQuery("SELECT 1")).toBe("Query must read from scoped_events");
+  it("requires the query to reference a scoped table at all", () => {
+    expect(validateScopedQuery("SELECT 1")).toBe("Query must read from scoped_events or scoped_users");
+  });
+});
+
+describe("validateScopedQuery — scoped_users", () => {
+  it("allows reading from scoped_users alone", () => {
+    expect(
+      validateScopedQuery("SELECT toStartOfDay(first_seen) AS day, count() FROM scoped_users GROUP BY day")
+    ).toBeNull();
+  });
+
+  it("allows joining scoped_users to scoped_events and scalar subqueries over either", () => {
+    expect(
+      validateScopedQuery(
+        "SELECT count() FROM scoped_users WHERE first_seen BETWEEN (SELECT min(timestamp) FROM scoped_events) AND (SELECT max(timestamp) FROM scoped_events)"
+      )
+    ).toBeNull();
+    expect(
+      validateScopedQuery(
+        "SELECT u.first_country, count() FROM scoped_events e JOIN scoped_users u ON e.user_id = u.user_id GROUP BY u.first_country"
+      )
+    ).toBeNull();
+    expect(
+      validateScopedQuery("SELECT count() FROM scoped_events WHERE user_id IN (SELECT user_id FROM scoped_users)")
+    ).toBeNull();
+  });
+
+  it("rejects redefining scoped_users", () => {
+    expect(validateScopedQuery("WITH scoped_users AS (SELECT * FROM events) SELECT * FROM scoped_users")).toBe(
+      "scoped_users is reserved and cannot be redefined"
+    );
+    expect(validateScopedQuery("SELECT * FROM scoped_events AS scoped_users")).toBe(
+      "scoped_users is reserved and cannot be redefined"
+    );
+  });
+
+  it("still rejects every other table beside scoped_users", () => {
+    expect(validateScopedQuery("SELECT count() FROM scoped_users, events")).toBe(SCOPED_ONLY_ERROR);
+    expect(validateScopedQuery("SELECT count() FROM scoped_users u JOIN users x ON u.user_id = x.id")).toBe(
+      SCOPED_ONLY_ERROR
+    );
   });
 });

@@ -97,8 +97,8 @@ export async function generateCustomQuery(
 You generate ClickHouse SQL for Rybbit custom analytics.
 Return exactly one SQL query and no Markdown, explanation, comments, or semicolon.
 The query must be a SELECT or WITH ... SELECT query.
-The only readable table is scoped_events. Never read from events or any other table.
-Never define or shadow scoped_events.
+The only readable tables are scoped_events and scoped_users. Never read from events or any other table.
+Never define or shadow scoped_events or scoped_users.
 Use ClickHouse syntax.
 Use LIMIT 1000 or smaller for detail/list queries.
 For custom event properties, use JSONExtractString(toString(props), 'property_name').
@@ -113,6 +113,7 @@ Good examples:
 SELECT pathname, countIf(type = 'pageview') AS pageviews FROM scoped_events GROUP BY pathname ORDER BY pageviews DESC LIMIT 100
 SELECT event_name, count() AS events FROM scoped_events WHERE type = 'custom_event' GROUP BY event_name ORDER BY events DESC LIMIT 100
 SELECT toStartOfDay(timestamp) AS day, count() AS events FROM scoped_events GROUP BY day ORDER BY day ASC LIMIT 1000
+SELECT toStartOfDay(first_seen) AS day, count() AS new_users FROM scoped_users WHERE first_seen >= now() - INTERVAL 30 DAY GROUP BY day ORDER BY day ASC LIMIT 1000
           `.trim(),
     },
     ...previousMessages,

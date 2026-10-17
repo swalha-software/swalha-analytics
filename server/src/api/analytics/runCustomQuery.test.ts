@@ -36,12 +36,12 @@ describe("validateScopedQuery", () => {
   });
 
   it("rejects direct reads from events", () => {
-    expect(validateScopedQuery("SELECT count() FROM events")).toBe("Queries can only read from scoped_events");
+    expect(validateScopedQuery("SELECT count() FROM events")).toBe("Queries can only read from scoped_events and scoped_users");
   });
 
   it("rejects comma joins to other tables", () => {
     expect(validateScopedQuery("SELECT count() FROM scoped_events, hourly_events_by_site_mv_target")).toBe(
-      "Queries can only read from scoped_events"
+      "Queries can only read from scoped_events and scoped_users"
     );
   });
 

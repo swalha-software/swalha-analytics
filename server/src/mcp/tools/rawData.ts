@@ -115,7 +115,7 @@ export function registerRawDataTools(server: McpServer, api: RybbitApiClient, gu
       ok(
         [
           "Rules for run_query SQL:",
-          "- The only readable table is scoped_events (pre-filtered to sites the API key can access).",
+          "- The only readable tables are scoped_events and scoped_users (both pre-filtered to sites the API key can access).",
           "- SELECT or WITH ... SELECT only; ClickHouse syntax; no semicolon.",
           "- Results are capped at 1000 rows and 10s execution time — aggregate instead of selecting raw rows.",
           "- Filter to one site with WHERE site_id = <id>, or pass site_id in the tool call.",

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { clickhouse } from "../../db/clickhouse/clickhouse.js";
 import { getSitesUserHasAccessTo } from "../../lib/auth-utils.js";
 import { MAX_CUSTOM_QUERY_LENGTH, normalizeCustomQuery, validateScopedQuery } from "./utils/customQueryValidation.js";
+import { SCOPED_USERS_CTE } from "./utils/scopedTables.js";
 
 const MAX_EXECUTION_TIME_SECONDS = 10;
 const MAX_RESULT_ROWS = 1000;
@@ -55,7 +56,7 @@ export async function runCustomQuery(
       SELECT *
       FROM events
       PREWHERE site_id IN {siteIds:Array(UInt16)}
-    )
+    ),${SCOPED_USERS_CTE}
     SELECT *
     FROM (
       ${normalizeCustomQuery(body.data.query)}

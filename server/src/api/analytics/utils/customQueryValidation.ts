@@ -1,4 +1,9 @@
+import { SCOPED_TABLE_NAMES } from "./scopedTables.js";
+
 export const MAX_CUSTOM_QUERY_LENGTH = 20_000;
+
+const scopedTableNames = new Set<string>(SCOPED_TABLE_NAMES);
+const scopedOnlyError = "Queries can only read from scoped_events and scoped_users";
 
 const blockedKeywords = [
   "ALTER",
@@ -401,27 +406,32 @@ export function validateScopedQuery(query: string): string | null {
   // regardless of how it's reached (FROM, JOIN, scalar subquery, function arg).
   // readonly=2 still permits SELECTing from these, so this is the real guard.
   if (/\b(system|information_schema|INFORMATION_SCHEMA)\s*\./i.test(compactQuery)) {
-    return "Queries can only read from scoped_events";
+    return scopedOnlyError;
   }
 
-  if (/\bWITH\s+scoped_events\s+AS\b/i.test(compactQuery) || /\bAS\s+scoped_events\b/i.test(compactQuery)) {
-    return "scoped_events is reserved and cannot be redefined";
+  for (const tableName of SCOPED_TABLE_NAMES) {
+    if (
+      new RegExp(`\\bWITH\\s+${tableName}\\s+AS\\b`, "i").test(compactQuery) ||
+      new RegExp(`\\bAS\\s+${tableName}\\b`, "i").test(compactQuery)
+    ) {
+      return `${tableName} is reserved and cannot be redefined`;
+    }
   }
 
-  // Every data-source reference must be scoped_events or a declared CTE. collectTableReferences
+  // Every data-source reference must be a scoped table or a declared CTE. collectTableReferences
   // walks the full FROM list, so comma-separated targets (`FROM scoped_events, other`) are
   // validated too — a FROM/JOIN-keyword-only scan captured only the first table and let the
   // rest through. collectInTableReferences covers ClickHouse's `expr IN table_name`
   // shorthand, which is equivalent to `expr IN (SELECT * FROM table_name)`.
   for (const reference of [...collectTableReferences(compactQuery), ...collectInTableReferences(compactQuery)]) {
     const normalizedTableName = reference.toLowerCase();
-    if (normalizedTableName !== "scoped_events" && !cteNames.has(normalizedTableName)) {
-      return "Queries can only read from scoped_events";
+    if (!scopedTableNames.has(normalizedTableName) && !cteNames.has(normalizedTableName)) {
+      return scopedOnlyError;
     }
   }
 
-  if (!/\bscoped_events\b/i.test(compactQuery)) {
-    return "Query must read from scoped_events";
+  if (!SCOPED_TABLE_NAMES.some(tableName => new RegExp(`\\b${tableName}\\b`, "i").test(compactQuery))) {
+    return "Query must read from scoped_events or scoped_users";
   }
 
   return null;
