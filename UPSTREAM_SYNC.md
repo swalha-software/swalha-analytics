@@ -15,11 +15,38 @@ Swalha-specific behavior that must survive every sync:
 
 ## Last reviewed upstream SHA
 
-`64f8c4fb7f394bdfe9379717de8e6c21758b1ac2` (2026-08-20)
+`a46032b5bcdd72f176b259bd1c1ff35140167268` (2026-11-22)
 
 Baseline before the first recorded sync: `0d0437cf1536`.
 
 ## Log
+
+### 2026-W47 — reviewed `64f8c4fb..a46032b5`
+
+Reviewed 233 commit summaries, merged PRs and release metadata for v2.9.0,
+v2.9.2 and v2.9.3. GitHub returned no Rybbit repository advisories. The
+published [ClickHouse advisory](https://github.com/advisories/GHSA-qhgw-ghp3-xh36)
+applies to the fork's previous ClickHouse pin.
+
+**Ported** [#1337](https://github.com/rybbit-io/rybbit/pull/1337) updates the
+ClickHouse image to 26.3.62.3 for CVE-2026-116366 in all three Compose files and
+the corresponding self-hosting docs. The change is limited to image version
+references, preserving the Swalha GHCR image names, R2 replay configuration,
+SSO and branding.
+
+**Deferred** Follow-up reviews should include this range when evaluating
+application security hardening (#1141, #1308, #1328, #1363, #1378), replay
+correctness and ingestion (#1146, #1316), and analytics correctness and
+ClickHouse time handling (#1143, #1144, #1169, #1177, #1207). Prioritize adapting
+the security changes to Swalha's SSO, custom SQL tables and npm lockfiles.
+This batch isolates the ClickHouse security update from those application
+ports and their test gates.
+
+**Skipped** Hosted billing and trial flows, upstream branding and marketing,
+and onboarding changes that conflict with Swalha's self-hosted SSO flow.
+
+**Gates** All three Compose files passed `docker compose config --no-interpolate
+--quiet`. The image manifest resolved and `git diff --check` passed.
 
 ### 2026-W34 — reviewed `b858276f..64f8c4fb`
 
