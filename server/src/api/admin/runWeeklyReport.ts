@@ -15,8 +15,9 @@ export async function getWeeklyReportStatus(_: FastifyRequest, res: FastifyReply
 }
 
 /**
- * Sends this week's reports to the requesting admin only, for the
- * organizations they own. A rehearsal of Monday's run against one inbox.
+ * Sends this week's report to the requesting admin only, for the
+ * organizations they own: one email, as on Monday (the full report for one
+ * site, a digest across several). A rehearsal of Monday's run against one inbox.
  */
 export async function runWeeklyReport(req: FastifyRequest, res: FastifyReply) {
   if (!EMAIL_ENABLED) {
@@ -29,11 +30,7 @@ export async function runWeeklyReport(req: FastifyRequest, res: FastifyReply) {
   }
 
   try {
-    const { organizations, emails } = await weeklyReportService.sendReportsToUser(
-      user.id,
-      user.email,
-      user.name ?? user.email
-    );
+    const { organizations, emails } = await weeklyReportService.sendReportsToUser(user.id);
 
     return res.send({ recipient: user.email, organizations, emails });
   } catch (error) {

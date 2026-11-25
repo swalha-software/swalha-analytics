@@ -33,7 +33,7 @@ function LoginContent() {
   useEffect(() => {
     if (!autoStart || started.current) return;
     started.current = true;
-    authClient.signIn.oauth2({ providerId: "swalha", ...(callbackURL ? { callbackURL } : {}) }).catch(e => {
+    authClient.signIn.social({ provider: "swalha", ...(callbackURL ? { callbackURL } : {}) }).catch((e: unknown) => {
       setError(String(e));
     });
   }, [autoStart, callbackURL]);

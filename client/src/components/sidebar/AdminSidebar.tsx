@@ -1,6 +1,6 @@
 "use client";
 
-import { AppWindow, Building2, Database, Mail, ShieldUser, Undo2, Users } from "lucide-react";
+import { AppWindow, Building2, Database, KeyRound, Mail, ShieldUser, Undo2, Users } from "lucide-react";
 import { useExtracted } from "next-intl";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
@@ -59,6 +59,12 @@ function AdminSections() {
             active={pathname.startsWith("/admin/sites")}
           />
           <NavItem label={t("Users")} href="/admin/users" icon={Users} active={pathname.startsWith("/admin/users")} />
+          <NavItem
+            label={t("API keys")}
+            href="/admin/api-keys"
+            icon={KeyRound}
+            active={pathname.startsWith("/admin/api-keys")}
+          />
           <NavItem
             label={t("Database")}
             href="/admin/database"

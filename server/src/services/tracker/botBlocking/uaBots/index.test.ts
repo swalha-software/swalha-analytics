@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { classifyUA, isBotUA } from "./index.js";
+import { AMBIGUOUS_ON_BROWSER, classifyUA, isBotUA } from "./index.js";
+import { ALL_BOT_PATTERNS } from "./patterns.js";
 
 describe("classifyUA", () => {
   it("returns NON_BOT for empty / nullish input", () => {
@@ -125,8 +126,173 @@ describe("classifyUA", () => {
     }
   });
 
+  it("names AI bots and splits them by purpose", () => {
+    // `category: "ai"` covers a training crawler, an answer-engine indexer and
+    // a fetch a person asked for a second ago. Only `purpose` tells them apart,
+    // and the difference is the whole reason a site owner looks at this page.
+    const cases: [string, string, string, string][] = [
+      [
+        "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko); compatible; GPTBot/1.2; +https://openai.com/gptbot",
+        "GPTBot",
+        "OpenAI",
+        "ai_training",
+      ],
+      ["Mozilla/5.0 (compatible; ClaudeBot/1.0; +claudebot@anthropic.com)", "ClaudeBot", "Anthropic", "ai_training"],
+      ["CCBot/2.0 (https://commoncrawl.org/faq/)", "CCBot", "Common Crawl", "ai_training"],
+      ["Mozilla/5.0 (compatible; OAI-SearchBot/1.0; +https://openai.com/searchbot)", "OAI-SearchBot", "OpenAI", "ai_search"],
+      ["Mozilla/5.0 (compatible; PerplexityBot/1.0)", "PerplexityBot", "Perplexity", "ai_search"],
+      ["Mozilla/5.0 (compatible; ChatGPT-User/1.0; +https://openai.com/bot)", "ChatGPT-User", "OpenAI", "ai_agent"],
+      ["Mozilla/5.0 (compatible; Claude-User/1.0)", "Claude-User", "Anthropic", "ai_agent"],
+      ["Mozilla/5.0 (compatible; Perplexity-User/1.0)", "Perplexity-User", "Perplexity", "ai_agent"],
+      ["claude-code/1.0.0", "Claude Code", "Anthropic", "ai_agent"],
+      ["Google-Agent", "Google-Agent", "Google", "ai_agent"],
+    ];
+
+    for (const [ua, name, operator, purpose] of cases) {
+      const cls = classifyUA(ua);
+      expect(cls.isBot, ua).toBe(true);
+      expect(cls.category, ua).toBe("ai");
+      expect(cls.name, ua).toBe(name);
+      expect(cls.operator, ua).toBe(operator);
+      expect(cls.purpose, ua).toBe(purpose);
+    }
+  });
+
+  it("names bots outside the AI family too", () => {
+    expect(classifyUA("Mozilla/5.0 (compatible; AhrefsBot/7.0)")).toMatchObject({
+      name: "AhrefsBot",
+      operator: "Ahrefs",
+      purpose: "seo",
+    });
+    expect(classifyUA("facebookexternalhit/1.1")).toMatchObject({
+      name: "facebookexternalhit",
+      operator: "Meta",
+      purpose: "social_preview",
+    });
+    expect(classifyUA("python-requests/2.31.0")).toMatchObject({
+      name: "python-requests",
+      operator: null,
+      purpose: "scripted",
+    });
+  });
+
+  it("leaves identity null for a bot matched only by a generic upstream pattern", () => {
+    // The vendored isbot list is intentionally un-annotated: a hit on "crawl"
+    // or "spider" is a bot without a name, and inventing one from the regex
+    // would be worse than admitting we do not know.
+    const cls = classifyUA("Mozilla/5.0 (compatible; SomeUnknownCrawler/3.1)");
+    expect(cls.isBot).toBe(true);
+    expect(cls.name).toBeNull();
+    expect(cls.operator).toBeNull();
+    expect(cls.purpose).toBeNull();
+  });
+
+  it("returns null identity for a non-bot", () => {
+    expect(classifyUA("Mozilla/5.0 (Windows NT 10.0) AppleWebKit/537.36 Chrome/120 Safari/537.36")).toMatchObject({
+      isBot: false,
+      name: null,
+      operator: null,
+      purpose: null,
+    });
+  });
+
   it("isBotUA boolean shorthand agrees with classifyUA", () => {
     expect(isBotUA("Googlebot/2.1")).toBe(true);
     expect(isBotUA("Mozilla/5.0 (Windows NT 10.0) AppleWebKit/537.36 Chrome/120 Safari/537.36")).toBe(false);
+  });
+});
+
+describe("generic substrings on a browser user agent", () => {
+  const webview = (suffix: string) =>
+    `Mozilla/5.0 (Linux; Android 14; SM-A546E Build/UP1A.231005.007; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/141.0.7390.122 Mobile Safari/537.36 ${suffix}`;
+
+  it("only corroborates when an in-app browser carries its host app's name", () => {
+    // A news app's readers, an ad network's in-app WebView: the upstream "news"
+    // substring matches the app, and says nothing about the visitor.
+    for (const ua of [
+      webview("NewsArticle/9.8.7 JsSdk/2.0 NetType/4G"),
+      "Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 BaoMoiNews/25.10.1",
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36 DailyNewsDesktop/3.2",
+    ]) {
+      const cls = classifyUA(ua);
+      expect(cls.isBot, ua).toBe(true);
+      expect(cls.supportingOnly, ua).toBe(true);
+      expect(isBotUA(ua), ua).toBe(false);
+    }
+  });
+
+  it("still convicts a crawler that borrows a browser frame and names itself", () => {
+    for (const ua of [
+      "Mozilla/5.0 (Linux; Android 6.0.1; Nexus 5X Build/MMB29P) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)",
+      "Mozilla/5.0 (iPhone; CPU iPhone OS 9_1 like Mac OS X) AppleWebKit/601.1.46 (KHTML, like Gecko) Version/9.0 Mobile/13B143 Safari/601.1 (compatible; Baiduspider-render/2.0; +http://www.baidu.com/search/spider.html)",
+      "Mozilla/5.0 (Linux; Android 5.0) AppleWebKit/537.36 (KHTML, like Gecko) Mobile Safari/537.36 (compatible; Bytespider; spider-feedback@bytedance.com)",
+      webview("NewsCrawler/1.0"),
+    ]) {
+      const cls = classifyUA(ua);
+      expect(cls.isBot, ua).toBe(true);
+      expect(cls.supportingOnly, ua).toBe(false);
+    }
+  });
+
+  it("does not read a handset's name as a crawler's", () => {
+    // Upstream's own `bot` pattern excludes "cubot"; the demotion must too.
+    const cls = classifyUA(
+      "Mozilla/5.0 (Linux; Android 13; CUBOT X70 Build/TP1A.220624.014; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/141.0.7390.122 Mobile Safari/537.36 DailyNews/4.1"
+    );
+
+    expect(cls.isBot).toBe(true);
+    expect(cls.supportingOnly).toBe(true);
+  });
+
+  it("still convicts a distinct product identifier inside a browser frame", () => {
+    for (const ua of [
+      webview("HTTrack/3.49"),
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36 DeuSu/5.0.2",
+      webview("SiteScraper/2.0"),
+    ]) {
+      const cls = classifyUA(ua);
+      expect(cls.isBot, ua).toBe(true);
+      expect(cls.supportingOnly, ua).toBe(false);
+    }
+  });
+
+  it("only demotes patterns that are still in the vendored list", () => {
+    const vendored = new Set(ALL_BOT_PATTERNS.filter(p => p.name === undefined).map(p => p.pattern));
+    for (const pattern of AMBIGUOUS_ON_BROWSER) {
+      expect(vendored.has(pattern), pattern).toBe(true);
+    }
+  });
+
+  it("still convicts on a specific pattern hiding behind a generic one", () => {
+    const cls = classifyUA(
+      "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/141.0.0.0 Safari/537.36 NewsReader/1.0"
+    );
+
+    expect(cls.supportingOnly).toBe(false);
+    expect(cls.category).toBe("headless");
+  });
+
+  it("still convicts a generic substring outside a browser frame", () => {
+    for (const ua of ["NewsFetcher/2.1", "my-news-tool", "Mozilla/5.0 (compatible; NewsAggregator/1.0)"]) {
+      const cls = classifyUA(ua);
+      expect(cls.isBot, ua).toBe(true);
+      expect(cls.supportingOnly, ua).toBe(false);
+    }
+  });
+
+  it("does not mistake the DuckDuckGo browser for DuckDuckBot", () => {
+    for (const ua of [
+      "Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Mobile/15E148 DuckDuckGo/7 Safari/605.1.15",
+      "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/141.0.0.0 Mobile DuckDuckGo/5 Safari/537.36",
+    ]) {
+      expect(classifyUA(ua).isBot, ua).toBe(false);
+    }
+
+    expect(classifyUA("DuckDuckBot/1.1; (+http://duckduckgo.com/duckduckbot.html)")).toMatchObject({
+      isBot: true,
+      supportingOnly: false,
+      name: "DuckDuckBot",
+    });
+    expect(classifyUA("DuckDuckGo-Favicons-Bot/1.0")).toMatchObject({ isBot: true, supportingOnly: false });
   });
 });

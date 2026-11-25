@@ -41,7 +41,7 @@ type IconProps = {
   size?: number;
 };
 
-interface Platform {
+export interface Platform {
   name: string;
   icon: ComponentType<IconProps>;
   path: string;
@@ -51,7 +51,7 @@ interface Platform {
 }
 
 // Platform data with their documentation paths, icons, and brand colors
-const platforms: Platform[] = [
+export const platforms: Platform[] = [
   { name: "Angular", icon: SiAngular, path: "/docs/guides/angular", color: "#DD0031" },
   { name: "Astro", icon: SiAstro, path: "/docs/guides/astro", color: "#BC52EE" },
   { name: "BigCommerce", icon: SiBigcommerce, path: "/docs/guides/bigcommerce", color: "#121118", darkColor: "#ffffff" },
@@ -101,11 +101,28 @@ const PlatformLogo = ({ name, icon: Icon, path, color, darkColor }: Platform) =>
   );
 };
 
+// The grid draws its hairlines with `gap-px` over a seam-colored background,
+// so a short last row would show the seam color as a solid block. Pad each
+// breakpoint's last row with blank cells (2 / 3 / 4 columns).
+const fillerCells = [
+  { columns: 2, className: "sm:hidden" },
+  { columns: 3, className: "hidden sm:block xl:hidden" },
+  { columns: 4, className: "hidden xl:block" },
+].flatMap(({ columns, className }) =>
+  Array.from({ length: (columns - (platforms.length % columns)) % columns }, (_, index) => ({
+    key: `${columns}-${index}`,
+    className,
+  }))
+);
+
 export function IntegrationsGrid() {
   return (
     <div className="grid min-h-full grid-cols-2 gap-px bg-neutral-200 dark:bg-neutral-800 sm:grid-cols-3 xl:grid-cols-4">
       {platforms.map((platform) => (
         <PlatformLogo key={platform.name} {...platform} />
+      ))}
+      {fillerCells.map(cell => (
+        <div key={cell.key} aria-hidden="true" className={`bg-white dark:bg-neutral-950 ${cell.className}`} />
       ))}
     </div>
   );

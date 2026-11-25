@@ -303,10 +303,8 @@ describe("product branding links to this deployment", () => {
     const linkedSurfaces = [
       "src/app/signup/page.tsx",
       "src/app/widget/[siteId]/route.ts",
-      "src/app/[site]/bots/components/BotChart.tsx",
       "src/app/[site]/main/components/MainSection/MainSection.tsx",
       "src/app/[site]/main/components/MainSection/MainSectionLite.tsx",
-      "src/app/[site]/performance/components/PerformanceChart.tsx",
     ];
     const decorativeSurfaces = ["src/app/login/page.tsx"];
 

@@ -1,14 +1,25 @@
 "use client";
 
-import type { Experiment, FeatureFlagVariant, GoalType as AnyGoalType } from "@/api/analytics/endpoints";
+import type {
+  Experiment,
+  FeatureFlag,
+  FeatureFlagPayload,
+  FeatureFlagVariant,
+  GoalType as AnyGoalType,
+} from "@/api/analytics/endpoints";
 import { useCreateExperiment, useUpdateExperiment } from "@/api/analytics/hooks/experiments/useExperiments";
-import { useCreateFeatureFlag, useFeatureFlags } from "@/api/analytics/hooks/featureFlags/useFeatureFlags";
-import { useCreateGoal } from "@/api/analytics/hooks/goals/useCreateGoal";
+import {
+  useCreateFeatureFlag,
+  useFeatureFlags,
+  useUpdateFeatureFlag,
+} from "@/api/analytics/hooks/featureFlags/useFeatureFlags";
+import { type CreateGoalRequest, useCreateGoal } from "@/api/analytics/hooks/goals/useCreateGoal";
 import { useGetGoals } from "@/api/analytics/hooks/goals/useGetGoals";
+import { useUpdateGoal } from "@/api/analytics/hooks/goals/useUpdateGoal";
 import { useMetric } from "@/api/analytics/hooks/useGetMetric";
 import { CodeSnippet } from "@/components/CodeSnippet";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { InputWithSuggestions, type SuggestionOption } from "@/components/ui/input-with-suggestions";
 import { Label } from "@/components/ui/label";
@@ -17,10 +28,11 @@ import { toast } from "@/components/ui/sonner";
 import { Textarea } from "@/components/ui/textarea";
 import { useStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
-import { Check, FlaskConical, Flag, MousePointerClick, Plus, Target, Trash2 } from "lucide-react";
+import { Check, ChevronRight, Plus, Trash2 } from "lucide-react";
 import { useExtracted } from "next-intl";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
+import { ChoiceGroup, CodeTabs, PercentInput, SavedNotice, SplitBar } from "../../feature-flags/components/formParts";
 
 type WizardStep = "basics" | "assignment" | "goal" | "implementation";
 type AssignmentMode = "new" | "existing";
@@ -47,6 +59,12 @@ type VariantSourceFlag = {
     name?: string;
     rolloutPercentage: number;
   }>;
+};
+
+// What an earlier, failed save already created, with the request that created it.
+type CreatedResources = {
+  flag?: { request: string; flag: FeatureFlag };
+  goal?: { request: string; goalId: number };
 };
 
 type ImplementationState = {
@@ -78,12 +96,21 @@ type WizardForm = {
 
 const STEPS: WizardStep[] = ["basics", "assignment", "goal", "implementation"];
 
-const VARIANT_SEGMENT_COLORS = ["bg-accent-500", "bg-accent-400", "bg-accent-600", "bg-accent-300", "bg-accent-700"];
-
 function createId() {
   return typeof crypto !== "undefined" && "randomUUID" in crypto
     ? crypto.randomUUID()
     : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
+// Flag and variant keys must match the server's /^[A-Za-z][A-Za-z0-9_.:-]*$/ (max 100 chars), so a key
+// never starts with a digit or separator: "2026 pricing test" becomes "pricing_test".
+// While typing, a trailing separator stays so the next word can follow it.
+function slugifyWhileTyping(value: string) {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^[^a-z]+/, "")
+    .slice(0, 100);
 }
 
 function slugify(value: string) {
@@ -91,7 +118,9 @@ function slugify(value: string) {
     .trim()
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "_")
-    .replace(/^_+|_+$/g, "");
+    .replace(/^[^a-z]+/, "")
+    .slice(0, 100)
+    .replace(/_+$/, "");
 }
 
 function getVariantDraftsFromFlag(flag: VariantSourceFlag): VariantDraft[] {
@@ -180,145 +209,6 @@ function getVariantKeys(flag: VariantSourceFlag) {
   ];
 }
 
-function CodeTabs({ jsCode, tsCode }: { jsCode: string; tsCode: string }) {
-  const [language, setLanguage] = useState<"js" | "ts">("js");
-
-  return (
-    <div className="grid gap-2">
-      <div className="flex gap-1">
-        <button
-          type="button"
-          onClick={() => setLanguage("js")}
-          className={cn(
-            "rounded px-2 py-1 text-xs transition-colors",
-            language === "js"
-              ? "bg-neutral-100 text-neutral-900 dark:bg-neutral-800 dark:text-neutral-100"
-              : "text-neutral-500 hover:bg-neutral-50 dark:text-neutral-400 dark:hover:bg-neutral-850"
-          )}
-        >
-          JavaScript
-        </button>
-        <button
-          type="button"
-          onClick={() => setLanguage("ts")}
-          className={cn(
-            "rounded px-2 py-1 text-xs transition-colors",
-            language === "ts"
-              ? "bg-neutral-100 text-neutral-900 dark:bg-neutral-800 dark:text-neutral-100"
-              : "text-neutral-500 hover:bg-neutral-50 dark:text-neutral-400 dark:hover:bg-neutral-850"
-          )}
-        >
-          TypeScript
-        </button>
-      </div>
-      <CodeSnippet code={language === "js" ? jsCode : tsCode} language="javascript" />
-    </div>
-  );
-}
-
-function WizardChoice({
-  selected,
-  icon,
-  title,
-  description,
-  onClick,
-}: {
-  selected: boolean;
-  icon: ReactNode;
-  title: string;
-  description: string;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        "rounded-lg border p-3 text-left transition-colors",
-        selected
-          ? "border-accent-500 bg-accent-500/5 dark:border-accent-600 dark:bg-accent-600/10"
-          : "border-neutral-150 bg-neutral-50/50 hover:border-neutral-200 hover:bg-neutral-100/60 dark:border-neutral-800 dark:bg-neutral-900/40 dark:hover:border-neutral-750 dark:hover:bg-neutral-900"
-      )}
-    >
-      <div className="flex items-start gap-3">
-        <div
-          className={cn(
-            "flex h-8 w-8 shrink-0 items-center justify-center rounded-md",
-            selected
-              ? "bg-accent-500/15 text-accent-600 dark:bg-accent-500/20 dark:text-accent-400"
-              : "bg-neutral-100 text-neutral-500 dark:bg-neutral-850 dark:text-neutral-400"
-          )}
-        >
-          {icon}
-        </div>
-        <div className="grid gap-1">
-          <span className="text-sm font-medium text-neutral-900 dark:text-neutral-50">{title}</span>
-          <span className="text-xs leading-5 text-neutral-500 dark:text-neutral-400">{description}</span>
-        </div>
-      </div>
-    </button>
-  );
-}
-
-function WizardHelp({ step, isEditing }: { step: WizardStep; isEditing: boolean }) {
-  const t = useExtracted();
-
-  const content: Record<WizardStep, { title: string; body: string[] }> = {
-    basics: {
-      title: t("Define the question"),
-      body: [
-        t("Start with the behavior you want to change and the metric you expect to move."),
-        t("The hypothesis is internal context for your team. It does not change assignment or tracking."),
-        isEditing
-          ? t("Changing these notes does not change assignment or tracking.")
-          : t("New experiments are created as drafts so you can add the implementation before starting traffic."),
-      ],
-    },
-    assignment: {
-      title: t("Create the assignment"),
-      body: [
-        t("Experiments use multivariate feature flags to assign each visitor to one stable variant."),
-        t("Calling rybbit.flag records the exposure that powers experiment results."),
-        t("A full split should add up to 100 percent unless you intentionally want unassigned traffic."),
-      ],
-    },
-    goal: {
-      title: t("Pick the outcome"),
-      body: [
-        t("The primary goal is the conversion event or page visit used to compare variants."),
-        t("Path goals work when conversion is a URL, like /thank-you. Event goals work for explicit actions."),
-        t("You can skip this for now, but conversion results need a goal later."),
-      ],
-    },
-    implementation: {
-      title: t("Implement and expose"),
-      body: [
-        t("Use the generated flag key in your app and branch your UI or behavior by variant."),
-        t("Read the flag in code before rendering the tested experience."),
-        t("For event goals, fire the event when the conversion action happens."),
-      ],
-    },
-  };
-
-  return (
-    <aside className="hidden border-l border-neutral-150 bg-neutral-50/70 p-5 dark:border-neutral-850 dark:bg-neutral-950/40 lg:block">
-      <div className="sticky top-5 grid gap-3">
-        <div className="flex h-9 w-9 items-center justify-center rounded-md bg-accent-500/10 text-accent-600 dark:text-accent-400">
-          <FlaskConical className="h-4 w-4" />
-        </div>
-        <div>
-          <h3 className="text-sm font-medium text-neutral-900 dark:text-neutral-50">{content[step].title}</h3>
-          <div className="mt-3 grid gap-3 text-sm leading-6 text-neutral-600 dark:text-neutral-300">
-            {content[step].body.map(item => (
-              <p key={item}>{item}</p>
-            ))}
-          </div>
-        </div>
-      </div>
-    </aside>
-  );
-}
-
 export function CreateExperimentWizard({
   experiment,
   experiments,
@@ -339,7 +229,9 @@ export function CreateExperimentWizard({
   const { data: pathsData } = useMetric({ parameter: "pathname", limit: 1000, useFilters: false });
   const { data: eventsData } = useMetric({ parameter: "event_name", limit: 1000, useFilters: false });
   const createFeatureFlagMutation = useCreateFeatureFlag();
+  const updateFeatureFlagMutation = useUpdateFeatureFlag();
   const createGoalMutation = useCreateGoal();
+  const updateGoalMutation = useUpdateGoal();
   const createExperimentMutation = useCreateExperiment();
   const updateExperimentMutation = useUpdateExperiment();
   const [internalOpen, setInternalOpen] = useState(false);
@@ -349,7 +241,13 @@ export function CreateExperimentWizard({
   const [savedImplementationState, setSavedImplementationState] = useState<ImplementationState | null>(null);
   const [flagKeyTouched, setFlagKeyTouched] = useState(false);
   const [goalNameTouched, setGoalNameTouched] = useState(false);
+  // A save is up to three requests (flag, goal, experiment) that commit separately. When a later one
+  // fails, the retry reuses what the earlier ones created, updated in place if the form changed since,
+  // instead of creating duplicates: a second flag with the same key is a 409, a second goal an orphan.
+  const createdRef = useRef<CreatedResources>({});
   const isEditing = !!experiment;
+  // Visitors are already assigned by this flag, so the server keeps it once started.
+  const assignmentLocked = !!experiment && experiment.status !== "draft";
 
   const usedFlagIds = useMemo(
     () =>
@@ -359,7 +257,11 @@ export function CreateExperimentWizard({
     [experiment?.experimentId, experiments]
   );
   const availableFlags = useMemo(
-    () => (flags || []).filter(flag => flag.flagType === "multivariate" && !usedFlagIds.has(flag.flagId)),
+    // Server-only flags never reach the tracking script, so they can't record exposures.
+    () =>
+      (flags || []).filter(
+        flag => flag.flagType === "multivariate" && flag.runtime !== "server" && !usedFlagIds.has(flag.flagId)
+      ),
     [flags, usedFlagIds]
   );
   const selectedFlag =
@@ -382,7 +284,9 @@ export function CreateExperimentWizard({
   const activeStepIndex = STEPS.indexOf(step);
   const isSaving =
     createFeatureFlagMutation.isPending ||
+    updateFeatureFlagMutation.isPending ||
     createGoalMutation.isPending ||
+    updateGoalMutation.isPending ||
     createExperimentMutation.isPending ||
     updateExperimentMutation.isPending;
 
@@ -393,6 +297,7 @@ export function CreateExperimentWizard({
     setSavedImplementationState(null);
     setFlagKeyTouched(!!experiment);
     setGoalNameTouched(!!experiment);
+    createdRef.current = {};
   }, [experiment?.experimentId, open]);
 
   useEffect(() => {
@@ -539,6 +444,65 @@ export function CreateExperimentWizard({
 
   const implementationState = savedImplementationState || (isEditing ? buildImplementationState("updated") : null);
 
+  const saveNewFlag = async (): Promise<FeatureFlag> => {
+    const variants: FeatureFlagVariant[] = form.variants.map(variant => ({
+      key: variant.key.trim(),
+      name: variant.name.trim() || undefined,
+      rolloutPercentage: Number(variant.rolloutPercentage),
+    }));
+    const payload: FeatureFlagPayload = {
+      key: form.flagKey.trim(),
+      description: form.flagDescription.trim() || `Assignment flag for ${form.name.trim()}`,
+      // Off until the experiment starts; starting it switches the flag on.
+      enabled: false,
+      runtime: "client",
+      flagType: "multivariate",
+      payload: null,
+      variants: [],
+      rolloutPercentage: 100,
+      rules: [],
+      conditionSets: [
+        {
+          name: "Default",
+          rules: [],
+          variants,
+        },
+      ],
+    };
+    const request = JSON.stringify(payload);
+    const previous = createdRef.current.flag;
+    if (previous?.request === request) return previous.flag;
+
+    const { data: flag } = previous
+      ? await updateFeatureFlagMutation.mutateAsync({ flagId: previous.flag.flagId, payload })
+      : await createFeatureFlagMutation.mutateAsync(payload);
+    createdRef.current.flag = { request, flag };
+    return flag;
+  };
+
+  const saveNewGoal = async (): Promise<number> => {
+    const goal: CreateGoalRequest = {
+      siteId: Number(site),
+      name: form.goalName.trim() || `${form.name.trim()} conversion`,
+      goalType: form.goalType,
+      config:
+        form.goalType === "path" ? { pathPattern: form.pathPattern.trim() } : { eventName: form.eventName.trim() },
+    };
+    const request = JSON.stringify(goal);
+    const previous = createdRef.current.goal;
+    if (previous?.request === request) return previous.goalId;
+
+    let goalId: number;
+    if (previous) {
+      await updateGoalMutation.mutateAsync({ ...goal, goalId: previous.goalId });
+      goalId = previous.goalId;
+    } else {
+      goalId = (await createGoalMutation.mutateAsync(goal)).goalId;
+    }
+    createdRef.current.goal = { request, goalId };
+    return goalId;
+  };
+
   const submitExperiment = async () => {
     const validationError = validateExperimentConfiguration();
     if (validationError) {
@@ -552,34 +516,10 @@ export function CreateExperimentWizard({
       let variantKeys = selectedFlag ? getVariantKeys(selectedFlag) : form.variants.map(variant => variant.key.trim());
 
       if (form.assignmentMode === "new") {
-        const variants: FeatureFlagVariant[] = form.variants.map(variant => ({
-          key: variant.key.trim(),
-          name: variant.name.trim() || undefined,
-          rolloutPercentage: Number(variant.rolloutPercentage),
-        }));
-
-        const createdFlag = await createFeatureFlagMutation.mutateAsync({
-          key: form.flagKey.trim(),
-          description: form.flagDescription.trim() || `Assignment flag for ${form.name.trim()}`,
-          enabled: true,
-          runtime: "client",
-          flagType: "multivariate",
-          payload: null,
-          variants: [],
-          rolloutPercentage: 100,
-          rules: [],
-          conditionSets: [
-            {
-              name: "Default",
-              rules: [],
-              variants,
-            },
-          ],
-        });
-
-        featureFlagId = createdFlag.data.flagId;
-        flagKey = createdFlag.data.key;
-        variantKeys = getVariantKeys(createdFlag.data);
+        const createdFlag = await saveNewFlag();
+        featureFlagId = createdFlag.flagId;
+        flagKey = createdFlag.key;
+        variantKeys = getVariantKeys(createdFlag);
       }
 
       let primaryGoalId: number | null = form.goalMode === "existing" ? Number(form.existingGoalId) : null;
@@ -587,15 +527,7 @@ export function CreateExperimentWizard({
       let goalLabel = form.goalMode === "none" ? undefined : (goalDisplayPattern(selectedGoal) ?? form.goalName.trim());
 
       if (form.goalMode === "new") {
-        const createdGoal = await createGoalMutation.mutateAsync({
-          siteId: Number(site),
-          name: form.goalName.trim() || `${form.name.trim()} conversion`,
-          goalType: form.goalType,
-          config:
-            form.goalType === "path" ? { pathPattern: form.pathPattern.trim() } : { eventName: form.eventName.trim() },
-        });
-
-        primaryGoalId = createdGoal.goalId;
+        primaryGoalId = await saveNewGoal();
         goalType = form.goalType;
         goalLabel = form.goalType === "path" ? form.pathPattern.trim() : form.eventName.trim();
       }
@@ -608,6 +540,8 @@ export function CreateExperimentWizard({
         primaryGoalId,
         status: "draft",
       });
+      // The experiment now owns them; a later save must not reuse or rewrite them.
+      createdRef.current = {};
 
       setSavedImplementationState({
         mode: "created",
@@ -639,35 +573,11 @@ export function CreateExperimentWizard({
       let flagKey = selectedFlag?.key || form.flagKey.trim();
       let variantKeys = selectedFlag ? getVariantKeys(selectedFlag) : form.variants.map(variant => variant.key.trim());
 
-      if (form.assignmentMode === "new") {
-        const variants: FeatureFlagVariant[] = form.variants.map(variant => ({
-          key: variant.key.trim(),
-          name: variant.name.trim() || undefined,
-          rolloutPercentage: Number(variant.rolloutPercentage),
-        }));
-
-        const createdFlag = await createFeatureFlagMutation.mutateAsync({
-          key: form.flagKey.trim(),
-          description: form.flagDescription.trim() || `Assignment flag for ${form.name.trim()}`,
-          enabled: true,
-          runtime: "client",
-          flagType: "multivariate",
-          payload: null,
-          variants: [],
-          rolloutPercentage: 100,
-          rules: [],
-          conditionSets: [
-            {
-              name: "Default",
-              rules: [],
-              variants,
-            },
-          ],
-        });
-
-        featureFlagId = createdFlag.data.flagId;
-        flagKey = createdFlag.data.key;
-        variantKeys = getVariantKeys(createdFlag.data);
+      if (form.assignmentMode === "new" && !assignmentLocked) {
+        const createdFlag = await saveNewFlag();
+        featureFlagId = createdFlag.flagId;
+        flagKey = createdFlag.key;
+        variantKeys = getVariantKeys(createdFlag);
       }
 
       let primaryGoalId: number | null = form.goalMode === "existing" ? Number(form.existingGoalId) : null;
@@ -675,15 +585,7 @@ export function CreateExperimentWizard({
       let goalLabel = form.goalMode === "none" ? undefined : (goalDisplayPattern(selectedGoal) ?? form.goalName.trim());
 
       if (form.goalMode === "new") {
-        const createdGoal = await createGoalMutation.mutateAsync({
-          siteId: Number(site),
-          name: form.goalName.trim() || `${form.name.trim()} conversion`,
-          goalType: form.goalType,
-          config:
-            form.goalType === "path" ? { pathPattern: form.pathPattern.trim() } : { eventName: form.eventName.trim() },
-        });
-
-        primaryGoalId = createdGoal.goalId;
+        primaryGoalId = await saveNewGoal();
         goalType = form.goalType;
         goalLabel = form.goalType === "path" ? form.pathPattern.trim() : form.eventName.trim();
       }
@@ -698,6 +600,7 @@ export function CreateExperimentWizard({
           primaryGoalId,
         },
       });
+      createdRef.current = {};
 
       setSavedImplementationState({
         mode: "updated",
@@ -737,6 +640,9 @@ export function CreateExperimentWizard({
               rows={3}
               placeholder={t("Changing the CTA copy will increase signup conversions.")}
             />
+            <p className="text-xs text-neutral-500 dark:text-neutral-400">
+              {t("The hypothesis is internal context for your team. It does not change assignment or tracking.")}
+            </p>
           </div>
           <div className="grid gap-1.5">
             <Label htmlFor="experiment-description">{t("Description")}</Label>
@@ -752,27 +658,44 @@ export function CreateExperimentWizard({
       );
     }
 
+    if (step === "assignment" && assignmentLocked && experiment) {
+      return (
+        <div className="grid gap-1.5">
+          <Label>{t("Assignment flag")}</Label>
+          <Input value={experiment.featureFlag.key} disabled readOnly className="font-mono" />
+          <p className="text-xs text-neutral-500 dark:text-neutral-400">
+            {t("The flag can't change once the experiment has started, because visitors are already assigned.")}
+          </p>
+        </div>
+      );
+    }
+
     if (step === "assignment") {
       const rolloutTotal = form.variants.reduce((sum, variant) => sum + Number(variant.rolloutPercentage || 0), 0);
 
       return (
         <div className="grid gap-5">
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <WizardChoice
-              selected={form.assignmentMode === "new"}
-              icon={<Plus className="h-4 w-4" />}
-              title={t("Create a new flag")}
-              description={t("Best for a new experiment that needs its own assignment split.")}
-              onClick={() => updateForm("assignmentMode", "new")}
-            />
-            <WizardChoice
-              selected={form.assignmentMode === "existing"}
-              icon={<Flag className="h-4 w-4" />}
-              title={t("Use an existing flag")}
-              description={t("Choose a multivariate flag that is not already connected to an experiment.")}
-              onClick={() => updateForm("assignmentMode", "existing")}
-            />
-          </div>
+          <p className="text-sm text-neutral-500 dark:text-neutral-400">
+            {t("Experiments use multivariate feature flags to assign each visitor to one stable variant.")}
+          </p>
+          <ChoiceGroup
+            ariaLabel={t("Assignment flag")}
+            className="sm:grid-cols-2"
+            value={form.assignmentMode}
+            onChange={mode => updateForm("assignmentMode", mode)}
+            options={[
+              {
+                value: "new",
+                title: t("Create a new flag"),
+                description: t("Best for a new experiment that needs its own assignment split."),
+              },
+              {
+                value: "existing",
+                title: t("Use an existing flag"),
+                description: t("Choose a multivariate flag that is not already connected to an experiment."),
+              },
+            ]}
+          />
 
           {form.assignmentMode === "existing" ? (
             <div className="grid gap-1.5">
@@ -805,8 +728,9 @@ export function CreateExperimentWizard({
                     value={form.flagKey}
                     onChange={event => {
                       setFlagKeyTouched(true);
-                      updateForm("flagKey", slugify(event.target.value));
+                      updateForm("flagKey", slugifyWhileTyping(event.target.value));
                     }}
+                    onBlur={() => updateForm("flagKey", slugify(form.flagKey))}
                     placeholder="checkout_cta"
                     className="font-mono"
                   />
@@ -836,27 +760,20 @@ export function CreateExperimentWizard({
                     {t("{rolloutTotal}% assigned", { rolloutTotal: String(rolloutTotal) })}
                   </span>
                 </div>
-                <div className="flex h-2 gap-px overflow-hidden rounded-full bg-neutral-150 dark:bg-neutral-800">
-                  {form.variants.map((variant, index) =>
-                    Number(variant.rolloutPercentage) > 0 ? (
-                      <div
-                        key={variant.id}
-                        className={cn(
-                          "h-full first:rounded-l-full last:rounded-r-full",
-                          VARIANT_SEGMENT_COLORS[index % VARIANT_SEGMENT_COLORS.length]
-                        )}
-                        style={{ width: `${Math.min(100, Number(variant.rolloutPercentage))}%` }}
-                        title={`${variant.key || t("variant")} · ${variant.rolloutPercentage}%`}
-                      />
-                    ) : null
-                  )}
-                </div>
+                <SplitBar
+                  segments={form.variants.map(variant => ({
+                    key: variant.id,
+                    label: variant.key || t("variant"),
+                    percent: Number(variant.rolloutPercentage) || 0,
+                  }))}
+                />
                 <div className="grid gap-2">
                   {form.variants.map(variant => (
                     <div key={variant.id} className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_5rem_2rem] gap-2">
                       <Input
                         value={variant.key}
-                        onChange={event => updateVariant(variant.id, "key", slugify(event.target.value))}
+                        onChange={event => updateVariant(variant.id, "key", slugifyWhileTyping(event.target.value))}
+                        onBlur={() => updateVariant(variant.id, "key", slugify(variant.key))}
                         placeholder="variant_a"
                         className="font-mono"
                       />
@@ -865,21 +782,11 @@ export function CreateExperimentWizard({
                         onChange={event => updateVariant(variant.id, "name", event.target.value)}
                         placeholder={t("Display name")}
                       />
-                      <div className="relative">
-                        <Input
-                          type="number"
-                          min={0}
-                          max={100}
-                          value={variant.rolloutPercentage}
-                          onChange={event =>
-                            updateVariant(variant.id, "rolloutPercentage", Number(event.target.value || 0))
-                          }
-                          className="pr-6 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                        />
-                        <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-neutral-500 dark:text-neutral-400">
-                          %
-                        </span>
-                      </div>
+                      <PercentInput
+                        ariaLabel={t("Rollout")}
+                        value={variant.rolloutPercentage}
+                        onChange={value => updateVariant(variant.id, "rolloutPercentage", value)}
+                      />
                       <Button
                         size="icon"
                         variant="ghost"
@@ -906,29 +813,32 @@ export function CreateExperimentWizard({
     if (step === "goal") {
       return (
         <div className="grid gap-5">
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <WizardChoice
-              selected={form.goalMode === "new"}
-              icon={<Plus className="h-4 w-4" />}
-              title={t("Create a new goal")}
-              description={t("Define the conversion while creating the experiment.")}
-              onClick={() => updateForm("goalMode", "new")}
-            />
-            <WizardChoice
-              selected={form.goalMode === "existing"}
-              icon={<Target className="h-4 w-4" />}
-              title={t("Use existing")}
-              description={t("Connect this experiment to a goal you already track.")}
-              onClick={() => updateForm("goalMode", "existing")}
-            />
-            <WizardChoice
-              selected={form.goalMode === "none"}
-              icon={<MousePointerClick className="h-4 w-4" />}
-              title={t("Skip for now")}
-              description={t("Create the experiment now and add a goal later.")}
-              onClick={() => updateForm("goalMode", "none")}
-            />
-          </div>
+          <p className="text-sm text-neutral-500 dark:text-neutral-400">
+            {t("The primary goal is the conversion event or page visit used to compare variants.")}
+          </p>
+          <ChoiceGroup
+            ariaLabel={t("Primary goal")}
+            className="sm:grid-cols-3"
+            value={form.goalMode}
+            onChange={mode => updateForm("goalMode", mode)}
+            options={[
+              {
+                value: "new",
+                title: t("Create a new goal"),
+                description: t("Define the conversion while creating the experiment."),
+              },
+              {
+                value: "existing",
+                title: t("Use existing"),
+                description: t("Connect this experiment to a goal you already track."),
+              },
+              {
+                value: "none",
+                title: t("Skip for now"),
+                description: t("Create the experiment now and add a goal later."),
+              },
+            ]}
+          />
 
           {form.goalMode === "existing" && (
             <div className="grid gap-1.5">
@@ -963,22 +873,20 @@ export function CreateExperimentWizard({
                 />
               </div>
 
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <WizardChoice
-                  selected={form.goalType === "path"}
-                  icon={<Target className="h-4 w-4" />}
-                  title={t("Page goal")}
-                  description={t("Count sessions that reach a URL path.")}
-                  onClick={() => updateForm("goalType", "path")}
-                />
-                <WizardChoice
-                  selected={form.goalType === "event"}
-                  icon={<MousePointerClick className="h-4 w-4" />}
-                  title={t("Event goal")}
-                  description={t("Count sessions where your app fires a named event.")}
-                  onClick={() => updateForm("goalType", "event")}
-                />
-              </div>
+              <ChoiceGroup
+                ariaLabel={t("Goal")}
+                className="sm:grid-cols-2"
+                value={form.goalType}
+                onChange={goalType => updateForm("goalType", goalType)}
+                options={[
+                  { value: "path", title: t("Page goal"), description: t("Count visitors that reach a URL path.") },
+                  {
+                    value: "event",
+                    title: t("Event goal"),
+                    description: t("Count visitors for whom your app fires a named event."),
+                  },
+                ]}
+              />
 
               {form.goalType === "path" ? (
                 <div className="grid gap-1.5">
@@ -1047,23 +955,13 @@ window.rybbit.onReady((rybbit) => {
 
     return (
       <div className="grid gap-5">
-        <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4 dark:border-emerald-900 dark:bg-emerald-950/30">
-          <div className="flex items-start gap-3">
-            <div className="mt-0.5 flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500 text-white">
-              <Check className="h-4 w-4" />
-            </div>
-            <div>
-              <h3 className="text-sm font-medium text-emerald-900 dark:text-emerald-100">
-                {implementationState.mode === "created"
-                  ? t("Experiment created as a draft")
-                  : t("Experiment changes saved")}
-              </h3>
-              <p className="mt-1 text-sm text-emerald-800 dark:text-emerald-200">
-                {t("Add this code to your app, then start the experiment from the list when you are ready.")}
-              </p>
-            </div>
-          </div>
-        </div>
+        <SavedNotice
+          title={
+            implementationState.mode === "created" ? t("Experiment created as a draft") : t("Experiment changes saved")
+          }
+        >
+          {t("Add this code to your app, then start the experiment from the list when you are ready.")}
+        </SavedNotice>
 
         <div className="grid gap-2">
           <Label>{t("Variant implementation")}</Label>
@@ -1076,20 +974,22 @@ window.rybbit.onReady((rybbit) => {
             <CodeSnippet code={eventGoalCode} language="javascript" />
           </div>
         ) : implementationState.goalType === "path" ? (
-          <p className="rounded-md border border-neutral-150 bg-neutral-50 p-3 text-sm text-neutral-600 dark:border-neutral-800 dark:bg-neutral-900/40 dark:text-neutral-300">
+          <p className="text-sm text-neutral-500 dark:text-neutral-400">
             {t(
-              "No conversion event code is needed for this path goal. Swalha Analytics will count sessions that reach {goalLabel}.",
+              "No conversion event code is needed for this path goal. Swalha Analytics will count visitors that reach {goalLabel}.",
               {
                 goalLabel: implementationState.goalLabel || "",
               }
             )}
           </p>
         ) : implementationState.goalType && implementationState.goalType !== "event" ? (
-          <p className="rounded-md border border-neutral-150 bg-neutral-50 p-3 text-sm text-neutral-600 dark:border-neutral-800 dark:bg-neutral-900/40 dark:text-neutral-300">
-            {t("No conversion event code is needed for this goal. Swalha Analytics tracks it automatically based on user behavior.")}
+          <p className="text-sm text-neutral-500 dark:text-neutral-400">
+            {t(
+              "No conversion event code is needed for this goal. Swalha Analytics tracks it automatically based on user behavior."
+            )}
           </p>
         ) : (
-          <p className="rounded-md border border-neutral-150 bg-neutral-50 p-3 text-sm text-neutral-600 dark:border-neutral-800 dark:bg-neutral-900/40 dark:text-neutral-300">
+          <p className="text-sm text-neutral-500 dark:text-neutral-400">
             {t("Add a primary goal later to calculate conversions for each variant.")}
           </p>
         )}
@@ -1097,93 +997,63 @@ window.rybbit.onReady((rybbit) => {
     );
   };
 
-  const stepTitle =
-    step === "basics"
-      ? t("Basics")
-      : step === "assignment"
-        ? t("Assignment")
-        : step === "goal"
-          ? t("Goal")
-          : t("Implement");
+  const stepLabels: Record<WizardStep, string> = {
+    basics: t("Basics"),
+    assignment: t("Assignment"),
+    goal: t("Goal"),
+    implementation: t("Implement"),
+  };
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       {trigger && <DialogTrigger asChild>{trigger}</DialogTrigger>}
-      <DialogContent className="flex max-h-[90vh] w-full max-w-5xl flex-col gap-0 p-0">
-        <DialogTitle className="sr-only">{isEditing ? t("Edit experiment") : t("Create experiment")}</DialogTitle>
+      <DialogContent className="flex max-h-[90vh] w-full max-w-2xl flex-col gap-0 overflow-hidden p-0">
+        <DialogHeader className="space-y-3 border-b border-neutral-150 px-6 py-4 dark:border-neutral-850">
+          <DialogTitle className="text-base">{isEditing ? t("Edit experiment") : t("New experiment")}</DialogTitle>
 
-        <div className="border-b border-neutral-150 px-6 pb-4 pt-5 dark:border-neutral-850">
-          <div className="mb-3 flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <span className="text-xs uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
-                {isEditing ? t("Edit experiment") : t("New experiment")}
-              </span>
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-neutral-100 px-2 py-0.5 text-xs text-neutral-500 dark:bg-neutral-850 dark:text-neutral-400">
-                {isEditing ? t("Existing") : t("Draft")}
-              </span>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2">
+          <ol className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-sm">
             {STEPS.map((item, index) => {
               const canOpenStep = item !== "implementation" || !!implementationState;
+              const done = index < activeStepIndex;
               return (
-                <button
-                  key={item}
-                  type="button"
-                  disabled={!canOpenStep}
-                  onClick={() => {
-                    if (canOpenStep) setStep(item);
-                  }}
-                  className={cn(
-                    "inline-flex items-center gap-2 rounded-full px-2.5 py-1 text-xs transition-colors",
-                    item === step
-                      ? "bg-accent-500/10 text-accent-700 dark:text-accent-300"
-                      : index < activeStepIndex
-                        ? "bg-neutral-100 text-neutral-700 dark:bg-neutral-850 dark:text-neutral-200"
-                        : canOpenStep
-                          ? "bg-neutral-50 text-neutral-500 hover:bg-neutral-100 dark:bg-neutral-900 dark:text-neutral-400 dark:hover:bg-neutral-850"
-                          : "bg-neutral-50 text-neutral-300 dark:bg-neutral-900 dark:text-neutral-600"
+                <li key={item} className="flex items-center gap-1.5">
+                  {index > 0 && (
+                    <ChevronRight className="h-3.5 w-3.5 text-neutral-300 dark:text-neutral-700" aria-hidden />
                   )}
-                >
-                  <span className="flex h-4 w-4 items-center justify-center rounded-full bg-current/10 text-[10px]">
-                    {index < activeStepIndex || (item === "implementation" && implementationState) ? (
-                      <Check className="h-3 w-3" />
-                    ) : (
-                      index + 1
+                  <button
+                    type="button"
+                    disabled={!canOpenStep}
+                    aria-current={item === step ? "step" : undefined}
+                    onClick={() => setStep(item)}
+                    className={cn(
+                      "inline-flex items-center gap-1 rounded-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-neutral-950 dark:focus-visible:ring-neutral-300",
+                      item === step
+                        ? "font-medium text-neutral-900 dark:text-neutral-50"
+                        : canOpenStep
+                          ? "text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100"
+                          : "text-neutral-400 dark:text-neutral-600"
                     )}
-                  </span>
-                  {item === "basics"
-                    ? t("Basics")
-                    : item === "assignment"
-                      ? t("Assignment")
-                      : item === "goal"
-                        ? t("Goal")
-                        : t("Implement")}
-                </button>
+                  >
+                    {done && <Check className="h-3.5 w-3.5" aria-hidden />}
+                    {stepLabels[item]}
+                  </button>
+                </li>
               );
             })}
-          </div>
-        </div>
+          </ol>
+        </DialogHeader>
 
-        <div className="grid min-h-[520px] flex-1 overflow-hidden lg:grid-cols-[minmax(0,1fr)_20rem]">
-          <div className="overflow-y-auto px-6 py-5">
-            <div className="mx-auto max-w-2xl">
-              <div className="mb-5">
-                <h2 className="text-xl font-medium tracking-tight text-neutral-900 dark:text-neutral-50">
-                  {stepTitle}
-                </h2>
-              </div>
-              {renderStep()}
-            </div>
-          </div>
-          <WizardHelp step={step} isEditing={isEditing} />
-        </div>
+        <div className="min-h-[26rem] flex-1 overflow-y-auto px-6 py-5">{renderStep()}</div>
 
-        <div className="flex items-center justify-between border-t border-neutral-150 px-6 py-4 dark:border-neutral-850">
-          <Button variant="ghost" onClick={() => setOpen(false)}>
-            {step === "implementation" ? t("Close") : t("Cancel")}
-          </Button>
+        <div className="flex items-center justify-between border-t border-neutral-150 px-6 py-3 dark:border-neutral-850">
+          {/* Once saved there is nothing to cancel, and Done already closes the dialog. */}
+          {step === "implementation" ? (
+            <span />
+          ) : (
+            <Button variant="ghost" onClick={() => setOpen(false)}>
+              {t("Cancel")}
+            </Button>
+          )}
           <div className="flex items-center gap-2">
             {activeStepIndex > 0 && step !== "implementation" && (
               <Button variant="secondary" onClick={() => setStep(STEPS[activeStepIndex - 1])}>
@@ -1191,7 +1061,11 @@ window.rybbit.onReady((rybbit) => {
               </Button>
             )}
             {step === "goal" ? (
-              <Button onClick={isEditing ? saveExperiment : submitExperiment} disabled={isSaving || !site}>
+              <Button
+                variant="success"
+                onClick={isEditing ? saveExperiment : submitExperiment}
+                disabled={isSaving || !site}
+              >
                 {isSaving
                   ? isEditing
                     ? t("Saving...")

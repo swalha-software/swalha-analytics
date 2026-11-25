@@ -25,8 +25,8 @@ export function SwalhaSSOButton({ onError, callbackURL, className = "", divider 
 
   const handleSSO = async () => {
     try {
-      await authClient.signIn.oauth2({
-        providerId: "swalha",
+      await authClient.signIn.social({
+        provider: "swalha",
         ...(callbackURL ? { callbackURL } : {}),
       });
     } catch (error) {

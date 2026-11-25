@@ -136,7 +136,7 @@ export const whoUses: WhoUsesItem[] = [
     icon: <Users className="w-6 h-6" />,
     title: "Privacy-conscious teams",
     description:
-      "No cookies, no consent banners, GDPR compliant by default. Ship analytics your legal team actually approves of.",
+      "No cookies, no consent banners, GDPR compliant by default. Ship analytics your legal team approves of.",
   },
   {
     icon: <TrendingUp className="w-6 h-6" />,
@@ -155,7 +155,7 @@ export const faqItems: FAQItem[] = [
   {
     question: "How is Rybbit different from Google Analytics?",
     answer:
-      "Rybbit is privacy-first (no cookies, no personal data), open source, and shows everything on a single dashboard instead of 150+ reports. The tracking script is 18KB vs GA4's 371KB. You also get features like session replay and funnels that GA4 lacks or charges $50k/year for.",
+      "Rybbit is privacy-first (no cookies, no personal data), open source, and shows everything on a single dashboard instead of 150+ reports. The tracking script is about 11KB vs GA4's 150KB, both compressed. You also get features like session replay and funnels that GA4 lacks or charges $50k/year for.",
   },
   {
     question: "Do I need a cookie consent banner?",

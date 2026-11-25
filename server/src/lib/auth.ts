@@ -1,18 +1,18 @@
 import { betterAuth } from "better-auth";
 import { APIError, createAuthMiddleware, getSessionFromCtx } from "better-auth/api";
-import { admin, captcha, genericOAuth, mcp, organization } from "better-auth/plugins";
+import { admin, captcha, genericOAuth, organization } from "better-auth/plugins";
 import { createAccessControl } from "better-auth/plugins/access";
 import { adminAc, defaultStatements, memberAc, ownerAc } from "better-auth/plugins/organization/access";
-import { ALL_SCOPE_STRINGS, OIDC_STANDARD_SCOPES } from "./scopes.js";
+import { createOAuthPlugins, getAuthBaseUrl } from "./oauth.js";
 import dotenv from "dotenv";
-import { and, asc, eq, inArray } from "drizzle-orm";
+import { and, asc, eq, inArray, ne } from "drizzle-orm";
 import pg from "pg";
-import { dash } from "@better-auth/infra";
 import { apiKey } from "@better-auth/api-key";
 
 import { db } from "../db/postgres/postgres.js";
 import * as schema from "../db/postgres/schema.js";
 import { member, user } from "../db/postgres/schema.js";
+import { type OrgRole } from "@rybbit/shared";
 import { apiKeyLimitForPlan, countApiKeysForReference } from "./apiKeyLimits.js";
 import { ORG_API_KEY_CONFIG_ID } from "./bearerAuth.js";
 import { IS_CLOUD } from "./const.js";
@@ -22,8 +22,8 @@ import {
   sendEmailVerificationLink,
   sendWelcomeEmail,
 } from "./email/email.js";
-import { onboardingTipsService } from "../services/onboardingTips/onboardingTipsService.js";
 import { getTrustedCorsOrigins } from "./cors.js";
+import { hasRenewingStripeSubscription } from "./subscriptionUtils.js";
 import { createServiceLogger } from "./logger/logger.js";
 import { applyLoginOrganizations } from "./orgSync/loginClaim.js";
 import { getDiscovery } from "./orgSync/provider.js";
@@ -66,11 +66,18 @@ const orgAccessControl = createAccessControl({
   ...defaultStatements,
   apiKey: [...ORG_API_KEY_ACTIONS],
 });
+//
+// Every role in ORG_ROLES (@rybbit/shared) must be registered here or
+// better-auth rejects it on invite and role change. Editors and viewers hold
+// no better-auth statements beyond a member's: what separates them is the app's
+// own permission map, which the route guards enforce.
 const orgRoles = {
   owner: orgAccessControl.newRole({ ...ownerAc.statements, apiKey: [...ORG_API_KEY_ACTIONS] }),
   admin: orgAccessControl.newRole({ ...adminAc.statements, apiKey: [...ORG_API_KEY_ACTIONS] }),
+  editor: orgAccessControl.newRole({ ...memberAc.statements }),
   member: orgAccessControl.newRole({ ...memberAc.statements }),
-};
+  viewer: orgAccessControl.newRole({ ...memberAc.statements }),
+} satisfies Record<OrgRole, unknown>;
 
 // Rate limiting moved out of the plugin and into lib/apiRateLimit.ts, which
 // enforces a burst tier and a daily quota per credential *owner* rather than a
@@ -85,26 +92,7 @@ const apiKeyRateLimit = { enabled: false };
 
 const pluginList = [
   admin(),
-  // OAuth provider for MCP clients (RFC 8414/9728 discovery, dynamic client
-  // registration, authorization-code + PKCE). The root /.well-known routes are
-  // registered in index.ts; token validation happens via auth.api.getMcpSession.
-  mcp({
-    loginPage: "/login",
-    ...(process.env.BASE_URL ? { resource: `${process.env.BASE_URL.replace(/\/$/, "")}/api/mcp` } : {}),
-    oidcConfig: {
-      loginPage: "/login",
-      // Registers the custom resource:action scopes so /mcp/authorize's
-      // invalid_scope check accepts them (merged after the standard scopes).
-      scopes: [...ALL_SCOPE_STRINGS],
-      // Advertised metadata is NOT derived from `scopes`. This feeds the
-      // RFC 9728 protected-resource document; the RFC 8414 authorization-server
-      // document is augmented in mcp/wellKnown.ts (better-auth builds it from a
-      // top-level option the mcp() plugin type doesn't expose).
-      metadata: {
-        scopes_supported: [...OIDC_STANDARD_SCOPES, ...ALL_SCOPE_STRINGS],
-      },
-    },
-  }),
+  ...createOAuthPlugins(getAuthBaseUrl()),
   apiKey([
     {
       // Kept only because the plugin requires a default configuration: every
@@ -129,7 +117,6 @@ const pluginList = [
       rateLimit: apiKeyRateLimit,
     },
   ]),
-  dash(),
   organization({
     // Organizations are created, membered and deleted in SWALHA Auth and
     // mirrored here (lib/orgSync); every local mutation is refused in hooks.before.
@@ -155,31 +142,54 @@ const pluginList = [
             defaultValue: [],
             fieldName: "site_ids",
           },
+          // Role on those sites; null = the invited role. Validated in
+          // beforeCreateInvitation.
+          siteRole: {
+            type: "string",
+            required: false,
+            fieldName: "site_role",
+          },
         },
       },
+      // Billing and usage fields are server-owned. `input: false` keeps them
+      // out of the /organization/create and /update body schemas; without it
+      // any signed-in user could create an org with a plan override, a custom
+      // plan, or another org's Stripe customer id. stripeCustomerId is also
+      // withheld from org reads so members can't copy it.
       organization: {
         additionalFields: {
           stripeCustomerId: {
             type: "string",
             required: false,
+            input: false,
+            returned: false,
           },
           monthlyEventCount: {
             type: "number",
             required: false,
             defaultValue: 0,
+            input: false,
           },
           overMonthlyLimit: {
             type: "boolean",
             required: false,
             defaultValue: false,
+            input: false,
           },
           planOverride: {
             type: "string",
             required: false,
+            input: false,
           },
           customPlan: {
             type: "string",
             required: false,
+            input: false,
+            // Column is snake_case (jsonb "custom_plan" in schema.ts). Without
+            // this, Better Auth 1.7's startup schema check looks for a
+            // "customPlan" column, reports SCHEMA_MISMATCH, and every
+            // /api/auth/* request 500s.
+            fieldName: "custom_plan",
           },
         },
       },
@@ -211,6 +221,12 @@ const pluginList = [
                 process.env.SWALHA_SSO_DISCOVERY_URL ?? "https://auth.swalha.com/.well-known/openid-configuration",
               scopes: ["openid", "email", "profile", "organizations"],
               pkce: true,
+              // Better Auth 1.7 serves generic OAuth providers from the core
+              // /callback/:id endpoint; 1.6 used /oauth2/callback/:providerId,
+              // and that is the redirect URI registered in SWALHA Auth. Keep
+              // sending the registered one — index.ts forwards it to the new
+              // endpoint — so the upgrade needs no change on the Auth side.
+              redirectURI: `${getAuthBaseUrl()}/api/auth/oauth2/callback/swalha`,
               // Auth owns the profile: refresh name/image locally on every sign-in.
               overrideUserInfo: true,
               // better-auth's default reads the id_token and skips userinfo, but
@@ -239,6 +255,9 @@ const pluginList = [
                 );
                 return {
                   id: profile.sub,
+                  // 1.7 keys the linked account on `sub` and checks it against
+                  // the ID token's subject.
+                  sub: profile.sub,
                   email: profile.email,
                   emailVerified: profile.email_verified ?? false,
                   name: profile.name ?? profile.email,
@@ -255,13 +274,52 @@ const pluginList = [
     : []),
 ];
 
+// Duck-typed: the api-key plugin can resolve its own copy of APIError.
+/**
+ * Refuses to remove an organization's last way to manage billing while its
+ * Stripe subscription would keep charging.
+ */
+async function assertOrganizationNotBilling(organizationId: string, message: string) {
+  if (!IS_CLOUD) return;
+  const [org] = await db
+    .select({ stripeCustomerId: schema.organization.stripeCustomerId })
+    .from(schema.organization)
+    .where(eq(schema.organization.id, organizationId))
+    .limit(1);
+  let renewing: boolean;
+  try {
+    renewing = await hasRenewingStripeSubscription(org?.stripeCustomerId ?? null);
+  } catch (error) {
+    authLogger.error({ err: error, organizationId }, "Could not check the subscription before deletion");
+    throw new APIError("SERVICE_UNAVAILABLE", {
+      message: "Couldn't check the subscription right now. Try again in a minute.",
+    });
+  }
+  if (renewing) {
+    throw new APIError("BAD_REQUEST", { message });
+  }
+}
+
+function isApiErrorLike(value: unknown): boolean {
+  return (
+    typeof value === "object" && value !== null && typeof (value as { statusCode?: unknown }).statusCode === "number"
+  );
+}
+
 export const auth = betterAuth({
   basePath: "/api/auth",
+  baseURL: getAuthBaseUrl(),
   appName: "Swalha Analytics",
   logger: {
     log: (level, message, ...args) => {
       // Route better-auth's internal logs (e.g. API key rate-limit errors)
       // through the project's pino logger instead of console.
+      // better-auth logs every unknown or expired API key at error level; a
+      // caller presenting a bad credential isn't a server fault (#1095).
+      if (message.startsWith("Failed to validate API key") && isApiErrorLike(args[0])) {
+        authLogger.debug({ args }, message);
+        return;
+      }
       authLogger[level]({ args }, message);
     },
   },
@@ -317,14 +375,36 @@ export const auth = betterAuth({
         defaultValue: true,
         input: true,
       },
-      // scheduledTipEmailIds: {
-      //   type: "string[]",
-      //   required: false,
-      //   defaultValue: [],
-      // },
     },
     deleteUser: {
       enabled: true,
+      // Membership rows go with the user, so an organization they solely own
+      // would be left with a live subscription and nobody able to cancel it.
+      beforeDelete: async deletingUser => {
+        const owned = await db
+          .select({ organizationId: member.organizationId, name: schema.organization.name })
+          .from(member)
+          .innerJoin(schema.organization, eq(schema.organization.id, member.organizationId))
+          .where(and(eq(member.userId, deletingUser.id), eq(member.role, "owner")));
+        for (const { organizationId, name } of owned) {
+          const [otherOwner] = await db
+            .select({ id: member.id })
+            .from(member)
+            .where(
+              and(
+                eq(member.organizationId, organizationId),
+                eq(member.role, "owner"),
+                ne(member.userId, deletingUser.id)
+              )
+            )
+            .limit(1);
+          if (otherOwner) continue;
+          await assertOrganizationNotBilling(
+            organizationId,
+            `You're the only owner of "${name}", which has an active subscription. Cancel it in Billing or make someone else an owner before deleting your account.`
+          );
+        }
+      },
       // apikey.referenceId no longer has a cascading FK to user.id (it holds
       // user OR org ids), so the user's keys are purged explicitly. Keys of a
       // user removed through other paths are unusable anyway — bearer auth
@@ -367,7 +447,8 @@ export const auth = betterAuth({
       create: {
         after: async u => {
           authLogger.info({ userId: u.id }, "User created");
-          const users = await db.select().from(schema.user).orderBy(asc(user.createdAt));
+          // Two rows are enough to tell whether this is the first user.
+          const users = await db.select({ id: user.id }).from(user).orderBy(asc(user.createdAt)).limit(2);
 
           // If this is the first user, make them an admin
           if (users.length === 1) {
@@ -375,18 +456,12 @@ export const auth = betterAuth({
           }
 
           sendWelcomeEmail(u.email, u.name);
-          // Add contact to marketing audience and schedule onboarding emails
+          // Add contact to marketing audience; lifecycle emails are driven by the
+          // state-machine cron (lifecycleEmailService), nothing is pre-scheduled here
           try {
             await addContactToAudience(u.email, u.name);
-
-            const emailIds = await onboardingTipsService.scheduleOnboardingEmails(u.email, u.name);
-
-            // Store scheduled email IDs for potential cancellation
-            if (emailIds.length > 0) {
-              await db.update(user).set({ scheduledTipEmailIds: emailIds }).where(eq(user.id, u.id));
-            }
           } catch (error) {
-            authLogger.error({ err: error, userId: u.id }, "Error setting up onboarding emails");
+            authLogger.error({ err: error, userId: u.id }, "Error adding contact to marketing audience");
           }
         },
       },

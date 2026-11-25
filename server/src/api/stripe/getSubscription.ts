@@ -13,7 +13,12 @@ import {
   STANDARD_MEMBER_LIMIT,
   STANDARD_SITE_LIMIT,
 } from "../../lib/const.js";
-import { getBestSubscription, subscriptionIncludesReplay, SubscriptionInfo } from "../../lib/subscriptionUtils.js";
+import {
+  getBestSubscription,
+  hasHadStripeSubscription,
+  subscriptionIncludesReplay,
+  SubscriptionInfo,
+} from "../../lib/subscriptionUtils.js";
 
 function getStartOfMonth() {
   return DateTime.now().startOf("month").toJSDate();
@@ -75,6 +80,8 @@ export async function getSubscriptionInner(organizationId: string) {
       monthlyEventCount: organization.monthlyEventCount,
       createdAt: organization.createdAt,
       name: organization.name,
+      customPlan: organization.customPlan,
+      planOverride: organization.planOverride,
     })
     .from(organization)
     .where(eq(organization.id, organizationId))
@@ -86,8 +93,9 @@ export async function getSubscriptionInner(organizationId: string) {
     return null;
   }
 
-  // Get the best subscription (custom plan / override / Stripe / free)
-  const subscription = await getBestSubscription(organizationId, org.stripeCustomerId);
+  // Get the best subscription (custom plan / override / Stripe / free). The org row
+  // read above already holds the custom plan and override, so it isn't read again.
+  const subscription = await getBestSubscription(organizationId, org.stripeCustomerId, { orgPlan: org });
   const includesReplay = subscriptionIncludesReplay(subscription);
 
   // Compute member/site limits
@@ -161,6 +169,8 @@ export async function getSubscriptionInner(organizationId: string) {
       eventLimit: subscription.eventLimit,
       monthlyEventCount: org.monthlyEventCount || 0,
       interval: subscription.interval,
+      // Stripe is retrying a failed renewal; the plan stays on and the app asks for a new card.
+      ...(subscription.pastDue && { pastDue: subscription.pastDue }),
       includesReplay,
       ...limits,
     };
@@ -176,6 +186,13 @@ export async function getSubscriptionInner(organizationId: string) {
     eventLimit: subscription.eventLimit,
     monthlyEventCount: org.monthlyEventCount || 0,
     trialDaysRemaining: 0,
+    // One trial per organization: false once it has had any subscription (trial ended,
+    // canceled, lapsed), so the app offers plans instead of a trial.
+    trialEligible: !(await hasHadStripeSubscription(org.stripeCustomerId)),
+    // Sites keep collecting until trialGrace.endsAt after an unpaid trial (siteRequiresPlan).
+    ...(subscription.source === "free" && subscription.trialGrace && { trialGrace: subscription.trialGrace }),
+    // Stripe is retrying a failed charge: the app asks the owners to update the card.
+    ...(subscription.source === "free" && subscription.pastDue && { pastDue: subscription.pastDue }),
     includesReplay,
     ...limits,
   };

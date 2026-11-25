@@ -65,10 +65,11 @@ export function OrgTotalsChart({
 
     // The previous period is drawn on the current period's axis, but keeps its
     // real timestamp so the tooltip can name the day it actually came from.
-    const { min: prevMin } = getChartTimeBounds(previousTime, bucket, timezone);
+    // No comparison selected: previousTime is null and there is nothing to align.
+    const prevMin = previousTime ? getChartTimeBounds(previousTime, bucket, timezone).min : undefined;
     const offsetMs = boundsMin && prevMin ? boundsMin.getTime() - prevMin.getTime() : 0;
     const previousPoints: PreviousPoint[] = [];
-    if (time.mode !== "all-time") {
+    if (time.mode !== "all-time" && previousTime) {
       totals?.previousSeries.forEach(point => {
         const ts = parseSeriesTime(point.time, timezone);
         if (!ts.isValid) return;

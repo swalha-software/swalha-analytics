@@ -14,22 +14,31 @@ export interface AdminOrganizationData {
   overMonthlyLimit: boolean;
   subscription: {
     id: string | null;
+    source: "custom" | "override" | "stripe" | "free";
     planName: string;
     status: string;
     eventLimit: number;
     currentPeriodEnd: Date;
     cancelAtPeriodEnd?: boolean;
     interval?: string;
+    memberLimit?: number | null;
+    siteLimit?: number | null;
   };
+  planOverride: string | null;
+  customPlan: { events: number; members: number | null; websites: number | null } | null;
+  stripeCustomerId: string | null;
+  stripeDashboardUrl: string | null;
   sites: {
     siteId: number;
     name: string;
     domain: string;
+    type: "web" | "mobile" | null;
     createdAt: string;
     eventsLast24Hours: number;
     eventsLast30Days: number;
   }[];
   members: {
+    memberId: string;
     userId: string;
     name: string;
     email: string;
@@ -48,6 +57,7 @@ export async function getAdminOrganizations(request: FastifyRequest, reply: Fast
     // Get all members for all organizations
     const allMembers = await db
       .select({
+        memberId: member.id,
         organizationId: member.organizationId,
         userId: member.userId,
         role: member.role,
@@ -65,6 +75,7 @@ export async function getAdminOrganizations(request: FastifyRequest, reply: Fast
         orgMembersMap.set(memberData.organizationId, []);
       }
       orgMembersMap.get(memberData.organizationId)?.push({
+        memberId: memberData.memberId,
         userId: memberData.userId,
         name: memberData.userName,
         email: memberData.userEmail,
@@ -80,6 +91,7 @@ export async function getAdminOrganizations(request: FastifyRequest, reply: Fast
         siteId: sites.siteId,
         name: sites.name,
         domain: sites.domain,
+        type: sites.type,
         createdAt: sites.createdAt,
         organizationId: sites.organizationId,
       })
@@ -87,7 +99,9 @@ export async function getAdminOrganizations(request: FastifyRequest, reply: Fast
       .where(allOrgIds.length > 0 ? inArray(sites.organizationId, allOrgIds) : undefined);
 
     // Get event counts for the past 24 hours and 30 days from ClickHouse
-    const now = DateTime.now();
+    // Bounds are rendered and parsed in UTC so neither Node's nor ClickHouse's
+    // timezone shifts the window.
+    const now = DateTime.utc();
     const yesterday = now.minus({ hours: 24 });
     const thirtyDaysAgo = now.minus({ days: 30 });
 
@@ -114,6 +128,7 @@ export async function getAdminOrganizations(request: FastifyRequest, reply: Fast
           siteId: site.siteId,
           name: site.name,
           domain: site.domain,
+          type: site.type,
           createdAt: site.createdAt,
           eventsLast24Hours: siteEventMap24h.get(site.siteId) || 0,
           eventsLast30Days: siteEventMap30d.get(site.siteId) || 0,
@@ -135,6 +150,12 @@ export async function getAdminOrganizations(request: FastifyRequest, reply: Fast
         monthlyEventCount: org.monthlyEventCount || 0,
         overMonthlyLimit: org.overMonthlyLimit || false,
         subscription: subscriptionData,
+        planOverride: org.planOverride,
+        customPlan: org.customPlan,
+        stripeCustomerId: org.stripeCustomerId,
+        stripeDashboardUrl: org.stripeCustomerId
+          ? `https://dashboard.stripe.com/${process.env.STRIPE_SECRET_KEY?.startsWith("sk_live") ? "" : "test/"}customers/${org.stripeCustomerId}`
+          : null,
         sites: orgSitesMap.get(org.id) || [],
         members: orgMembersMap.get(org.id) || [],
       };

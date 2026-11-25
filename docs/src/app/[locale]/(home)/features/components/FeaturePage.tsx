@@ -1,5 +1,6 @@
 import { CTASection } from "@/components/CTASection";
 import { InteriorPageHero } from "@/components/InteriorPageHero";
+import { toDemoEmbedUrl } from "@/lib/const";
 import {
   Accordion,
   AccordionContent,
@@ -108,7 +109,7 @@ export function FeaturePage({
                 </div>
               </div>
               <iframe
-                src={demoUrl}
+                src={toDemoEmbedUrl(demoUrl)}
                 width="1300"
                 height="750"
                 className="block h-[440px] w-full md:h-[620px] lg:h-[750px]"
@@ -136,7 +137,7 @@ export function FeaturePage({
             {introParagraphs.map((paragraph, index) => (
               <div
                 key={index}
-                className="max-w-3xl text-base leading-7 text-neutral-600 dark:text-neutral-300 md:text-lg md:leading-8"
+                className="max-w-3xl text-base leading-7 text-neutral-600 dark:text-neutral-300 md:text-lg md:leading-8 [&_a]:font-medium [&_a]:text-emerald-600 [&_a]:underline [&_a]:underline-offset-4 dark:[&_a]:text-emerald-400"
               >
                 {paragraph}
               </div>
@@ -276,7 +277,7 @@ export function FeaturePage({
       )}
 
       <CTASection
-        title={ctaTitle || t("Ready for better analytics?")}
+        title={ctaTitle || t("Switch to better analytics")}
         description={
           ctaDescription ||
           t("The full analytics surface on one dashboard: cookieless, open source, and live in minutes.")

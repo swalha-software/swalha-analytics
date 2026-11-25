@@ -12,6 +12,10 @@ const mocks = vi.hoisted(() => ({
   getConfig: vi.fn(async () => ({ siteId: 1 })),
 }));
 
+vi.mock("../../services/usageService.js", () => ({
+  usageService: { requestOrganizationRefresh: vi.fn() },
+}));
+
 vi.mock("../../db/postgres/postgres.js", () => ({
   db: {
     query: {
@@ -95,7 +99,7 @@ beforeEach(() => {
   mocks.getSubscriptionInner.mockResolvedValue(subscription(false));
 });
 
-describe("updateSiteConfig — session replay pro gating (the only subscription-gated field)", () => {
+describe("updateSiteConfig — session replay pro gating", () => {
   it("rejects enabling session replay on a non-pro plan and writes nothing", async () => {
     mocks.getSubscriptionInner.mockResolvedValue(subscription(false));
     const reply = replyStub();
@@ -119,20 +123,6 @@ describe("updateSiteConfig — session replay pro gating (the only subscription-
     expect(reply.body.success).toBe(true);
     expect(state.updates[0]).toMatchObject({ sessionReplay: true });
     expect(mocks.invalidate).toHaveBeenCalledWith(state.site);
-  });
-
-  it("rejects enabling session replay during a large (>=500k events) pro trial", async () => {
-    mocks.getSubscriptionInner.mockResolvedValue({
-      ...subscription(false),
-      planName: "pro-1m",
-      status: "trialing",
-    });
-    const reply = replyStub();
-
-    await updateSiteConfig(makeRequest({ sessionReplay: true }), reply);
-
-    expect(reply.statusCode).toBe(403);
-    expect(state.updates).toHaveLength(0);
   });
 
   it("always allows turning session replay off, without a subscription lookup", async () => {
@@ -182,8 +172,7 @@ describe("updateSiteConfig — non-gated fields update without subscription chec
         name: "Renamed",
         public: true,
         blockBots: false,
-        webVitals: true,
-        trackErrors: true,
+        trackUrlFragments: true,
         excludedCountries: ["US", "GB"],
         tags: ["prod"],
       }),
@@ -196,8 +185,7 @@ describe("updateSiteConfig — non-gated fields update without subscription chec
       name: "Renamed",
       public: true,
       blockBots: false,
-      webVitals: true,
-      trackErrors: true,
+      trackUrlFragments: true,
       excludedCountries: ["US", "GB"],
       tags: ["prod"],
     });

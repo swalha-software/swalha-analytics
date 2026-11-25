@@ -1,9 +1,10 @@
+import { roleHasPermission } from "@rybbit/shared";
 import { FastifyReply, FastifyRequest } from "fastify";
 import { stripe } from "../../lib/stripe.js";
 import { db } from "../../db/postgres/postgres.js";
 import { organization } from "../../db/postgres/schema.js";
 import { eq } from "drizzle-orm";
-import { getOrgMembership, isOrgOwner } from "../../lib/access.js";
+import { getOrgMembership } from "../../lib/access.js";
 import Stripe from "stripe";
 
 interface PortalRequestBody {
@@ -30,7 +31,7 @@ export async function createPortalSession(request: FastifyRequest<{ Body: Portal
     // 1. Verify user has permission to manage billing for this organization
     const membership = await getOrgMembership(userId, organizationId);
 
-    if (!isOrgOwner(membership)) {
+    if (!roleHasPermission(membership?.role, "billing:manage")) {
       return reply.status(403).send({
         error: "Only organization owners can manage billing",
       });
@@ -124,8 +125,11 @@ export async function createPortalSession(request: FastifyRequest<{ Body: Portal
           };
         }
       } else if (flowType === "payment_method_update") {
+        // Send the customer back once the card is saved, so the app can charge it right away
+        // (see retryPayment) instead of leaving them on the portal's home page.
         sessionConfig.flow_data = {
           type: "payment_method_update",
+          after_completion: { type: "redirect", redirect: { return_url: returnUrl } },
         };
       }
     }

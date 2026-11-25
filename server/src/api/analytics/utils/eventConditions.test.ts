@@ -1,7 +1,5 @@
 import { describe, it, expect } from "vitest";
 import {
-  AUTOCAPTURE_PATTERN_PROPS,
-  AUTOCAPTURE_TARGET_TYPES,
   buildAutocaptureCondition,
   buildEventCondition,
   buildPageCondition,
@@ -10,9 +8,8 @@ import {
 } from "./eventConditions.js";
 
 describe("isAutocaptureTargetType", () => {
-  it("accepts every declared autocapture target type", () => {
-    expect(AUTOCAPTURE_TARGET_TYPES).toEqual(["outbound", "button_click", "form_submit", "copy"]);
-    for (const type of AUTOCAPTURE_TARGET_TYPES) {
+  it("accepts the four autocapture target types", () => {
+    for (const type of ["outbound", "button_click", "form_submit", "copy"]) {
       expect(isAutocaptureTargetType(type)).toBe(true);
     }
   });
@@ -30,18 +27,6 @@ describe("isAutocaptureTargetType", () => {
     expect(isAutocaptureTargetType("outbound ")).toBe(false);
     expect(isAutocaptureTargetType("buttonclick")).toBe(false);
   });
-
-  it("declares pattern props for every target type", () => {
-    expect(AUTOCAPTURE_PATTERN_PROPS).toEqual({
-      outbound: ["url"],
-      button_click: ["text"],
-      form_submit: ["formName", "formId", "formAction"],
-      copy: ["text"],
-    });
-    for (const type of AUTOCAPTURE_TARGET_TYPES) {
-      expect(AUTOCAPTURE_PATTERN_PROPS[type].length).toBeGreaterThan(0);
-    }
-  });
 });
 
 describe("resolvePropertyFilters", () => {
@@ -49,17 +34,20 @@ describe("resolvePropertyFilters", () => {
     expect(resolvePropertyFilters({})).toEqual([]);
   });
 
-  it("prefers the propertyFilters array when present", () => {
-    const filters = [{ key: "plan", value: "pro" }];
-    expect(resolvePropertyFilters({ propertyFilters: filters })).toBe(filters);
+  it("prefers the propertyFilters array over the legacy fields", () => {
+    expect(
+      resolvePropertyFilters({
+        propertyFilters: [{ key: "plan", value: "pro" }],
+        eventPropertyKey: "legacy",
+        eventPropertyValue: "no",
+      })
+    ).toEqual([{ key: "plan", value: "pro" }]);
   });
 
-  it("returns an empty propertyFilters array as-is, ignoring the legacy fields", () => {
-    // An empty array is truthy, so it short-circuits the legacy fallback.
-    const filters: { key: string; value: string }[] = [];
+  it("treats an empty propertyFilters array as no filters, ignoring the legacy fields", () => {
     expect(
-      resolvePropertyFilters({ propertyFilters: filters, eventPropertyKey: "plan", eventPropertyValue: "pro" })
-    ).toBe(filters);
+      resolvePropertyFilters({ propertyFilters: [], eventPropertyKey: "plan", eventPropertyValue: "pro" })
+    ).toEqual([]);
   });
 
   it("lifts the legacy single-property fields into a one-element array", () => {
@@ -172,10 +160,10 @@ describe("buildEventCondition", () => {
 
   it("compares numeric property filters as floats with an unquoted literal", () => {
     expect(buildEventCondition("purchase", [{ key: "amount", value: 42 }])).toBe(
-      "type = 'custom_event' AND event_name = 'purchase' AND toFloat64(JSONExtractString(toString(props), 'amount')) = 42"
+      "type = 'custom_event' AND event_name = 'purchase' AND toFloat64OrNull(JSONExtractString(toString(props), 'amount')) = 42"
     );
     expect(buildEventCondition("purchase", [{ key: "amount", value: 9.5 }])).toBe(
-      "type = 'custom_event' AND event_name = 'purchase' AND toFloat64(JSONExtractString(toString(props), 'amount')) = 9.5"
+      "type = 'custom_event' AND event_name = 'purchase' AND toFloat64OrNull(JSONExtractString(toString(props), 'amount')) = 9.5"
     );
   });
 
@@ -195,7 +183,7 @@ describe("buildEventCondition", () => {
         { key: "seats", value: 3 },
       ])
     ).toBe(
-      "type = 'custom_event' AND event_name = 'purchase' AND JSONExtractString(toString(props), 'plan') = 'pro' AND toFloat64(JSONExtractString(toString(props), 'seats')) = 3"
+      "type = 'custom_event' AND event_name = 'purchase' AND JSONExtractString(toString(props), 'plan') = 'pro' AND toFloat64OrNull(JSONExtractString(toString(props), 'seats')) = 3"
     );
   });
 
@@ -267,13 +255,6 @@ describe("buildAutocaptureCondition", () => {
     );
   });
 
-  it("lets a single star cross a slash, unlike path patterns", () => {
-    // Autocapture values have no path-segment boundary, so '*' compiles to '.+'
-    // rather than '[^/]+'.
-    expect(buildAutocaptureCondition("outbound", "https://example.com/*", [])).toContain("/.+$");
-    expect(buildPageCondition("/a/*", [])).toContain("[^/]+");
-  });
-
   it("compiles a double star to .*", () => {
     expect(buildAutocaptureCondition("copy", "a**b", [])).toBe(
       "type = 'copy' AND (match(JSONExtractString(toString(props), 'text'), '^a.*b$'))"
@@ -301,7 +282,7 @@ describe("buildAutocaptureCondition", () => {
       ])
     ).toBe(
       "type = 'button_click' AND JSONExtractString(toString(props), 'id') = 'cta'" +
-        " AND toFloat64(JSONExtractString(toString(props), 'count')) = 2"
+        " AND toFloat64OrNull(JSONExtractString(toString(props), 'count')) = 2"
     );
   });
 

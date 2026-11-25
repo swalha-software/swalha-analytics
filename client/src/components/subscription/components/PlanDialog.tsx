@@ -1,3 +1,5 @@
+import { SegmentedControl } from "@/components/interior/segmented-control";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Slider } from "@/components/ui/slider";
@@ -7,8 +9,8 @@ import { BACKEND_URL } from "@/lib/const";
 import { STRIPE_TIERS } from "@/lib/stripe";
 import { EVENT_TIERS, findPriceForTier, formatEventTier } from "@/lib/subscription/planUtils";
 import { usePreviewSubscriptionUpdate, useUpdateSubscription } from "@/lib/subscription/useSubscriptionMutations";
-import { cn } from "@/lib/utils";
 import { ArrowRight } from "lucide-react";
+import { useExtracted } from "next-intl";
 import { useMemo, useState } from "react";
 import { CheckoutModal } from "./CheckoutModal";
 import { PlanChangePreviewDialog } from "./PlanChangePreviewDialog";
@@ -42,6 +44,7 @@ function parseCurrentPlan(currentPlanName?: string) {
 }
 
 export function PlanDialog({ open, onOpenChange, currentPlanName, hasActiveSubscription }: PlanDialogProps) {
+  const t = useExtracted();
   const defaults = useMemo(() => parseCurrentPlan(currentPlanName), [currentPlanName]);
 
   // Default to next tier up for existing subscribers
@@ -137,11 +140,17 @@ export function PlanDialog({ open, onOpenChange, currentPlanName, hasActiveSubsc
     if (!activeOrg || !pendingPriceId) return;
 
     try {
+      // Resolves after the plan queries have refetched (see useUpdateSubscription),
+      // so the billing page already shows the new plan when this closes. No reload:
+      // it would wipe the success toast.
       await updateMutation.mutateAsync({
         organizationId: activeOrg.id,
         newPriceId: pendingPriceId,
       });
-      window.location.reload();
+      previewMutation.reset();
+      setPendingPriceId(null);
+      setPendingPlanName(null);
+      onOpenChange(false);
     } catch (error) {
       // Error is already handled by the mutation
     }
@@ -173,40 +182,27 @@ export function PlanDialog({ open, onOpenChange, currentPlanName, hasActiveSubsc
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <div className="flex items-center justify-between">
-              <DialogTitle>Choose Your Plan</DialogTitle>
-              {/* Monthly/Annual toggle */}
-              <div className="relative flex bg-neutral-150 dark:bg-neutral-850 border border-neutral-250 dark:border-neutral-750 rounded-full p-0.5 text-sm">
-                <button
-                  onClick={() => setIsAnnual(false)}
-                  className={cn(
-                    "px-2.5 py-1 rounded-full transition-colors cursor-pointer",
-                    !isAnnual
-                      ? "bg-white dark:bg-white/20 text-neutral-700 dark:text-neutral-100 font-medium"
-                      : "text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-200"
-                  )}
-                >
-                  Monthly
-                </button>
-                <button
-                  onClick={() => setIsAnnual(true)}
-                  className={cn(
-                    "px-2.5 py-1 rounded-full transition-colors cursor-pointer",
-                    isAnnual
-                      ? "bg-white dark:bg-white/20 text-neutral-700 dark:text-neutral-100 font-medium"
-                      : "text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-200"
-                  )}
-                >
-                  Annual
-                </button>
-                {isAnnual && (
-                  <span className="absolute -top-3 -right-12 text-[10px] text-accent-950 bg-accent-500 px-1.5 py-0.5 rounded-full whitespace-nowrap">
-                    4 months free
-                  </span>
-                )}
-              </div>
-            </div>
+            <DialogTitle>{t("Choose your plan")}</DialogTitle>
           </DialogHeader>
+
+          {/* Monthly/Annual toggle, on its own row so it stays clear of the
+              close button. As on the signup plan step, the savings chip sits
+              beside it in both states (emerald while Annual is picked), so the
+              toggle never shifts under the pointer. */}
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
+            <SegmentedControl
+              aria-label={t("Billing period")}
+              options={[
+                { value: "monthly", label: t("Monthly") },
+                { value: "annual", label: t("Annual") },
+              ]}
+              value={isAnnual ? "annual" : "monthly"}
+              onValueChange={value => setIsAnnual(value === "annual")}
+            />
+            <Badge variant={isAnnual ? "success" : "secondary"} className="whitespace-nowrap">
+              {t("4 months free")}
+            </Badge>
+          </div>
 
           <div className="space-y-6">
             {/* Event slider */}
@@ -288,18 +284,12 @@ export function PlanDialog({ open, onOpenChange, currentPlanName, hasActiveSubsc
                 className="w-full h-11"
                 variant="success"
                 onClick={handleSelectPlan}
-                disabled={isLoading || previewMutation.isPending || isCurrentSelection}
+                // Covers the preview request and, after confirming, the update itself
+                loading={isLoading || previewMutation.isPending || updateMutation.isPending}
+                disabled={isCurrentSelection}
               >
-                {isLoading || previewMutation.isPending
-                  ? "Loading..."
-                  : isCurrentSelection
-                    ? "Current Plan"
-                    : hasActiveSubscription
-                      ? "Change Plan"
-                      : "Subscribe"}
-                {!isLoading && !previewMutation.isPending && !isCurrentSelection && (
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                )}
+                {isCurrentSelection ? t("Current Plan") : hasActiveSubscription ? t("Change Plan") : t("Subscribe")}
+                {!isCurrentSelection && <ArrowRight className="ml-2 h-4 w-4" />}
               </Button>
             )}
 

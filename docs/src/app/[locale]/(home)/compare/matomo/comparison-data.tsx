@@ -1,5 +1,13 @@
 import Link from "next/link";
-import { ComparisonSection, DeepDive, FAQItem, PricingInfo, RelatedResource } from "../components/ComparisonPage";
+import {
+  ComparisonSection,
+  DeepDive,
+  FAQItem,
+  OtherAlternatives,
+  PricingInfo,
+  RelatedResource,
+} from "../components/ComparisonPage";
+import { pickAlternatives } from "../components/competitorSummaries";
 
 export const matomoComparisonData: ComparisonSection[] = [
   {
@@ -10,6 +18,7 @@ export const matomoComparisonData: ComparisonSection[] = [
       { name: "Funnels", rybbitValue: true, competitorValue: true },
       { name: "User journeys (Sankey)", rybbitValue: true, competitorValue: false },
       { name: "Conversion goals", rybbitValue: true, competitorValue: true },
+      { name: "Saved segments", rybbitValue: true, competitorValue: true },
       { name: "UTM tracking", rybbitValue: true, competitorValue: true },
       { name: "Public dashboards", rybbitValue: true, competitorValue: false },
     ],
@@ -38,7 +47,7 @@ export const matomoComparisonData: ComparisonSection[] = [
   {
     title: "Technical & Pricing",
     features: [
-      { name: "Script size", rybbitValue: "18KB", competitorValue: "20-50KB" },
+      { name: "Script size", rybbitValue: "~11KB", competitorValue: "20-50KB" },
       { name: "Bypasses ad blockers", rybbitValue: true, competitorValue: false },
       { name: "API access", rybbitValue: true, competitorValue: true },
       { name: "Starting price", rybbitValue: "$19/mo", competitorValue: "\u20AC29/mo (50k hits)" },
@@ -53,7 +62,7 @@ export const matomoExtendedData = {
   introParagraphs: [
     "Matomo (formerly Piwik) has been around since 2007 and positions itself as the open-source Google Analytics alternative. It's feature-rich with 70+ reports, heatmaps, A/B testing, and form analytics. But that breadth comes with Google Analytics-level complexity, and most teams need training just to find the metrics they care about, and the PHP/MySQL stack feels increasingly dated.",
     "Rybbit is built the way a modern analytics tool should be. A single-page dashboard shows all essential metrics on one screen, with no training required. Privacy works by default: no cookies, no consent banners, no configuration needed. The stack (TypeScript, ClickHouse) is built for performance, and the managed cloud option means zero server maintenance. You get session replay, user journeys, Web Vitals, and error tracking without installing plugins.",
-    "Matomo's cloud pricing starts at €29/month for just 50k hits, and many useful features require paid plugins on top of that. Rybbit starts at $19/month with all features included. If you're tired of Matomo's complexity, maintenance burden, or plugin costs, Rybbit is a much simpler path to the analytics your team actually needs.",
+    "Matomo's cloud pricing starts at €29/month for just 50k hits, and many useful features require paid plugins on top of that. Rybbit starts at $19/month with all features included. If you're tired of Matomo's complexity, maintenance burden, or plugin costs, Rybbit is a much simpler path to the analytics your team needs.",
   ],
 
   chooseRybbit: [
@@ -115,7 +124,7 @@ export const matomoExtendedData = {
             But two decades of accretion show up in the product. Matomo&apos;s interface spreads dozens of report types
             across many sections, and its architecture predates the tooling that makes modern analytics fast and
             pleasant. Rybbit is what this category looks like when it&apos;s designed in the 2020s: a single-page
-            dashboard, an ~18KB script, and <Link href="/features/funnels">funnels</Link>,{" "}
+            dashboard, an ~11KB script, and <Link href="/features/funnels">funnels</Link>,{" "}
             <Link href="/features/session-replay">session replay</Link>, user journeys, error tracking, Web Vitals, and
             user profiles built into the core product rather than bolted on over the years.
           </>,
@@ -125,8 +134,8 @@ export const matomoExtendedData = {
         heading: "“Free self-hosting” and the plugin-bundle math",
         paragraphs: [
           <>
-            Matomo&apos;s On-Premise Community Edition is genuinely free forever, with unlimited users and hits,
-            a real point in its favor. The catch is what happens when you want the advanced features. On self-hosted
+            Matomo&apos;s On-Premise Community Edition is free forever, with unlimited users and hits,
+            a point in its favor. The catch is what happens when you want the advanced features. On self-hosted
             Matomo, those come as paid plugin bundles: the Team bundle starts at &euro;275 for 4 users and 5M hits per
             month, Business runs &euro;1,450, and Enterprise &euro;3,400. &ldquo;Free&rdquo; quietly becomes a
             line-item negotiation over which capabilities your deployment is licensed for.
@@ -184,6 +193,13 @@ export const matomoExtendedData = {
     ],
   } satisfies DeepDive,
 
+  otherAlternatives: {
+    title: "Other Matomo alternatives",
+    intro:
+      "Most teams leaving Matomo want less server upkeep or a simpler interface. These are other Matomo alternatives, with the main trade-off of each and a link to the full comparison.",
+    items: pickAlternatives(["google-analytics", "plausible", "posthog", "umami", "fathom", "simpleanalytics"]),
+  } satisfies OtherAlternatives,
+
   faqItems: [
     {
       question: "Is Rybbit really simpler than Matomo?",
@@ -203,25 +219,25 @@ export const matomoExtendedData = {
     },
     {
       question: "Does Matomo have features Rybbit doesn't?",
-      answer: "Yes, Matomo offers heatmaps, A/B testing, form analytics, and a custom report builder that Rybbit doesn't have. However, many of these require paid plugins. Rybbit focuses on delivering the analytics features most teams actually need, with a much simpler experience.",
+      answer: "Yes, Matomo offers heatmaps, A/B testing, form analytics, and a custom report builder that Rybbit doesn't have. However, many of these require paid plugins. Rybbit focuses on delivering the analytics features most teams need, with a much simpler experience.",
     },
   ] satisfies FAQItem[],
 
   relatedResources: [
     {
-      title: "Rybbit vs Google Analytics",
-      href: "/compare/google-analytics",
-      description: "The privacy-first alternative to GA4",
+      title: "Matomo vs Google Analytics",
+      href: "/compare/matomo-vs-google-analytics",
+      description: "How the two compare on privacy, features, and cost",
     },
     {
-      title: "Rybbit vs PostHog",
-      href: "/compare/posthog",
-      description: "Focused analytics vs a full product suite",
+      title: "Best Google Analytics alternatives",
+      href: "/blog/best-google-analytics-alternatives",
+      description: "Nine GA4 alternatives compared on price, privacy, and features",
     },
     {
-      title: "Rybbit vs Umami",
-      href: "/compare/umami",
-      description: "Two open-source analytics tools compared",
+      title: "Best web analytics tools",
+      href: "/blog/best-web-analytics-tools",
+      description: "Ten tools compared by use case",
     },
     {
       title: "Getting started with Rybbit",
@@ -236,7 +252,7 @@ export const matomoExtendedData = {
     {
       title: "Pricing",
       href: "/pricing",
-      description: "Simple, transparent pricing for every team size",
+      description: "Plans and prices",
     },
   ] satisfies RelatedResource[],
 };

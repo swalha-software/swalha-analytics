@@ -87,7 +87,7 @@ const faqItems = [
   {
     question: "Can I charge my clients for analytics?",
     answer:
-      "That's the model. Analytics you resell under your brand is your product at your price. Rybbit charges you by traffic, not per client, so the margin math stays yours as the roster grows.",
+      "Yes. Analytics you resell under your brand is your product at your price. Rybbit charges you by traffic, not per client, so the margin math stays yours as the roster grows.",
   },
   {
     question: "What does full white-label on Enterprise include?",
@@ -163,7 +163,7 @@ export default function WhiteLabelPage() {
     <div className="overflow-x-clip">
       <InteriorPageHero
         eyebrow="Rybbit white label"
-        title="Your analytics. Your brand. Not ours."
+        title="Your analytics under your brand, not ours."
         description="Put analytics in front of clients without sending them to a third-party login. Embed a read-only dashboard in your own portal, build on the API, or self-host the whole thing. Rebrand it end to end on Enterprise."
         eventLocation="white_label_hero"
       />
@@ -207,8 +207,8 @@ export default function WhiteLabelPage() {
             <div className="flex items-end px-5 py-10 sm:px-8 md:py-20 lg:col-span-5 lg:px-10">
               <p className="max-w-md text-lg leading-8 text-neutral-600 text-pretty dark:text-neutral-400">
                 When the analytics you resell carries someone else&apos;s brand, every client dashboard is an ad for a
-                tool they could go buy directly. Rybbit is built to disappear behind your product: as an embed, an
-                API, or a copy you host yourself.
+                tool they could go buy directly. Rybbit is built to disappear behind your product: as an embed, an API,
+                or a copy you host yourself.
               </p>
             </div>
           </div>
@@ -349,8 +349,8 @@ export default function WhiteLabelPage() {
                 Build on the API
               </h3>
               <p className="mt-2 max-w-md text-sm leading-6 text-neutral-600 dark:text-neutral-400">
-                Prefer your own interface? Pull the same numbers from the Stats API and render them in your portal,
-                styled entirely as your brand. Available on every plan.
+                If you prefer your own interface, pull the same numbers from the Stats API and render them in your
+                portal, styled entirely as your brand. Available on every plan.
               </p>
               <pre className="mt-6 overflow-x-auto rounded-md border border-neutral-200 bg-neutral-50 p-4 text-xs leading-5 text-neutral-700 dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-300">
                 <code>{statsSnippet}</code>
@@ -437,7 +437,7 @@ export default function WhiteLabelPage() {
               </Link>
             ))}
             <div className="flex flex-wrap items-center justify-between gap-3 border-t border-neutral-200 px-5 py-5 text-sm text-neutral-500 dark:border-neutral-800 dark:text-neutral-400 sm:px-8 lg:px-10">
-              <span>Reselling to a roster of clients?</span>
+              <span>Resell to a roster of clients.</span>
               <Link
                 href="/for-agencies"
                 className="group inline-flex items-center gap-1.5 rounded-sm font-medium text-emerald-700 transition-colors duration-200 hover:text-emerald-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 dark:text-emerald-400 dark:hover:text-emerald-300"
@@ -465,8 +465,8 @@ export default function WhiteLabelPage() {
             </h2>
             <p className="mt-6 max-w-xl text-base leading-7 text-neutral-600 dark:text-neutral-400">
               Because Rybbit is open source with full API access and data export on every plan, a white-label built on
-              it is never a black box you&apos;re renting. You can inspect it, extend it, and, if it ever matters,
-              take the entire deployment in-house without losing a single client dashboard.
+              it is never a black box you&apos;re renting. You can inspect it, extend it, and, if it ever matters, take
+              the entire deployment in-house without losing a single client dashboard.
             </p>
           </div>
           <div className="flex flex-col justify-center gap-4 px-5 py-10 sm:px-8 md:py-20 lg:col-span-5 lg:px-10">
@@ -497,7 +497,7 @@ export default function WhiteLabelPage() {
       </section>
 
       <div id="wl-faq" className="scroll-mt-24">
-        <PersonaFaqSection heading="White-label questions, answered plainly." items={faqItems} />
+        <PersonaFaqSection heading="White-label FAQ" items={faqItems} />
       </div>
       <PersonaCrossLinks current="white-label" />
 

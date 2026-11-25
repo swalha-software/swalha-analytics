@@ -5,6 +5,8 @@ import { organization } from "../../db/postgres/schema.js";
 import { eq } from "drizzle-orm";
 import Stripe from "stripe";
 import { invalidateStripeSubscriptionCache } from "../../lib/subscriptionUtils.js";
+import { paymentFailedEmails } from "../../services/paymentRecovery/paymentFailedEmails.js";
+import { usageService } from "../../services/usageService.js";
 import dotenv from "dotenv";
 
 dotenv.config();
@@ -21,8 +23,8 @@ export async function handleWebhook(request: FastifyRequest, reply: FastifyReply
   let event: Stripe.Event;
 
   try {
-    // Use rawBody instead of request.body for signature verification
-    const rawBody = (request.raw as any).body;
+    // Stripe signs the exact request bytes; the route's parser keeps them.
+    const rawBody = request.rawBody;
     if (!rawBody) {
       return reply.status(400).send("Webhook error: No raw body available");
     }
@@ -70,6 +72,8 @@ export async function handleWebhook(request: FastifyRequest, reply: FastifyReply
                 "Organization already linked to Stripe customer"
               );
             }
+            // Turn the organization's sites on now rather than at the next usage check.
+            usageService.requestOrganizationRefresh(existingOrg[0]?.id ?? organizationId);
           } catch (dbError: any) {
             request.log.error({ err: dbError, stripeCustomerId }, "Failed to link organization to Stripe customer");
             // Retriable failure: the org is still not linked to its Stripe customer.
@@ -95,9 +99,34 @@ export async function handleWebhook(request: FastifyRequest, reply: FastifyReply
     // Note: invalidateStripeSubscriptionCache is a synchronous in-process Map delete —
     // it cannot fail, so there is no swallowed-error path here to convert to a 5xx.
     case "customer.subscription.updated":
-    case "customer.subscription.deleted":
+    case "customer.subscription.deleted": {
       const changedSubscription = event.data.object as Stripe.Subscription;
-      invalidateStripeSubscriptionCache(changedSubscription.customer as string);
+      const changedCustomerId = changedSubscription.customer as string;
+      invalidateStripeSubscriptionCache(changedCustomerId);
+      try {
+        // A lapsed or canceled plan switches off sites that need one; a renewed plan switches
+        // them back on. The usage cron would get there too, up to 30 minutes later.
+        const [changedOrg] = await db
+          .select({ id: organization.id })
+          .from(organization)
+          .where(eq(organization.stripeCustomerId, changedCustomerId))
+          .limit(1);
+        usageService.requestOrganizationRefresh(changedOrg?.id);
+      } catch (dbError) {
+        request.log.warn({ err: dbError, stripeCustomerId: changedCustomerId }, "Could not refresh organization usage");
+      }
+      // Stripe ran out of retries on a paid plan: tell the owners why tracking stopped.
+      if (event.type === "customer.subscription.deleted") {
+        await paymentFailedEmails.onSubscriptionCanceled(changedSubscription);
+      }
+      break;
+    }
+
+    // A renewal, or the first charge after a trial, was declined. The subscription going past
+    // due arrives as its own customer.subscription.updated event; this one emails the owners.
+    // Never throws: a failed email must not make Stripe redeliver the event.
+    case "invoice.payment_failed":
+      await paymentFailedEmails.onPaymentFailed(event.data.object as Stripe.Invoice);
       break;
 
     // ... handle other event types as needed
