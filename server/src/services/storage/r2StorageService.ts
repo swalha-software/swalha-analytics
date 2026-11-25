@@ -7,7 +7,6 @@ import {
 } from "@aws-sdk/client-s3";
 import { NodeHttpHandler } from "@smithy/node-http-handler";
 import { Readable } from "stream";
-import { gunzipSync } from "zlib";
 import { compress as zstdCompress, decompress as zstdDecompress } from "@mongodb-js/zstd";
 import { createServiceLogger } from "../../lib/logger/logger.js";
 
@@ -66,8 +65,13 @@ class R2StorageService {
   /**
    * Store a batch of event data in R2
    * Returns the storage key if successful, null if R2 is disabled
+   *
+   * Takes each event's data already serialized (`JSON.stringify(event.data)`),
+   * which ingestion computes anyway to size the batch. Joining those strings
+   * into an array literal yields the same bytes as `JSON.stringify` of the data
+   * array, without serializing the whole batch a second time.
    */
-  async storeBatch(siteId: number, sessionId: string, eventDataArray: any[]): Promise<string | null> {
+  async storeBatch(siteId: number, sessionId: string, serializedEvents: string[]): Promise<string | null> {
     if (!this.enabled || !this.client) {
       return null;
     }
@@ -77,7 +81,7 @@ class R2StorageService {
 
     try {
       // Compress with zstd - much faster decompression than brotli
-      const jsonBuffer = Buffer.from(JSON.stringify(eventDataArray));
+      const jsonBuffer = Buffer.from(`[${serializedEvents.join(",")}]`);
       const compressed = await zstdCompress(jsonBuffer, 3); // level 3 = good balance
 
       await this.client.send(
@@ -90,7 +94,7 @@ class R2StorageService {
           Metadata: {
             siteId: siteId.toString(),
             sessionId: sessionId,
-            eventCount: eventDataArray.length.toString(),
+            eventCount: serializedEvents.length.toString(),
             compression: "zstd",
           },
         })
@@ -148,18 +152,8 @@ class R2StorageService {
         }
       }
 
-      // Try to decompress based on file extension
-      let decompressed: Buffer;
-
       try {
-        if (key.endsWith(".zst")) {
-          decompressed = await zstdDecompress(buffer);
-        } else if (key.endsWith(".gz")) {
-          decompressed = gunzipSync(buffer);
-        } else {
-          // Assume zstd for unknown extensions
-          decompressed = await zstdDecompress(buffer);
-        }
+        const decompressed = await zstdDecompress(buffer);
         return JSON.parse(decompressed.toString());
       } catch (decompressionError: any) {
         // If decompression fails and we haven't tried JSON yet, try it now

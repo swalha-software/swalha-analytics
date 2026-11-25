@@ -10,6 +10,7 @@ export const simpleAnalyticsComparisonData: ComparisonSection[] = [
       { name: "Funnels", rybbitValue: true, competitorValue: false },
       { name: "User journeys (Sankey)", rybbitValue: true, competitorValue: false },
       { name: "Conversion goals", rybbitValue: true, competitorValue: true },
+      { name: "Saved segments", rybbitValue: true, competitorValue: false },
       { name: "UTM tracking", rybbitValue: true, competitorValue: true },
       { name: "Public dashboards", rybbitValue: true, competitorValue: true },
     ],
@@ -38,7 +39,7 @@ export const simpleAnalyticsComparisonData: ComparisonSection[] = [
   {
     title: "Technical & Pricing",
     features: [
-      { name: "Script size", rybbitValue: "18KB", competitorValue: "~6KB" },
+      { name: "Script size", rybbitValue: "~11KB", competitorValue: "~6KB" },
       { name: "Bypasses ad blockers", rybbitValue: true, competitorValue: true },
       { name: "API access", rybbitValue: true, competitorValue: true },
       { name: "Starting price", rybbitValue: "$19/mo", competitorValue: "$20/mo per user" },
@@ -52,8 +53,8 @@ export const simpleAnalyticsExtendedData = {
   introHeading: "Why consider Rybbit over Simple Analytics?",
   introParagraphs: [
     "Simple Analytics lives up to its name: it's a privacy-focused analytics tool that keeps things minimal. It offers a clean dashboard, cookie-free tracking, and EU-based data storage. But its simplicity means no session replay, no funnel analysis, no user journeys, and only country-level geolocation. It's also entirely closed-source with no self-hosting option.",
-    "Rybbit matches Simple Analytics on privacy (cookie-free, no personal data collection, EU data storage) but adds the advanced features growing teams actually need. Session replay lets you watch how users interact with your site. Funnel analysis shows where visitors drop off in your conversion flow. User journey visualization reveals the paths people take through your content. And city-level geolocation gives you much more granular insights into where your audience is.",
-    "The business model difference matters too. Rybbit is fully open source under AGPL v3: you can self-host it for free and verify exactly how your data is handled. Simple Analytics is proprietary, so you're locked into their cloud service with no alternative. If you want privacy-first analytics with the depth to actually improve your product and the transparency of open source, Rybbit is the stronger choice.",
+    "Rybbit matches Simple Analytics on privacy (cookie-free, no personal data collection, EU data storage) but adds the advanced features growing teams need. Session replay lets you watch how users interact with your site. Funnel analysis shows where visitors drop off in your conversion flow. User journey visualization reveals the paths people take through your content. And city-level geolocation gives you much more granular insights into where your audience is.",
+    "The business model difference matters too. Rybbit is fully open source under AGPL v3: you can self-host it for free and verify exactly how your data is handled. Simple Analytics is proprietary, so you're locked into their cloud service with no alternative. If you want privacy-first analytics with the depth to improve your product and the transparency of open source, Rybbit is the stronger choice.",
   ],
 
   chooseRybbit: [
@@ -106,7 +107,7 @@ export const simpleAnalyticsExtendedData = {
           <>
             Simple Analytics prices by user. Paid plans start at $20 per month for one user, with a usage slider that
             scales the price by pageviews (the slider runs from 100k up to 2.5M), and every additional team member
-            costs another $20 per month. Annual billing gives you two months free, and there&apos;s a genuinely useful
+            costs another $20 per month. Annual billing gives you two months free, and there&apos;s a useful
             free tier for hobby sites: one user, five websites, one month of history, no card required.
           </>,
           <>
@@ -161,7 +162,7 @@ export const simpleAnalyticsExtendedData = {
           <>
             Unusually for an analytics migration, you don&apos;t have to start from zero: Rybbit ships a data importer
             for Simple Analytics, and your historical stats come with you. See the{" "}
-            <Link href="/docs">docs</Link> for the import walkthrough.
+            <Link href="/docs/data-import">import guide</Link> for the walkthrough.
           </>,
           <ol>
             <li>
@@ -175,7 +176,7 @@ export const simpleAnalyticsExtendedData = {
             </li>
           </ol>,
           <>
-            Still weighing options? Our roundup of the{" "}
+            If you&apos;re still weighing options, our roundup of the{" "}
             <Link href="/blog/best-web-analytics-tools">best web analytics tools</Link> covers where each tool fits.
           </>,
         ],
@@ -235,7 +236,7 @@ export const simpleAnalyticsExtendedData = {
     {
       title: "Pricing",
       href: "/pricing",
-      description: "Simple, transparent pricing for every team size",
+      description: "Plans and prices",
     },
   ] satisfies RelatedResource[],
 };

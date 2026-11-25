@@ -1,9 +1,11 @@
 "use client";
 
 import { useExperiments } from "@/api/analytics/hooks/experiments/useExperiments";
+import { ErrorState } from "@/components/ErrorState";
 import { NothingFound } from "@/components/NothingFound";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useCanOnSite } from "@/hooks/usePermissions";
 import { useSetPageTitle } from "@/hooks/useSetPageTitle";
 import { GOALS_PAGE_FILTERS } from "@/lib/filterGroups";
 import { useStore } from "@/lib/store";
@@ -19,7 +21,8 @@ export default function ExperimentsPage() {
   const t = useExtracted();
   useSetPageTitle("Experiments");
   const { site } = useStore();
-  const { data: experiments, isLoading } = useExperiments();
+  const { data: experiments, isError, refetch } = useExperiments();
+  const canWrite = useCanOnSite("experiments:write");
   const [search, setSearch] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
 
@@ -37,7 +40,7 @@ export default function ExperimentsPage() {
   return (
     <div className="mx-auto max-w-[1400px] space-y-3 p-2 md:p-4">
       <SubHeader availableFilters={GOALS_PAGE_FILTERS} />
-      <ExperimentDialog experiments={experiments || []} open={createOpen} onOpenChange={setCreateOpen} />
+      {canWrite && <ExperimentDialog experiments={experiments || []} open={createOpen} onOpenChange={setCreateOpen} />}
 
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <Input
@@ -47,21 +50,32 @@ export default function ExperimentsPage() {
           value={search}
           onChange={event => setSearch(event.target.value)}
         />
-        <Button onClick={() => setCreateOpen(true)}>
-          <Plus className="h-4 w-4" />
-          {t("New experiment")}
-        </Button>
+        {canWrite && (
+          <Button onClick={() => setCreateOpen(true)}>
+            <Plus className="h-4 w-4" />
+            {t("New experiment")}
+          </Button>
+        )}
       </div>
 
-      {isLoading || !site ? (
-        <ExperimentSkeleton />
+      {!site || !experiments ? (
+        isError ? (
+          <ErrorState title={t("Failed to load data")} message="" refetch={() => void refetch()} />
+        ) : (
+          <ExperimentSkeleton />
+        )
       ) : filteredExperiments.length > 0 ? (
         <div className="grid gap-3">
           {filteredExperiments.map(experiment => (
-            <ExperimentRow key={experiment.experimentId} experiment={experiment} experiments={experiments || []} />
+            <ExperimentRow
+              key={experiment.experimentId}
+              experiment={experiment}
+              experiments={experiments || []}
+              canWrite={canWrite}
+            />
           ))}
         </div>
-      ) : experiments?.length ? (
+      ) : experiments.length ? (
         <NothingFound
           icon={<FlaskConical className="h-10 w-10" />}
           title={t("No experiments found")}
@@ -73,10 +87,12 @@ export default function ExperimentsPage() {
           title={t("No experiments yet")}
           description={t("Create an experiment from a multivariate feature flag and connect it to a conversion goal.")}
           action={
-            <Button onClick={() => setCreateOpen(true)}>
-              <Plus className="h-4 w-4" />
-              {t("New experiment")}
-            </Button>
+            canWrite ? (
+              <Button onClick={() => setCreateOpen(true)}>
+                <Plus className="h-4 w-4" />
+                {t("New experiment")}
+              </Button>
+            ) : undefined
           }
         />
       )}

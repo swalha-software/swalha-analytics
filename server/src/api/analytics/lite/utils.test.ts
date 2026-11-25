@@ -5,8 +5,8 @@ import {
   getLiteSessionFilter,
   hasLiteDatetimeRange,
   hasLiteFilters,
+  hasLiteRealtimeRange,
   liteBucket,
-  wrapLiteLikeValue,
 } from "./utils.js";
 
 vi.mock("../../../db/postgres/postgres.js", () => ({
@@ -138,11 +138,6 @@ describe("getLiteSessionFilter", () => {
       });
     });
 
-    it("should not parenthesize single values", () => {
-      const result = getLiteSessionFilter(filtersOf([{ parameter: "country", type: "equals", value: ["US"] }]));
-      expect(result.sql).toBe("AND country = 'US'");
-    });
-
     it("should AND-join separate filters", () => {
       const result = getLiteSessionFilter(
         filtersOf([
@@ -167,6 +162,11 @@ describe("getLiteSessionFilter", () => {
       expect(result.sql).toBe("AND browser LIKE '%O\\'Brien%'");
     });
 
+    it("should keep LIKE wildcards literal in exact matches", () => {
+      const result = getLiteSessionFilter(filtersOf([{ parameter: "country", type: "equals", value: ["50%"] }]));
+      expect(result.sql).toBe("AND country = '50%'");
+    });
+
     it("should stringify numeric values", () => {
       const result = getLiteSessionFilter(filtersOf([{ parameter: "country", type: "equals", value: [42] }]));
       expect(result.sql).toBe("AND country = '42'");
@@ -180,12 +180,33 @@ describe("hasLiteDatetimeRange", () => {
   // and the lite fill used to ignore these params outright, answering with
   // all-time data and a 200.
   it("should be true only when both datetime bounds are present", () => {
-    expect(hasLiteDatetimeRange(params({ start_datetime: "2024-01-01 10:30:00", end_datetime: "2024-01-01 14:45:00" })))
-      .toBe(true);
+    expect(
+      hasLiteDatetimeRange(params({ start_datetime: "2024-01-01 10:30:00", end_datetime: "2024-01-01 14:45:00" }))
+    ).toBe(true);
     expect(hasLiteDatetimeRange(params({ start_datetime: "2024-01-01 10:30:00" }))).toBe(false);
     expect(hasLiteDatetimeRange(params({ end_datetime: "2024-01-01 14:45:00" }))).toBe(false);
     expect(hasLiteDatetimeRange(params({ start_date: "2024-01-01", end_date: "2024-01-31" }))).toBe(false);
     expect(hasLiteDatetimeRange(params({}))).toBe(false);
+  });
+});
+
+describe("hasLiteRealtimeRange", () => {
+  it.each([
+    [5, 0, true],
+    [30, 0, true],
+    [120, 0, true],
+    [240, 120, true],
+    [121, 0, false],
+    [1440, 0, false],
+    [2880, 1440, false],
+  ])("uses the window length for %i to %i minutes ago", (start, end, expected) => {
+    expect(hasLiteRealtimeRange(params({ past_minutes_start: start, past_minutes_end: end }))).toBe(expected);
+  });
+
+  it("accepts wire strings without treating missing bounds as realtime", () => {
+    expect(hasLiteRealtimeRange({ past_minutes_start: "60", past_minutes_end: "30" })).toBe(true);
+    expect(hasLiteRealtimeRange(params({ past_minutes_start: 30 }))).toBe(false);
+    expect(hasLiteRealtimeRange(params({}))).toBe(false);
   });
 });
 
@@ -204,43 +225,6 @@ describe("liteBucket", () => {
     for (const bucket of ["hour", "day", "week", "month", "year"] as TimeBucket[]) {
       expect(liteBucket(bucket)).toBe(bucket);
     }
-  });
-});
-
-describe("wrapLiteLikeValue", () => {
-  it("should wrap contains and not_contains with both wildcards", () => {
-    expect(wrapLiteLikeValue("contains", "blog")).toBe("%blog%");
-    expect(wrapLiteLikeValue("not_contains", "blog")).toBe("%blog%");
-  });
-
-  it("should append a wildcard for starts_with", () => {
-    expect(wrapLiteLikeValue("starts_with", "app.")).toBe("app.%");
-  });
-
-  it("should prepend a wildcard for ends_with", () => {
-    expect(wrapLiteLikeValue("ends_with", ".dev")).toBe("%.dev");
-  });
-
-  it("should pass other types through unwrapped", () => {
-    expect(wrapLiteLikeValue("equals", "US")).toBe("US");
-    expect(wrapLiteLikeValue("not_equals", "US")).toBe("US");
-  });
-
-  it("should stringify numbers", () => {
-    expect(wrapLiteLikeValue("contains", 42)).toBe("%42%");
-  });
-
-  it("should escape % and _ in user values so they match literally", () => {
-    expect(wrapLiteLikeValue("contains", "50%")).toBe("%50\\%%");
-    expect(wrapLiteLikeValue("starts_with", "a_b")).toBe("a\\_b%");
-  });
-
-  it("should escape backslashes in user values", () => {
-    expect(wrapLiteLikeValue("ends_with", "C:\\temp")).toBe("%C:\\\\temp");
-  });
-
-  it("should not escape values for non-LIKE types", () => {
-    expect(wrapLiteLikeValue("equals", "50%")).toBe("50%");
   });
 });
 

@@ -9,6 +9,7 @@ import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import type { GetSessionsResponse } from "../api/analytics/endpoints";
 import { useConfigs } from "../lib/configs";
+import { visitorAvatarSVG } from "../lib/visitorAvatar";
 import "../app/[site]/globe/globe.css";
 
 // Constants
@@ -22,23 +23,6 @@ const MIN_CLUSTER_SIZE = 20;
 const CLUSTERING_THRESHOLD = 500;
 const SPREAD_START_ZOOM = 8;
 const SPREAD_RADIUS_DEGREES = 0.006;
-
-// Import avatar generation
-import BoringAvatar from "boring-avatars";
-import { createElement } from "react";
-// @ts-ignore - React 19 has built-in types
-import { renderToStaticMarkup } from "react-dom/server";
-import { AVATAR_COLORS } from "./Avatar";
-
-function generateAvatarSVG(userId: string, size: number): string {
-  const avatarElement = createElement(BoringAvatar, {
-    size,
-    name: userId,
-    variant: "beam",
-    colors: AVATAR_COLORS,
-  });
-  return renderToStaticMarkup(avatarElement);
-}
 
 // Hash function for deterministic spreading
 function hashStringToNumber(str: string): number {
@@ -180,9 +164,14 @@ export function SpinningGlobe() {
 
     mapRef.current = map;
 
+    // The idle spin is decorative, so reduced-motion users get a still globe. The check must stay:
+    // Mapbox honors the setting by making easeTo instant, which fires "moveend" synchronously and
+    // would turn the moveend -> spinGlobe loop below into unbounded recursion.
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+
     // Spin globe function using easeTo for smooth animation
     const spinGlobe = () => {
-      if (!mapRef.current) return;
+      if (!mapRef.current || reducedMotion.matches) return;
       const zoom = mapRef.current.getZoom();
       if (!isUserInteractingRef.current && zoom < MAX_SPIN_ZOOM) {
         let distancePerSecond = 360 / SECONDS_PER_REVOLUTION;
@@ -488,8 +477,8 @@ export function SpinningGlobe() {
           const avatarContainer = document.createElement("div");
           avatarContainer.className = "timeline-avatar-marker";
           avatarContainer.style.cssText =
-            "cursor: pointer; border-radius: 50%; overflow: hidden; width: 32px; height: 32px; box-shadow: 0 2px 8px rgba(0,0,0,0.3);";
-          avatarContainer.innerHTML = generateAvatarSVG(session.user_id, 32);
+            "cursor: pointer; width: 32px; height: 32px; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.55));";
+          avatarContainer.innerHTML = visitorAvatarSVG(session.user_id, 32);
 
           const marker = new mapboxgl.Marker({
             element: avatarContainer,

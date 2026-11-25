@@ -33,6 +33,7 @@ import { parseUtcTimestamp } from "../../../../lib/dateTimeUtils";
 import { CopyText } from "../../../../components/CopyText";
 import { cn } from "@/lib/utils";
 import { useExtracted } from "next-intl";
+import { RemoteOrganizationCombobox } from "../shared/RemoteOrganizationCombobox";
 
 interface UsersTableProps {
   data: { users: AdminUser[]; total: number } | undefined;

@@ -23,9 +23,9 @@ import type {
 export const capabilities: FeatureCapability[] = [
   {
     icon: <Play className="w-5 h-5" />,
-    title: "Unlimited replays",
+    title: "Replay quota that grows with your plan",
     description:
-      "Watch as many sessions as you need. Every session is recorded and available for playback with no per-replay limits.",
+      "Pro includes replays equal to 10% of your monthly event allowance: 10,000 a month on the 100k-event plan, 100,000 on the 1M plan.",
   },
   {
     icon: <MousePointerClick className="w-5 h-5" />,
@@ -121,7 +121,7 @@ export const whoUses: WhoUsesItem[] = [
     icon: <Package className="w-6 h-6" />,
     title: "Startup founders",
     description:
-      "Understand your first users deeply. Watch how they discover and use your product to iterate faster and build what actually matters.",
+      "Understand your first users deeply. Watch how they discover and use your product to iterate faster and build what matters.",
   },
 ];
 
@@ -149,7 +149,7 @@ export const faqItems: FAQItem[] = [
   {
     question: "How long are replays stored?",
     answer:
-      "Replay data is stored for 30 days on cloud plans. If you self-host, you control retention policies entirely.",
+      "Replays are kept for 30 days, on Rybbit Cloud and in self-hosted installs.",
   },
   {
     question: "Can I block specific parts of my UI from being recorded?",

@@ -1,9 +1,11 @@
 import { GitHubStarButton } from "@/components/GitHubStarButton";
 import { GridCrosses } from "@/components/GridCrosses";
+import { DomainStartForm } from "@/components/DomainStartForm";
 import { HeroDataLine } from "@/components/HeroDataLine";
 import { BrandWatermark } from "@/components/deco/BrandWatermark";
 import { TrackedButton } from "@/components/TrackedButton";
-import { ArrowRight, ExternalLink } from "lucide-react";
+import { toDemoEmbedUrl } from "@/lib/const";
+import { ExternalLink } from "lucide-react";
 import { useExtracted } from "next-intl";
 
 const EUFlag = () => (
@@ -62,26 +64,15 @@ export function HeroSection({ title, subtitle, showEUFlag = true, showGitHubStar
               </div>
             )}
 
-            <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-              <TrackedButton
-                href="https://app.rybbit.io/signup"
-                eventName="signup"
-                eventProps={{ location: "hero", button_text: "get started" }}
-                className="group inline-flex min-h-11 items-center justify-center gap-2 rounded-md bg-emerald-600 px-5 py-2.5 text-sm font-medium text-white transition-colors duration-200 hover:bg-emerald-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-neutral-950"
-              >
-                {t("Start for $0")}
-                <ArrowRight
-                  className="size-4 transition-transform duration-200 group-hover:translate-x-0.5 motion-reduce:transition-none"
-                  aria-hidden="true"
-                />
-              </TrackedButton>
+            <div className="mt-6 flex flex-col gap-3">
+              <DomainStartForm location="hero" />
               <TrackedButton
                 href="https://demo.rybbit.com/81"
                 eventName="demo"
                 target="_blank"
                 rel="noopener noreferrer"
                 eventProps={{ location: "hero", button_text: "Live demo" }}
-                className="group inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-neutral-300 px-5 py-2.5 text-sm font-medium text-neutral-900 transition-colors duration-200 hover:bg-neutral-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500 focus-visible:ring-offset-2 dark:border-neutral-700 dark:text-white dark:hover:bg-neutral-900 dark:focus-visible:ring-offset-neutral-950"
+                className="group inline-flex w-fit items-center gap-1.5 text-sm font-medium text-neutral-600 transition-colors duration-200 hover:text-neutral-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500 focus-visible:ring-offset-2 dark:text-neutral-400 dark:hover:text-white dark:focus-visible:ring-offset-neutral-950"
               >
                 {t("Live demo")}
                 <ExternalLink
@@ -91,21 +82,24 @@ export function HeroSection({ title, subtitle, showEUFlag = true, showGitHubStar
               </TrackedButton>
             </div>
 
-            <p className="mt-4 text-sm text-neutral-500 dark:text-neutral-400">
-              {t("7-day free trial. Cancel anytime.")}
-            </p>
+            {/* <p className="mt-4 text-sm text-neutral-500 dark:text-neutral-400">
+              {t("No account needed. Claim your site later with a 7-day free trial.")}
+            </p> */}
           </div>
         </div>
 
         {logoBand}
 
-        <div className="relative min-w-0 border-t border-neutral-200 bg-neutral-100 p-2 [background-image:radial-gradient(circle,rgba(0,0,0,0.08)_1px,transparent_1px)] [background-size:14px_14px] dark:border-neutral-800 dark:bg-neutral-900 dark:[background-image:radial-gradient(circle,rgba(255,255,255,0.07)_1px,transparent_1px)] sm:p-3">
+        <div className="relative min-w-0 border-t border-neutral-200 bg-neutral-100 p-2 dark:border-neutral-800 dark:bg-neutral-900 sm:p-3">
           <GridCrosses />
           {/* Peeking over the demo window; the browser card below is
-              `relative`, so DOM order lets it occlude the frog's body. */}
-          <div className="pointer-events-none absolute -top-12 right-10 hidden w-24 -rotate-2 text-neutral-950 opacity-[0.12] dark:text-white dark:opacity-[0.09] md:block lg:right-16 lg:w-28">
-            <BrandWatermark />
-          </div>
+              `relative`, so DOM order lets it occlude the mark's lower half. Not
+              with a logo band: the mark would rise over a customer's logo. */}
+          {!logoBand && (
+            <div className="pointer-events-none absolute -top-12 right-10 hidden w-24 -rotate-2 text-neutral-950 opacity-[0.12] dark:text-white dark:opacity-[0.09] md:block lg:right-16 lg:w-28">
+              <BrandWatermark />
+            </div>
+          )}
           <div className="relative min-w-0 max-w-full overflow-hidden rounded-lg border border-neutral-300 bg-white dark:border-neutral-700 dark:bg-neutral-950">
             <div className="grid h-10 grid-cols-[1fr_auto_1fr] items-center gap-2 border-b border-neutral-200 px-3 dark:border-neutral-800 sm:px-4">
               {/* Real macOS behavior: the glyphs only appear when you mouse
@@ -162,8 +156,10 @@ export function HeroSection({ title, subtitle, showEUFlag = true, showGitHubStar
                 mobile — a scaled viewport would land between the demo's
                 responsive breakpoints. The two values must stay reciprocal. */}
             <div className="h-[500px] min-w-0 max-w-full overflow-hidden md:h-[600px] lg:h-[650px]">
+              {/* A week, not the default "today": early in the visitor's day that is a near-empty
+                  dashboard with every change deep in the red. */}
               <iframe
-                src="https://demo.rybbit.com/81/main"
+                src={toDemoEmbedUrl("https://demo.rybbit.com/81/main?wellKnown=last-7-days")}
                 className="block h-full w-full border-none md:h-[117.6%] md:w-[117.6%] md:origin-top-left md:scale-[0.85]"
                 title="Rybbit Analytics Demo"
               />

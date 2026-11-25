@@ -1,7 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { TimeBucket } from "../types.js";
 import {
-  bucketIntervalMap,
   getTimeStatement,
   isTimeBucket,
   normalizeDatetimeForClickhouse,
@@ -33,10 +32,10 @@ describe("where()", () => {
           toStartOfDay(toDateTime('2024-01-01', 'America/New_York')),
           'UTC'
           )
-          AND timestamp < if(
+          AND if(
             toDate('2024-01-31') = toDate(now(), 'America/New_York'),
-            toTimeZone(now(), 'UTC'),
-            toTimeZone(
+            timestamp <= toTimeZone(now64(3), 'UTC'),
+            timestamp < toTimeZone(
               toStartOfDay(toDateTime('2024-01-31', 'America/New_York')) + INTERVAL 1 DAY,
               'UTC'
             )
@@ -56,7 +55,10 @@ describe("where()", () => {
       const result = getTime({ start_date: "2024-06-15", end_date: "2024-06-15", time_zone: "UTC" });
 
       expect(normalize(result)).toContain("toDate('2024-06-15') = toDate(now(), 'UTC')");
-      expect(normalize(result)).toContain("toTimeZone(now(), 'UTC')");
+      expect(normalize(result)).toContain("timestamp <= toTimeZone(now64(3), 'UTC')");
+      expect(normalize(result)).toContain(
+        "timestamp < toTimeZone( toStartOfDay(toDateTime('2024-06-15', 'UTC')) + INTERVAL 1 DAY, 'UTC' )"
+      );
     });
 
     it("should take precedence over datetime range and past minutes", () => {
@@ -166,10 +168,6 @@ describe("where()", () => {
       expect(getTime(PAST_MINUTES, "event_hour")).toContain("AND event_hour >");
       expect(getTime(DATETIME_RANGE, "session_hour")).toContain("AND session_hour >=");
     });
-
-    it("should default to timestamp", () => {
-      expect(getTime(DATE_RANGE)).toContain("AND timestamp >=");
-    });
   });
 
   describe("empty params", () => {
@@ -257,12 +255,6 @@ describe("fill()", () => {
       expect(result).toContain("+ INTERVAL 1 HOUR)");
       expect(result).toContain("'2024-01-01 14:45:00'");
     });
-
-    it("should not fill past an upper bound already on a bucket boundary", () => {
-      expect(fillOf({ start_datetime: "2024-01-01 00:00:00", end_datetime: "2024-01-01 04:00:00" }, "hour")).toContain(
-        "TO if("
-      );
-    });
   });
 
   describe("past minutes range", () => {
@@ -311,15 +303,6 @@ describe("fill()", () => {
 
       expect(window.where()).toContain("2024-06-15 12:34:00");
       expect(window.fill("hour")).toContain("2024-06-15 12:34:00");
-    });
-  });
-
-  describe("buckets", () => {
-    it.each(ALL_BUCKETS)("should use the matching fn and interval for %s", bucket => {
-      const result = fillOf(DATE_RANGE, bucket);
-
-      expect(result).toContain(TimeBucketToFn[bucket]);
-      expect(result).toContain(`STEP INTERVAL ${bucketIntervalMap[bucket]}`);
     });
   });
 

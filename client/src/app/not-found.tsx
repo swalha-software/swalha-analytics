@@ -27,9 +27,7 @@ export default function NotFound() {
         <div className="space-y-2 max-w-md">
           <h2 className="text-2xl font-semibold text-neutral-800 dark:text-neutral-200">{t("Page Not Found")}</h2>
           <p className="text-neutral-600 dark:text-neutral-400 leading-relaxed">
-            {t(
-              "The page you're looking for doesn't exist or has been moved. Let's get you back to analyzing your data."
-            )}
+            {t("The page you're looking for doesn't exist or has been moved.")}
           </p>
         </div>
 

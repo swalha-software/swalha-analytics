@@ -18,27 +18,35 @@ export interface SubscriptionData {
   trialDaysRemaining?: number;
   message?: string; // For expired trial message
   isOverride?: boolean;
+  // Only on "free": false once the organization has had any subscription, so it is offered
+  // plans instead of another trial (checkout skips the trial too).
+  trialEligible?: boolean;
+  // Stripe is retrying a failed charge on this subscription, so the app asks for a new card.
+  // A plan that has been paid for before stays "active" meanwhile; otherwise the status is "free".
+  pastDue?: { subscriptionId: string; planName: string | null };
   memberLimit: number | null;
   siteLimit: number | null;
 }
 
-export function useStripeSubscription(): UseQueryResult<SubscriptionData | null, Error> {
+/** The subscription of `organizationId`, or of the active organization when omitted. */
+export function useStripeSubscription(organizationId?: string): UseQueryResult<SubscriptionData | null, Error> {
   const { data: activeOrg } = authClient.useActiveOrganization();
+  const orgId = organizationId ?? activeOrg?.id;
 
   const fetchSubscription = async () => {
-    if (!activeOrg || !IS_CLOUD) {
+    if (!orgId || !IS_CLOUD) {
       // React Query rejects undefined query data; null means "no subscription".
       return null;
     }
 
-    return authedFetch<SubscriptionData>(`/stripe/subscription?organizationId=${activeOrg.id}`);
+    return authedFetch<SubscriptionData>(`/stripe/subscription?organizationId=${orgId}`);
   };
 
   return useQuery<SubscriptionData | null>({
-    queryKey: ["stripe-subscription", activeOrg?.id],
+    queryKey: ["stripe-subscription", orgId],
     queryFn: fetchSubscription,
     staleTime: 5 * 60 * 1000,
     retry: false,
-    enabled: !!activeOrg && IS_CLOUD,
+    enabled: !!orgId && IS_CLOUD,
   });
 }

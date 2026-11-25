@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useRef, useEffect } from "react";
+import { useMemo, useState, useRef } from "react";
 import { DateTime } from "luxon";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,7 +21,13 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Upload, FileText, AlertCircle, CheckCircle2, Loader2, Trash2 } from "lucide-react";
 import { useExtracted } from "next-intl";
-import { useGetSiteImports, useCreateSiteImport, useDeleteSiteImport } from "@/api/admin/hooks/useImport";
+import {
+  isImportRunning,
+  useGetSiteImports,
+  useCreateSiteImport,
+  useDeleteSiteImport,
+} from "@/api/admin/hooks/useImport";
+import { GetSiteImportsResponse } from "@/api/admin/endpoints";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { IS_CLOUD } from "@/lib/const";
 import { CsvParser } from "@/lib/import/csvParser";
@@ -66,7 +72,6 @@ export function ImportManager({ siteId, disabled }: ImportManagerProps) {
   const [selectedPlatform, setSelectedPlatform] = useState<ImportPlatform | "">("");
   const [fileError, setFileError] = useState<string>("");
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const workerManagerRef = useRef<CsvParser | PlausibleCsvParser | null>(null);
 
   function validateFile(file: File | null, platform: ImportPlatform | ""): string {
     if (!file) {
@@ -91,12 +96,6 @@ export function ImportManager({ siteId, disabled }: ImportManagerProps) {
   const createImportMutation = useCreateSiteImport(siteId);
   const deleteMutation = useDeleteSiteImport(siteId);
 
-  useEffect(() => {
-    return () => {
-      workerManagerRef.current?.cancel();
-    };
-  }, []);
-
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] || null;
     setSelectedFile(file);
@@ -114,49 +113,54 @@ export function ImportManager({ siteId, disabled }: ImportManagerProps) {
     }
   };
 
-  const executeImport = () => {
+  const executeImport = async () => {
     if (!selectedFile || !selectedPlatform) return;
-
-    createImportMutation.mutate(
-      { platform: selectedPlatform },
-      {
-        onSuccess: response => {
-          const { importId, allowedDateRange } = response.data;
-
-          if (selectedPlatform === "plausible") {
-            const parser = new PlausibleCsvParser(
-              siteId,
-              importId,
-              allowedDateRange.earliestAllowedDate,
-              allowedDateRange.latestAllowedDate
-            );
-            workerManagerRef.current = parser;
-            parser.startImport(selectedFile).catch(err => {
-              console.error("Plausible import failed:", err);
-            });
-          } else {
-            const parser = new CsvParser(
-              siteId,
-              importId,
-              selectedPlatform,
-              allowedDateRange.earliestAllowedDate,
-              allowedDateRange.latestAllowedDate
-            );
-            workerManagerRef.current = parser;
-            parser.startImport(selectedFile);
-          }
-
-          setSelectedFile(null);
-          setSelectedPlatform("");
-          setFileError("");
-          if (fileInputRef.current) {
-            fileInputRef.current.value = "";
-          }
-        },
-      }
-    );
-
+    const file = selectedFile;
+    const platform = selectedPlatform;
     setShowConfirmDialog(false);
+
+    // mutateAsync rather than a per-call onSuccess: React Query drops per-call callbacks once the
+    // component unmounts (closing the dialog mid-request), which would leave the import created
+    // on the server with no parser feeding it.
+    let response;
+    try {
+      response = await createImportMutation.mutateAsync({ platform });
+    } catch (error) {
+      console.error("Failed to create import:", error);
+      return;
+    }
+    const { importId, allowedDateRange } = response.data;
+
+    if (platform === "plausible") {
+      const parser = new PlausibleCsvParser(
+        siteId,
+        importId,
+        allowedDateRange.earliestAllowedDate,
+        allowedDateRange.latestAllowedDate
+      );
+      // The parser is deliberately not tied to this component: switching settings tabs or
+      // closing the dialog unmounts it, and cancelling then would strand the import
+      // "In Progress" forever (blocking new imports). It runs until done or the page unloads.
+      parser.startImport(file).catch(err => {
+        console.error("Plausible import failed:", err);
+      });
+    } else {
+      const parser = new CsvParser(
+        siteId,
+        importId,
+        platform,
+        allowedDateRange.earliestAllowedDate,
+        allowedDateRange.latestAllowedDate
+      );
+      parser.startImport(file);
+    }
+
+    setSelectedFile(null);
+    setSelectedPlatform("");
+    setFileError("");
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
   };
 
   const handleDeleteClick = (importId: string) => {
@@ -176,8 +180,14 @@ export function ImportManager({ siteId, disabled }: ImportManagerProps) {
     }
   };
 
-  const getStatusInfo = (completedAt: string | null) => {
-    if (completedAt === null) {
+  const getStatusInfo = (imp: GetSiteImportsResponse) => {
+    if (imp.completedAt !== null) {
+      return {
+        variant: "success" as const,
+        icon: CheckCircle2,
+        label: t("Completed"),
+      };
+    } else if (isImportRunning(imp)) {
       return {
         variant: "info" as const,
         icon: Loader2,
@@ -185,9 +195,9 @@ export function ImportManager({ siteId, disabled }: ImportManagerProps) {
       };
     } else {
       return {
-        variant: "success" as const,
-        icon: CheckCircle2,
-        label: t("Completed"),
+        variant: "destructive" as const,
+        icon: AlertCircle,
+        label: t("Failed"),
       };
     }
   };
@@ -204,15 +214,14 @@ export function ImportManager({ siteId, disabled }: ImportManagerProps) {
     });
   }, [data?.data]);
 
-  const hasActiveImport = IS_CLOUD && sortedImports.some(imp => imp.completedAt === null);
+  const hasActiveImport = IS_CLOUD && sortedImports.some(isImportRunning);
 
-  const isImportDisabled =
-    !selectedFile || !selectedPlatform || !!fileError || createImportMutation.isPending || disabled || hasActiveImport;
+  const isImportDisabled = !selectedFile || !selectedPlatform || !!fileError || disabled || hasActiveImport;
 
   return (
     <DisabledOverlay message="Data Import" requiredPlan="standard">
       <SettingsSections>
-        <SettingsSection title={t("Import Data")} description={t("Import data from other analytics platforms.")}>
+        <SettingsSection title={t("Import Data")}>
           {/* Active Import Warning */}
           {hasActiveImport && (
             <Alert>
@@ -267,18 +276,15 @@ export function ImportManager({ siteId, disabled }: ImportManagerProps) {
             </div>
 
             {/* Import Button */}
-            <Button type="submit" disabled={isImportDisabled} className="w-full sm:w-auto">
-              {createImportMutation.isPending ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  {t("Importing...")}
-                </>
-              ) : (
-                <>
-                  <Upload className="h-4 w-4" />
-                  {t("Import")}
-                </>
-              )}
+            <Button
+              type="submit"
+              disabled={isImportDisabled}
+              loading={createImportMutation.isPending}
+              loadingLabel={t("Importing...")}
+              className="w-full sm:w-auto"
+            >
+              <Upload className="h-4 w-4" />
+              {t("Import")}
             </Button>
           </form>
 
@@ -307,7 +313,7 @@ export function ImportManager({ siteId, disabled }: ImportManagerProps) {
           )}
         </SettingsSection>
 
-        <SettingsSection title={t("Import History")} description={t("Track the status of your data imports")}>
+        <SettingsSection title={t("Import History")}>
           {isLoading && !data ? (
             <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground">
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -340,7 +346,8 @@ export function ImportManager({ siteId, disabled }: ImportManagerProps) {
                 </TableHeader>
                 <TableBody>
                   {sortedImports.map(imp => {
-                    const statusInfo = getStatusInfo(imp.completedAt);
+                    const isRunning = isImportRunning(imp);
+                    const statusInfo = getStatusInfo(imp);
                     const StatusIcon = statusInfo.icon;
                     const startedAt = DateTime.fromSQL(imp.startedAt).toFormat("MMM dd, yyyy HH:mm");
 
@@ -352,7 +359,7 @@ export function ImportManager({ siteId, disabled }: ImportManagerProps) {
                         </TableCell>
                         <TableCell>
                           <Badge variant={statusInfo.variant} className="gap-1">
-                            <StatusIcon className={`h-3 w-3 ${imp.completedAt === null ? "animate-spin" : ""}`} />
+                            <StatusIcon className={`h-3 w-3 ${isRunning ? "animate-spin" : ""}`} />
                             {statusInfo.label}
                           </Badge>
                         </TableCell>
@@ -394,7 +401,7 @@ export function ImportManager({ siteId, disabled }: ImportManagerProps) {
                           )}
                         </TableCell>
                         <TableCell className="text-center">
-                          {imp.completedAt !== null && (
+                          {!isRunning && (
                             <Button
                               variant="outline"
                               size="smIcon"

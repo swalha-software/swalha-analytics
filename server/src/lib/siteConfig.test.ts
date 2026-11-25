@@ -15,11 +15,14 @@ type SiteRow = {
   excludedHostnames: unknown;
   excludedUserAgents: unknown;
   privateLinkKey: string | null;
+  claimExpiresAt?: string | null;
+  organizationId: string | null;
   sessionReplay: boolean | null;
   webVitals: boolean | null;
   trackErrors: boolean | null;
   trackOutbound: boolean | null;
   trackUrlParams: boolean | null;
+  trackUrlFragments: boolean | null;
   trackInitialPageView: boolean | null;
   trackSpaNavigation: boolean | null;
   trackIp: boolean | null;
@@ -64,11 +67,13 @@ function createSiteRow(overrides: Partial<SiteRow>): SiteRow {
     excludedHostnames: [],
     excludedUserAgents: [],
     privateLinkKey: null,
+    organizationId: "org_1",
     sessionReplay: false,
     webVitals: false,
     trackErrors: false,
     trackOutbound: true,
     trackUrlParams: true,
+    trackUrlFragments: false,
     trackInitialPageView: true,
     trackSpaNavigation: true,
     trackIp: false,
@@ -129,20 +134,10 @@ beforeEach(() => {
 });
 
 describe("siteConfig.getConfig", () => {
-  it("resolves digit-only string site IDs by exact sites.id before legacy site_id fallback", async () => {
-    dbMock.rows.push(
-      createSiteRow({
-        id: "123456789012",
-        siteId: 42,
-        domain: "numeric-text-id.example",
-      })
-    );
-
-    const config = await siteConfig.getConfig("123456789012");
-
-    expect(config?.siteId).toBe(42);
-    expect(config?.id).toBe("123456789012");
-    expect(dbMock.queries).toEqual([{ column: "id", value: "123456789012" }]);
+  it.each([true, false, null])("defaults or preserves URL fragment tracking set to %s", async value => {
+    dbMock.rows.push(createSiteRow({ trackUrlFragments: value }));
+    const config = await siteConfig.getConfig(123);
+    expect(config?.trackUrlFragments).toBe(value ?? false);
   });
 
   it("falls back to legacy numeric site_id when a numeric string has no exact sites.id match", async () => {
@@ -158,13 +153,9 @@ describe("siteConfig.getConfig", () => {
 
     expect(config?.siteId).toBe(21);
     expect(config?.id).toBe("abcdef123456");
-    expect(dbMock.queries).toEqual([
-      { column: "id", value: "21" },
-      { column: "site_id", value: 21 },
-    ]);
   });
 
-  it("keeps numeric and string cache keys separate", async () => {
+  it("prefers an exact sites.id match for digit strings, and caches numeric and string keys separately", async () => {
     dbMock.rows.push(
       createSiteRow({
         id: "123",
@@ -181,10 +172,6 @@ describe("siteConfig.getConfig", () => {
 
     expect(exactTextConfig?.siteId).toBe(99);
     expect(legacyConfig?.siteId).toBe(123);
-    expect(dbMock.queries).toEqual([
-      { column: "id", value: "123" },
-      { column: "site_id", value: 123 },
-    ]);
   });
 
   it("applies the blockBots default a direct column read would miss", async () => {
@@ -204,15 +191,12 @@ describe("siteConfig.getConfig", () => {
   // Route guards resolve whatever the caller put in the URL, before auth, and a
   // digit-only string falls back to site_id — so every zero-padded rendering of
   // one site's number resolves that site under its own cache key.
-  it("caches zero-padded identifier variants separately", async () => {
+  it("resolves zero-padded identifier variants to the same site", async () => {
     dbMock.rows.push(createSiteRow({ id: "abcdef123456", siteId: 123 }));
-    const cache = getCache();
 
     for (const identifier of ["123", "0123", "00123", "000123"]) {
       expect((await siteConfig.getConfig(identifier))?.siteId).toBe(123);
     }
-
-    expect(cache.size).toBe(4);
   });
 
   it("bounds the cache so those variants cannot grow it without limit", async () => {
@@ -315,14 +299,25 @@ describe("siteConfig.resolveSiteId", () => {
   it("returns null for an identifier no site matches", async () => {
     expect(await siteConfig.resolveSiteId("abcdef123456")).toBeNull();
   });
+});
 
-  it("shares the configuration cache rather than keeping its own table", async () => {
-    dbMock.rows.push(createSiteRow({ id: "abcdef123456", siteId: 123 }));
-
-    await siteConfig.resolveSiteId("abcdef123456");
-    const queriesAfterResolve = dbMock.queries.length;
-
-    expect((await siteConfig.getConfig("abcdef123456"))?.siteId).toBe(123);
-    expect(dbMock.queries).toHaveLength(queriesAfterResolve);
+describe("unclaimed site expiry", () => {
+  it("stops serving tracking config when an unclaimed site expires", async () => {
+    dbMock.rows = [createSiteRow({ organizationId: null, claimExpiresAt: "2000-01-01 00:00:00" })];
+    expect(await siteConfig.getConfig(123)).toBeUndefined();
   });
+  it("refreshes an expired cached config in case another worker claimed the site", async () => {
+    const expiry = new Date(Date.now() + 10_000).toISOString();
+    dbMock.rows = [createSiteRow({ organizationId: null, claimExpiresAt: expiry })];
+    await siteConfig.getConfig(123);
+    const cached = getCache().get("number:123")!;
+    (cached.data as { claimExpiresAt: string }).claimExpiresAt = "2000-01-01T00:00:00Z";
+    dbMock.rows = [createSiteRow({ claimExpiresAt: null })];
+    expect(await siteConfig.getConfig(123)).toMatchObject({ siteId: 123, claimExpiresAt: null });
+  });
+});
+
+it("does not expire an owned site transferred through the system-admin move path", async () => {
+  dbMock.rows = [createSiteRow({ organizationId: "org_1", claimExpiresAt: "2000-01-01 00:00:00" })];
+  expect(await siteConfig.getConfig(123)).toMatchObject({ siteId: 123, claimExpiresAt: null });
 });

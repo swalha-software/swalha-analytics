@@ -10,6 +10,7 @@ export const fathomComparisonData: ComparisonSection[] = [
       { name: "Funnels", rybbitValue: true, competitorValue: false },
       { name: "User journeys (Sankey)", rybbitValue: true, competitorValue: false },
       { name: "Conversion goals", rybbitValue: true, competitorValue: true },
+      { name: "Saved segments", rybbitValue: true, competitorValue: true },
       { name: "UTM tracking", rybbitValue: true, competitorValue: true },
       { name: "Public dashboards", rybbitValue: true, competitorValue: true },
     ],
@@ -38,7 +39,7 @@ export const fathomComparisonData: ComparisonSection[] = [
   {
     title: "Technical & Pricing",
     features: [
-      { name: "Script size", rybbitValue: "18KB", competitorValue: "~2KB" },
+      { name: "Script size", rybbitValue: "~11KB", competitorValue: "~2KB" },
       { name: "Bypasses ad blockers", rybbitValue: true, competitorValue: true },
       { name: "API access", rybbitValue: true, competitorValue: true },
       { name: "Starting price", rybbitValue: "$19/mo", competitorValue: "$15/mo" },
@@ -103,7 +104,7 @@ export const fathomExtendedData = {
         heading: "Two privacy-first tools, two philosophies",
         paragraphs: [
           <>
-            Fathom deserves real credit: it&apos;s one of the founders of the privacy-analytics category, and it has
+            Fathom deserves credit: it&apos;s one of the founders of the privacy-analytics category, and it has
             run as a profitable, independent company for years while bigger players came and went. If you&apos;re
             leaving Google Analytics for something cookieless and simple, Fathom is a legitimate destination.
             We&apos;ve said as much in our roundup of{" "}
@@ -130,8 +131,8 @@ export const fathomExtendedData = {
             Rybbit covers the same dashboard basics, then adds the layer Fathom deliberately leaves out:{" "}
             <Link href="/features/session-replay">session replay</Link> to watch real sessions, funnels to find where
             signups stall, user journey (Sankey) visualization, <Link href="/features/error-tracking">error
-            tracking</Link>, Web Vitals monitoring, and user profiles. Rybbit&apos;s script is bigger (~18KB) because
-            it does more. That&apos;s the honest trade. There&apos;s also an ownership difference with no
+            tracking</Link>, Web Vitals monitoring, and user profiles. Rybbit&apos;s script is bigger (~11KB compressed) because
+            it does more. There&apos;s also an ownership difference with no
             trade-off attached: Rybbit is open source and can be{" "}
             <Link href="/docs/self-hosting">self-hosted for free</Link>, while Fathom is closed-source and
             SaaS-only: there is no way to run it on your own infrastructure.
@@ -147,7 +148,7 @@ export const fathomExtendedData = {
             (&ldquo;Do you have a lower/free option? Nope&rdquo; is a real answer on their FAQ). The generous parts are
             real, too: every plan includes at least 50 sites (extra sites are $10/month per 50), data is retained
             forever, and paying annually gets you two months free. For an agency running dozens of low-traffic sites,
-            that 50-site allowance is genuinely hard to beat.
+            that 50-site allowance is hard to beat.
           </>,
           <>
             Rybbit prices on events instead, starting at{" "}
@@ -240,7 +241,7 @@ export const fathomExtendedData = {
     {
       title: "Pricing",
       href: "/pricing",
-      description: "Simple, transparent pricing for every team size",
+      description: "Plans and prices",
     },
   ] satisfies RelatedResource[],
 };

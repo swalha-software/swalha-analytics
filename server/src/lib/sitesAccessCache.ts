@@ -9,8 +9,14 @@ export const sitesAccessCache = new NodeCache({
   useClones: false, // Don't clone objects for better performance with promises
 });
 
+// Cache keys for one user's site list. A browser session may carry
+// system-admin authority; a bearer credential for the same user never does,
+// so the two are cached apart.
+export const sessionSitesKey = (userId: string) => `${userId}:session`;
+export const bearerSitesKey = (userId: string) => `${userId}:bearer`;
+
 // Cache invalidation helper - call this when membership or site access changes
 export function invalidateSitesAccessCache(userId: string) {
-  sitesAccessCache.del(`${userId}:true`);
-  sitesAccessCache.del(`${userId}:false`);
+  sitesAccessCache.del(sessionSitesKey(userId));
+  sitesAccessCache.del(bearerSitesKey(userId));
 }

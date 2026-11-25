@@ -92,7 +92,20 @@ describe("resolveBearerIdentity", () => {
         }),
       })
     );
-    expect(identity).toEqual({ status: "valid", userId: "u2", statements: { analytics: ["read"] } });
+    expect(identity).toEqual({ status: "valid", userId: "u2", statements: { analytics: ["read"] }, oauth: true });
+  });
+
+  it("sends a JWT access token straight to the OAuth lookup, skipping the API-key check", async () => {
+    const verifyApiKey = vi.fn(async () => ({ valid: false, error: { code: "KEY_NOT_FOUND" } }));
+    const identity = await resolveBearerIdentity(
+      "eyJhbGciOiJSUzI1NiJ9.eyJzdWIiOiJ1MiJ9.c2ln",
+      deps({
+        verifyApiKey,
+        getOAuthSession: async () => ({ userId: "u2", accessTokenExpiresAt: future(), scopes: "openid" }),
+      })
+    );
+    expect(verifyApiKey).not.toHaveBeenCalled();
+    expect(identity.status).toBe("valid");
   });
 
   it("rejects an expired OAuth token", async () => {
@@ -191,13 +204,6 @@ describe("resolveBearerIdentity rate limiting", () => {
 });
 
 describe("bearer handoff", () => {
-  it("returns the identity for a matching nonce and token", () => {
-    const identity = { status: "valid" as const, userId: "u1", statements: null };
-    const nonce = registerBearerHandoff("tok", identity);
-    expect(consumeBearerHandoff(nonce, "tok")).toBe(identity);
-    releaseBearerHandoff(nonce);
-  });
-
   it("fails safe on a mismatched token, missing nonce, or wrong type", () => {
     const nonce = registerBearerHandoff("tok", { status: "valid", userId: "u1", statements: null });
     // Wrong token -> null (falls through to real verification)

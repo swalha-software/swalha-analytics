@@ -36,8 +36,10 @@ export async function proxy(request: NextRequest) {
     const excludedRoutes = [
       "login",
       "signup",
+      "try",
       "subscribe",
       "invitation",
+      "transfer",
       "auth",
       "admin",
       "organization",

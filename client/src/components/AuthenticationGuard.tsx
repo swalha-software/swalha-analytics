@@ -1,11 +1,14 @@
 "use client";
 
 import { useEffect } from "react";
-import { redirect, usePathname } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { userStore } from "../lib/userStore";
 import { useGetSiteIsPublic } from "../api/admin/hooks/useSites";
 
-const PUBLIC_ROUTES = ["/login", "/signup"];
+// /auth/consent is the OAuth consent screen MCP clients land on. Upstream also
+// opens /try, /invitation, /reset-password and /transfer/<id>; here every door
+// goes through SSO, and the deep link below brings a transfer recipient back.
+const PUBLIC_ROUTES = ["/login", "/signup", "/auth/consent"];
 
 export function AuthenticationGuard() {
   const { user, isPending } = userStore();
@@ -36,9 +39,12 @@ export function AuthenticationGuard() {
       !isPublicSite &&
       !hasPrivateKey
     ) {
-      // Carry the deep link through the SSO round trip.
+      // Carry the deep link through the SSO round trip. A document navigation keeps this page on
+      // screen until /login has painted: redirect() from an effect unmounts <html> until then,
+      // dropping its theme class, and the URL-state sync's history writes can discard a pending
+      // router.replace().
       const next = `${pathname}${window.location.search}`;
-      redirect(next === "/" ? "/login" : `/login?next=${encodeURIComponent(next)}`);
+      window.location.replace(next === "/" ? "/login" : `/login?next=${encodeURIComponent(next)}`);
     }
   }, [isPending, user, pathname, isCheckingPublic, isPublicSite, hasPrivateKey]);
 

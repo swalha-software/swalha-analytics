@@ -1,6 +1,6 @@
 import { FilterParams } from "@rybbit/shared";
 import { FilterType, TimeBucket } from "../types.js";
-import { buildStringFilterCondition, wrapLikeValue } from "../utils/getFilterStatement.js";
+import { buildStringFilterCondition } from "../utils/getFilterStatement.js";
 import { validateFilters } from "../utils/query-validation.js";
 
 // Lite endpoints back the simplified high-traffic dashboard. They read from
@@ -55,10 +55,6 @@ const LITE_SUPPORTED_FILTER_TYPES = new Set<FilterType>([
   "ends_with",
 ]);
 
-// LIKE-value wrapping is shared with the events surface; re-exported under the
-// historical lite name for existing importers and tests.
-export const wrapLiteLikeValue = wrapLikeValue;
-
 // Build a WHERE-clause fragment (prefixed " AND ") against sessions_mv_target
 // columns. Returns `supported: false` when any filter targets a column or type
 // the session rollup can't serve, signalling the caller to fall back to events.
@@ -104,8 +100,18 @@ export function liteBucket(bucket: TimeBucket | undefined): TimeBucket {
 // same escape hatch an unsupported filter takes. Before, both the lite time
 // statement and the lite fill simply ignored start_datetime/end_datetime, so the
 // request came back as all-time data with a 200.
-export function hasLiteDatetimeRange(
-  params: Pick<FilterParams, "start_datetime" | "end_datetime">
-): boolean {
+export function hasLiteDatetimeRange(params: Pick<FilterParams, "start_datetime" | "end_datetime">): boolean {
   return Boolean(params.start_datetime && params.end_datetime);
+}
+
+// Match the dashboard's minute-resolution rolling windows (up to two hours).
+// Hourly timestamps can all fall before the cutoff, and the refreshable
+// summary can omit the current hour entirely. Read exact events for these
+// windows, including shifted comparison periods; keep long ranges on the MVs.
+export function hasLiteRealtimeRange(params: {
+  past_minutes_start?: number | string;
+  past_minutes_end?: number | string;
+}): boolean {
+  const minutes = Number(params.past_minutes_start) - Number(params.past_minutes_end);
+  return minutes > 0 && minutes <= 120;
 }

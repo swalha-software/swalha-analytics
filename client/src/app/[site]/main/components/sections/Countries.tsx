@@ -1,7 +1,7 @@
 "use client";
 import { ChevronRight, Globe } from "lucide-react";
 import { useExtracted } from "next-intl";
-import { useSubdivisions } from "../../../../../lib/geo";
+import { parseCityValue, useGetRegionName } from "../../../../../lib/geo";
 import { getCountryName, getLanguageName } from "../../../../../lib/utils";
 import { MapComponent } from "../../../components/shared/Map/MapComponent";
 import {
@@ -9,15 +9,6 @@ import {
   type StandardSectionTab,
 } from "../../../components/shared/StandardSection/StandardSectionTabs";
 import { CountryFlag } from "../../../components/shared/icons/CountryFlag";
-
-function getCountryCity(value: string) {
-  if (value.split("-").length === 2) {
-    const [country, city] = value.split("-");
-    return { country, region: "", city };
-  }
-  const [country, region, city] = value.split("-");
-  return { country, region, city };
-}
 
 // Helper to extract country code from language code
 const getCountryFromLanguage = (languageCode: string): string | null => {
@@ -30,7 +21,7 @@ const getCountryFromLanguage = (languageCode: string): string | null => {
 
 export function useCountriesTabs(): StandardSectionTab<string>[] {
   const t = useExtracted();
-  const { data: subdivisions } = useSubdivisions();
+  const { getRegionName } = useGetRegionName();
 
   return [
     {
@@ -58,16 +49,12 @@ export function useCountriesTabs(): StandardSectionTab<string>[] {
         title: t("Regions"),
         getValue: e => e.value,
         getKey: e => e.value,
-        getFilterLabel: e => {
-          const region = subdivisions?.features.find(feature => feature.properties.iso_3166_2 === e.value)?.properties;
-          return region?.name ?? "";
-        },
+        getFilterLabel: e => getRegionName(e.value),
         getLabel: e => {
           if (!e.value) {
             return t("Unknown");
           }
 
-          const region = subdivisions?.features.find(feature => feature.properties.iso_3166_2 === e.value)?.properties;
           const countryCode = e.value.split("-")[0];
 
           return (
@@ -75,7 +62,7 @@ export function useCountriesTabs(): StandardSectionTab<string>[] {
               <CountryFlag country={countryCode} />
               {countryCode}
               <ChevronRight className="w-4 h-4 mx-[-4px]" />
-              {region?.name ?? e.value.slice(3)}
+              {getRegionName(e.value) || e.value.slice(3)}
             </div>
           );
         },
@@ -94,17 +81,15 @@ export function useCountriesTabs(): StandardSectionTab<string>[] {
             return t("Unknown");
           }
 
-          const { country, region, city } = getCountryCity(e.value) ?? {};
-          const region_ = subdivisions?.features.find(
-            feature => feature.properties.iso_3166_2 === `${country}-${region}`
-          )?.properties;
+          const { country, region, city } = parseCityValue(e.value);
+          const regionName = getRegionName(`${country}-${region}`);
 
           return (
             <div className="flex gap-2 items-center">
               <CountryFlag country={country} />
               {country}
-              {region_?.name && <ChevronRight className="w-4 h-4 mx-[-4px]" />}
-              {region_?.name}
+              {regionName && <ChevronRight className="w-4 h-4 mx-[-4px]" />}
+              {regionName}
               {city && <ChevronRight className="w-4 h-4 mx-[-4px]" />}
               {city}
             </div>

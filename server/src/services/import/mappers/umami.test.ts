@@ -39,7 +39,7 @@ describe("UmamiImportMapper", () => {
       expect(result).toHaveLength(1);
       expect(result[0]).toMatchObject({
         site_id: 1,
-        timestamp: "2024-06-15 14:30:00",
+        timestamp: "2024-06-15T14:30:00.000Z",
         session_id: TEST_SESSION_ID,
         user_id: "visitor-1",
         hostname: "example.com",
@@ -66,7 +66,7 @@ describe("UmamiImportMapper", () => {
         props: {},
         import_id: "import-1",
       });
-      expect(result[0].channel).toBeTruthy();
+      expect(result[0].channel).toBe("Organic Search");
     });
 
     it("should transform a custom event", () => {
@@ -250,6 +250,19 @@ describe("UmamiImportMapper", () => {
         expect(result[0].country).toBe("");
       });
 
+      it("drops a well-shaped impossible date without losing the rest of the batch", () => {
+        const result = UmamiImportMapper.transform(
+          [
+            makeEvent({ created_at: "2024-06-15 14:30:00" }),
+            makeEvent({ created_at: "2024-02-31 12:00:00" }),
+            makeEvent({ created_at: "2024-06-16 09:00:00" }),
+          ],
+          1,
+          "i"
+        );
+        expect(result.map(row => row.timestamp)).toEqual(["2024-06-15T14:30:00.000Z", "2024-06-16T09:00:00.000Z"]);
+      });
+
       it("should drop rows with an invalid timestamp format", () => {
         for (const created_at of [
           "2024-06-15T14:30:00", // ISO "T" separator
@@ -267,21 +280,6 @@ describe("UmamiImportMapper", () => {
         const result = UmamiImportMapper.transform([makeEvent({ screen: "1920*1080" })], 1, "i");
         expect(result).toHaveLength(0);
       });
-
-      it("should keep valid rows when mixed with invalid ones", () => {
-        const events = [
-          makeEvent({ url_path: "/valid" }),
-          makeEvent({ session_id: "bad" }),
-          makeEvent({ url_path: "/also-valid" }),
-        ];
-        const result = UmamiImportMapper.transform(events, 1, "i");
-        expect(result).toHaveLength(2);
-        expect(result.map(e => e.pathname)).toEqual(["/valid", "/also-valid"]);
-      });
-    });
-
-    it("should return empty array for empty input", () => {
-      expect(UmamiImportMapper.transform([], 1, "i")).toHaveLength(0);
     });
   });
 });

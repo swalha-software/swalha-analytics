@@ -31,11 +31,12 @@ const Stat = ({
   decimals?: number;
   postfix?: string;
 }) => {
-  const { selectedStat, setSelectedStat } = useStore();
+  const selectedStat = useStore((state) => state.selectedStat);
+  const setSelectedStat = useStore((state) => state.setSelectedStat);
   return (
     <div
       className={cn(
-        "flex flex-col cursor-pointer border-r border-neutral-100 dark:border-neutral-800 last:border-r-0 text-nowrap",
+        "flex flex-col cursor-pointer bg-white dark:bg-neutral-900 text-nowrap",
         selectedStat === id && "bg-neutral-0 dark:bg-neutral-850"
       )}
       onClick={() => setSelectedStat(id)}
@@ -49,11 +50,7 @@ const Stat = ({
             <span>{valueFormatter(value)}</span>
           ) : (
             <span>
-              <NumberFlow
-                respectMotionPreference={false}
-                value={decimals ? Number(value.toFixed(decimals)) : value}
-                format={{ notation: "compact" }}
-              />
+              <NumberFlow value={decimals ? Number(value.toFixed(decimals)) : value} format={{ notation: "compact" }} />
               {postfix && <span>{postfix}</span>}
             </span>
           )}
@@ -75,7 +72,9 @@ export function MainSection({
   lite?: boolean;
 }) {
   const t = useExtracted();
-  const { selectedStat, bucket, time } = useStore();
+  const selectedStat = useStore((state) => state.selectedStat);
+  const bucket = useStore((state) => state.bucket);
+  const time = useStore((state) => state.time);
 
   const { series, isFetching, isLoading } = useRollupBucketed({
     siteIds,
@@ -153,7 +152,8 @@ export function MainSection({
     <>
       <Card>
         <CardContent className="p-0 w-full">
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-0 items-center">
+          {/* Seams are the 1px gap over the grid's tint, so they stay right however the row wraps. */}
+          <div className="grid grid-cols-2 gap-px bg-neutral-100 md:grid-cols-3 lg:grid-cols-6 dark:bg-neutral-800">
             <Stat
               title={t("Unique Users")}
               id="users"

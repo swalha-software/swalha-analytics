@@ -1,9 +1,11 @@
 "use client";
 
 import { useFeatureFlags } from "@/api/analytics/hooks/featureFlags/useFeatureFlags";
+import { ErrorState } from "@/components/ErrorState";
+import { NothingFound } from "@/components/NothingFound";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { NothingFound } from "@/components/NothingFound";
+import { useCanOnSite } from "@/hooks/usePermissions";
 import { useSetPageTitle } from "@/hooks/useSetPageTitle";
 import { Flag, Plus } from "lucide-react";
 import { useExtracted } from "next-intl";
@@ -15,7 +17,8 @@ import { FeatureFlagTable } from "./components/FeatureFlagTable";
 export default function FeatureFlagsPage() {
   const t = useExtracted();
   useSetPageTitle("Feature Flags");
-  const { data: flags, isLoading } = useFeatureFlags();
+  const { data: flags, isError, refetch } = useFeatureFlags();
+  const canWrite = useCanOnSite("flags:write");
   const [search, setSearch] = useState("");
 
   const filteredFlags = useMemo(() => {
@@ -36,35 +39,43 @@ export default function FeatureFlagsPage() {
           value={search}
           onChange={event => setSearch(event.target.value)}
         />
-        <FeatureFlagDialog
-          trigger={
-            <Button>
-              <Plus className="h-4 w-4" />
-              {t("New flag")}
-            </Button>
-          }
-        />
+        {canWrite && (
+          <FeatureFlagDialog
+            trigger={
+              <Button>
+                <Plus className="h-4 w-4" />
+                {t("New flag")}
+              </Button>
+            }
+          />
+        )}
       </div>
 
-      {isLoading ? (
-        <FeatureFlagSkeleton />
+      {!flags ? (
+        isError ? (
+          <ErrorState title={t("Failed to load data")} message="" refetch={() => void refetch()} />
+        ) : (
+          <FeatureFlagSkeleton />
+        )
       ) : filteredFlags.length > 0 ? (
-        <FeatureFlagTable flags={filteredFlags} />
-      ) : flags?.length ? (
+        <FeatureFlagTable flags={filteredFlags} canWrite={canWrite} />
+      ) : flags.length ? (
         <NothingFound icon={<Flag className="h-10 w-10" />} title={t("No feature flags found")} />
       ) : (
         <NothingFound
           icon={<Flag className="h-10 w-10" />}
           title={t("No feature flags yet")}
           action={
-            <FeatureFlagDialog
-              trigger={
-                <Button>
-                  <Plus className="h-4 w-4" />
-                  {t("New flag")}
-                </Button>
-              }
-            />
+            canWrite ? (
+              <FeatureFlagDialog
+                trigger={
+                  <Button>
+                    <Plus className="h-4 w-4" />
+                    {t("New flag")}
+                  </Button>
+                }
+              />
+            ) : undefined
           }
         />
       )}

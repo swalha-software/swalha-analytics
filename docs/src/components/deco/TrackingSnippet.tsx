@@ -10,11 +10,10 @@ const TOKENS = [
   { text: "<script\n  ", className: "" },
   { text: "src", className: "text-neutral-700 dark:text-neutral-300" },
   { text: "=", className: "" },
-  { text: '"https://app.rybbit.io/api/script.js"', className: "text-emerald-700 dark:text-emerald-400" },
-  { text: "\n  ", className: "" },
-  { text: "data-site-id", className: "text-neutral-700 dark:text-neutral-300" },
-  { text: "=", className: "" },
-  { text: '"YOUR_SITE_ID"', className: "text-emerald-700 dark:text-emerald-400" },
+  {
+    text: '"https://app.rybbit.io/api/script.js?siteId=YOUR_SITE_ID"',
+    className: "text-emerald-700 dark:text-emerald-400",
+  },
   { text: "\n  ", className: "" },
   { text: "async", className: "text-neutral-700 dark:text-neutral-300" },
   { text: "\n", className: "" },
@@ -84,11 +83,8 @@ export function TrackingSnippet({ className }: { className?: string }) {
         className
       )}
     >
-      <div className="flex items-center gap-1.5 border-b border-neutral-200 px-3 py-2 dark:border-neutral-800">
-        <span aria-hidden="true" className="size-2 rounded-full bg-[#ff5f57]" />
-        <span aria-hidden="true" className="size-2 rounded-full bg-[#febc2e]" />
-        <span aria-hidden="true" className="size-2 rounded-full bg-[#28c840]" />
-        <span className="ml-2 font-mono text-xs text-neutral-500 dark:text-neutral-400">index.html</span>
+      <div className="border-b border-neutral-200 px-3 py-2 dark:border-neutral-800">
+        <span className="font-mono text-xs text-neutral-500 dark:text-neutral-400">index.html</span>
       </div>
       <pre className="min-h-[9rem] overflow-x-auto p-3 text-xs leading-6">
         <code className="text-neutral-500 dark:text-neutral-400">

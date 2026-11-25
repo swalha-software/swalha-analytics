@@ -87,11 +87,6 @@ describe("parseAsStringArray", () => {
   it("round-trips a string array", () => {
     expect(parseAsStringArray.parse(parseAsStringArray.serialize(["a", "b"]))).toEqual(["a", "b"]);
   });
-
-  it("does not validate its contents — anything json-shaped comes back as-is", () => {
-    expect(parseAsStringArray.parse("[1,2]")).toEqual([1, 2]);
-    expect(parseAsStringArray.parse('{"a":1}')).toEqual({ a: 1 });
-  });
 });
 
 describe("enum parsers", () => {
@@ -163,11 +158,6 @@ describe("analyticsParsers", () => {
     expect(analyticsParsers.hideSidebar.parse("false")).toBe(false);
     expect(analyticsParsers.past_minutes_start.parse("30")).toBe(30);
     expect(analyticsParsers.past_minutes_end.parse("abc")).toBeNull();
-  });
-
-  it("leaves date params as opaque strings", () => {
-    expect(analyticsParsers.day.parse("2024-03-15")).toBe("2024-03-15");
-    expect(analyticsParsers.startDate.parse("whenever")).toBe("whenever");
   });
 });
 

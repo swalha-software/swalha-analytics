@@ -1,14 +1,20 @@
+import { isDesktopUserAgent } from "@rybbit/shared";
 import { anomalyObserve, type AnomalyCounterSpec } from "../../../db/redis/redis.js";
 import { createServiceLogger } from "../../../lib/logger/logger.js";
+import { toIpRange } from "../../userId/ipRange.js";
+import { normalizeUserAgentForIdentity } from "../../userId/normalizeUserAgent.js";
 import {
   ENUMERATION_BUCKET_MS,
   observeEnumeration,
   resetEnumerationObserverForTests,
   type EnumerationObservation,
 } from "./enumerationObserver.js";
+import { HUMAN_INTERACTION_EVENT_TYPES, RELAY_EGRESS_ASNS, SASE_EGRESS_ASNS } from "./sharedSignals.js";
+import { getSiteBaseline, type SiteBaseline } from "./siteBaseline.js";
 
 const SECOND = 1000;
 const MINUTE = 60 * SECOND;
+const HOUR = 60 * MINUTE;
 
 const ANOMALY_SCORE_THRESHOLD = 4;
 const CLEANUP_INTERVAL_MS = 60 * SECOND;
@@ -25,7 +31,7 @@ const MAX_LOCAL_COUNTER_KEYS = 100_000;
 /**
  * Cohort-uniformity rule. A cohort is one exact device fingerprint on a site —
  * (screen, language, browser) — and the rule measures how its traffic is spread
- * across browser major versions inside a fixed one-minute bucket.
+ * across browser major versions inside a fixed one-hour bucket.
  *
  * An organic cohort is steeply peaked: browsers auto-update, so one current
  * version holds most of it (measured 0.52-0.98 modal share, and >=0.74 for every
@@ -40,8 +46,15 @@ const MAX_LOCAL_COUNTER_KEYS = 100_000;
  * to any single-visitor view because the evidence only exists in aggregate.
  * Thresholds are set with a wide margin — over 24h of production traffic across
  * every site, only the crawler's own cohort satisfied all three.
+ *
+ * The bucket is an hour, not a minute. The crawler paces itself: its busiest
+ * cohort peaked at 19 events in any one minute against a 300-event gate, and
+ * over 14 days of production the minute-bucket version never fired once. Over
+ * an hour the same cohort holds 3,000+ events with a modal share of 0.1, and
+ * with a 100-event gate it was the only cohort platform-wide to qualify in 22
+ * of 24 hours. The window was wrong; the shape test was not.
  */
-const COHORT_MIN_EVENTS_60S = 300;
+const COHORT_MIN_EVENTS_1H = 100;
 const COHORT_MIN_DISTINCT_VERSIONS = 8;
 const COHORT_MAX_MODAL_SHARE = 0.25;
 
@@ -71,6 +84,145 @@ const ACTOR_EVENTS_1D_SCORE = 1;
 const PROXY_MERGE_MAX_USER_AGENTS = 3;
 const DAY = 24 * 60 * MINUTE;
 
+/**
+ * Site-flood rules. The failure these exist for: a fleet of disposable
+ * identities — one event each, a fresh IP and user agent per hit, spread over
+ * thousands of residential ASNs, running a real browser — lands on a site that
+ * normally sees four events an hour and pushes it to four thousand. Every rule
+ * above is keyed on an actor and sees one well-behaved event per actor; nothing
+ * fires. Measured across production, detection caught 14% of traffic in such
+ * hours against 48% at rest — worst exactly where the site owner is looking.
+ *
+ * What the fleet cannot hide is the site's aggregate: the rate against the
+ * site's own baseline (`siteBaseline.ts`), and, within the flood, a single
+ * device cohort that is nearly all distinct actors, nearly all direct, and a
+ * large share of the site's traffic. A launch or a press bump is the mirror
+ * image — many devices, several events per visitor, referrers set — so the
+ * flood gate alone never convicts; a cohort or an actor still has to show a
+ * shape no organic audience produces.
+ *
+ * The actor rule inside a flood is hosting-only. On the first day in
+ * production a residential version of it (1,000 events a day) convicted two
+ * real people: power users of small internal tools, clicking and typing
+ * through edit pages at a few events a minute, who *were* their site's whole
+ * "flood" against a near-zero baseline. A human at a keyboard can produce a
+ * thousand events a day on a site they work in; a datacenter address cannot
+ * be one.
+ *
+ * The gate is the site's 10-minute volume at twenty times its padded weekly
+ * median and at least 100 events. Sites without a baseline, or younger than a
+ * week, never pass it.
+ */
+const FLOOD_MULTIPLE = 20;
+const FLOOD_MIN_EVENTS_10M = 100;
+const FLOOD_COHORT_MIN_EVENTS_10M = 50;
+const FLOOD_COHORT_MIN_ACTOR_RATIO = 0.6;
+const FLOOD_COHORT_MIN_DIRECT_SHARE = 0.95;
+const FLOOD_COHORT_MIN_SITE_SHARE = 0.25;
+const FLOOD_ACTOR_EVENTS_1D_HOSTING = 200;
+const TEN_MINUTES = 10 * MINUTE;
+
+/**
+ * Long-window volume from a hosting address convicts on its own. The
+ * supporting-only `actor_events_1d` above exists because one residential or
+ * office address can be hundreds of people; a datacenter address is not. The
+ * Azure-hosted fleet this targets ran ~300 events per address per day across
+ * 3,000 sites and was caught under half the time, because the hosting ASN is
+ * only ever corroborating and nothing corroborated it.
+ *
+ * SASE egress is the exception a hosting flag cannot see — Cato, Zscaler and
+ * Netskope route whole companies through cloud addresses — so those are
+ * exempt outright, in addition to the many-user-agents guard.
+ */
+const HOSTING_ACTOR_EVENTS_1D_THRESHOLD = 1000;
+
+/**
+ * Hosting volume by range — shadow mode. `hosting_actor_events_1d` counts one
+ * exact address, and a scraper renting a block simply rotates inside it:
+ * measured on one site, a single identity produced 3,000 pageviews a day from a
+ * hosting /24 while no address in it came near the threshold, and the rule fired
+ * 46 times against 75,000 leaked events on another. The actor here is the range
+ * (/24, or /48 for IPv6) plus the version-stripped user agent.
+ *
+ * A range is a wider net than an address — a company on cloud-hosted virtual
+ * desktops is one range, one browser build and one display size — so it needs
+ * more than volume. All of these must hold for the actor's day so far:
+ *
+ * - the site captures at least one kind of human interaction. Button, copy and
+ *   form tracking are off by default, and "nobody clicked" means nothing on a
+ *   site that could not have recorded a click.
+ * - no human interaction at all (a click, an input change, a copy, a form
+ *   submit, an outbound click). Custom events do not count either way: a
+ *   scripted checkout test fires them, and so did the largest crawler measured.
+ * - one or two known screen sizes. One scraper is one headless window; a VPN
+ *   exit or a relay pool is many people, and many people are many displays. A
+ *   hit with no screen size is not counted as a display.
+ * - not a relay or SASE network, where a range is a crowd by construction.
+ *   Those are not even counted.
+ * - the day's counters are whole. A click recorded in-process during a Redis
+ *   outage is invisible once Redis is back, so after any fallback the rule is
+ *   silent until the next UTC day (`counterHistoryGap1d`).
+ *
+ * It records and never scores. The offline check that motivated it read
+ * end-of-day totals over stored identities, which is not what a live rule sees:
+ * it fires on the hit that crosses the threshold, before a later click or a
+ * third screen could have spared the range. Rows in `bot_observations` are that
+ * live decision, and are what a promotion has to be argued from.
+ */
+const HOSTING_RANGE_EVENTS_1D_THRESHOLD = 1000;
+const HOSTING_RANGE_MAX_SCREENS = 2;
+/** A day-bucketed key outlives its UTC day by this much, then expires. */
+const DAY_KEY_GRACE_MS = 10 * MINUTE;
+
+/**
+ * One-shot cohort, by day. The flood rule above needs a site to be far over its
+ * own baseline; a fleet that arrives every day *is* the baseline by the second
+ * week, and one paced under a hundred events in ten minutes never reaches the
+ * gate at all. What still shows is the cohort's day: one desktop fingerprint
+ * producing hundreds of pageviews, nearly every one from an address never seen
+ * before, nearly every one with no referrer, across dozens of networks.
+ *
+ * Both forms are shadow-only: they record and never score.
+ *
+ * - `cohort_oneshot_direct_1d` is the shape alone, which is what the 1920x1080
+ *   fleets on current Chrome look like — and also what a link passed around in a
+ *   chat client or a newsletter looks like: one page each, no referrer, every
+ *   network in the country.
+ * - `cohort_oneshot_flat_versions_1d` adds the version test the uniformity rule
+ *   uses, loosened: at least eight browser versions with the commonest under 40%
+ *   of the cohort. Browsers update themselves, so an organic cohort sits on one
+ *   or two versions; a fleet drawing from a list is flat. The 2560x1600 fleet
+ *   this was written against holds a modal share of 0.24-0.28 — just over the
+ *   uniformity rule's 0.25, which is why that rule caught a third of it.
+ *
+ * Neither convicts, for a reason that outlasts any threshold: the verdict is on
+ * the cohort, and it is inherited by everyone in it. Once a fleet has qualified
+ * a site's 1920x1080 en-US Chrome cohort for the day, a returning customer who
+ * opens a bookmark on that screen matches every conjunct, and so would their
+ * clicks and their checkout. Promotion needs evidence about the arriving actor,
+ * not only about the cohort, and the rows this writes to `bot_observations` are
+ * how to find out what that evidence should be.
+ *
+ * Only pageviews are counted — a visit is one pageview and usually one vitals
+ * event, and counting both would halve the actor ratio — and only desktop
+ * cohorts, since a phone's screen is shared by millions. Only direct hits are
+ * recorded: a visitor in the same cohort who arrived from a search result is,
+ * by that fact, not the fleet.
+ *
+ * Two limits of the counters, both failing towards silence. The version
+ * histogram stops admitting new versions at its field cap, after which its total
+ * undercounts the cohort, so a cohort at the cap is not judged. And the
+ * in-process fallback holds at most MAX_LOCAL_DISTINCT_VALUES actors per cohort,
+ * so past about 5,000 pageviews a day it can no longer reach the actor ratio and
+ * says nothing where Redis would.
+ */
+const ONESHOT_COHORT_MIN_PAGEVIEWS_1D = 200;
+const ONESHOT_COHORT_MIN_ACTOR_RATIO = 0.8;
+const ONESHOT_COHORT_MIN_DIRECT_SHARE = 0.95;
+const ONESHOT_COHORT_MIN_ASNS = 20;
+const ONESHOT_COHORT_MIN_DISTINCT_VERSIONS = 8;
+const ONESHOT_COHORT_MAX_MODAL_SHARE = 0.4;
+
 const logger = createServiceLogger("anomaly-scorer");
 
 // Counters live in Redis so every worker/replica shares one view; an in-process
@@ -98,14 +250,30 @@ export interface AnomalyCounters {
   ipDistinctHosts60s: number;
   siteUserAgentEvents60s: number;
   missingClientScore60s: number;
-  cohortEvents60s: number;
-  cohortTopVersionEvents60s: number;
-  cohortDistinctVersions60s: number;
+  cohortEvents1h: number;
+  cohortTopVersionEvents1h: number;
+  cohortDistinctVersions1h: number;
   actorEvents1d: number;
+  siteEvents10m: number;
+  siteDistinctActors10m: number;
+  cohortEvents10m: number;
+  cohortDistinctActors10m: number;
+  cohortDirectEvents10m: number;
   enumerationEvents15m: number;
   enumerationDistinctPaths15m: number;
   enumerationDistinctActors15m: number;
   enumerationDirectEvents15m: number;
+  hostingRangeEvents1d: number;
+  hostingRangeInteractions1d: number;
+  hostingRangeScreens1d: number;
+  /** Non-zero when today's Redis counters are known to have a hole in them. */
+  counterHistoryGap1d: number;
+  cohortPageviews1d: number;
+  cohortTopVersionPageviews1d: number;
+  cohortDistinctVersions1d: number;
+  cohortDistinctActors1d: number;
+  cohortDirectPageviews1d: number;
+  cohortDistinctAsns1d: number;
 }
 
 /**
@@ -138,10 +306,20 @@ export interface AnomalyInput {
    */
   referrer?: string;
   hasClientBotScore: boolean;
+  /**
+   * Whether the site records any human interaction at all (outbound, button,
+   * copy or form tracking). Without it "no interactions" is not evidence.
+   */
+  capturesHumanInteractions?: boolean;
   /** Cohort dimensions; the cohort rule is skipped unless all three resolve. */
   screenWidth?: number;
   screenHeight?: number;
   language?: string;
+  /** Whether the request address resolved to hosting/datacenter or bot-provider space. */
+  isHostingAsn?: boolean;
+  asn?: number;
+  /** Overrides the site baseline lookup; tests only. */
+  siteBaseline?: SiteBaseline | null;
   nowMs?: number;
 }
 
@@ -164,6 +342,12 @@ export interface AnomalyResult {
   supportingReasons: AnomalyReason[];
   /** Both lists, in that order, for the audit record written to ClickHouse. */
   reasons: AnomalyReason[];
+  /**
+   * Rules still under evaluation. They are recorded so their catch and their
+   * collateral can be read from production, and nothing here adds them to
+   * `score` — a shadow rule that could convict would not be a shadow rule.
+   */
+  shadowReasons: AnomalyReason[];
   counters: AnomalyCounters;
   /**
    * Shadow-mode enumeration reading. Recorded, never scored — nothing in this
@@ -253,6 +437,21 @@ class BucketedDistributionCounter {
     return { total, top, distinct: bucket.counts.size };
   }
 
+  /** The bucket as it stands, without adding to it. */
+  peek(key: string, nowMs: number, windowMs: number): AnomalyDistributionReading {
+    const bucket = this.buckets.get(key);
+    if (!bucket || bucket.startMs !== Math.floor(nowMs / windowMs) * windowMs) {
+      return { total: 0, top: 0, distinct: 0 };
+    }
+    let total = 0;
+    let top = 0;
+    for (const count of bucket.counts.values()) {
+      total += count;
+      if (count > top) top = count;
+    }
+    return { total, top, distinct: bucket.counts.size };
+  }
+
   cleanup(nowMs: number, windowMs: number) {
     for (const [key, bucket] of this.buckets) {
       if (bucket.startMs + windowMs < nowMs) {
@@ -284,6 +483,10 @@ class BucketedDistributionCounter {
 export class BucketedCounter {
   private buckets = new Map<string, { startMs: number; count: number }>();
 
+  get size(): number {
+    return this.buckets.size;
+  }
+
   observe(key: string, nowMs: number, windowMs: number, maxKeys: number): number {
     const bucketStartMs = Math.floor(nowMs / windowMs) * windowMs;
     let bucket = this.buckets.get(key);
@@ -298,6 +501,12 @@ export class BucketedCounter {
     }
     bucket.count++;
     return bucket.count;
+  }
+
+  /** The bucket's count as it stands, without adding to it. */
+  peek(key: string, nowMs: number, windowMs: number): number {
+    const bucket = this.buckets.get(key);
+    return bucket && bucket.startMs === Math.floor(nowMs / windowMs) * windowMs ? bucket.count : 0;
   }
 
   cleanup(nowMs: number, windowMs: number) {
@@ -336,6 +545,12 @@ class BucketedDistinctCounter {
     return bucket.values.size;
   }
 
+  /** The bucket's distinct count as it stands, without adding to it. */
+  peek(key: string, nowMs: number, windowMs: number): number {
+    const bucket = this.buckets.get(key);
+    return bucket && bucket.startMs === Math.floor(nowMs / windowMs) * windowMs ? bucket.values.size : 0;
+  }
+
   cleanup(nowMs: number, windowMs: number) {
     for (const [key, bucket] of this.buckets) {
       if (bucket.startMs + windowMs < nowMs) {
@@ -366,13 +581,25 @@ const tupleDistinctPaths60s = new RollingDistinctCounter();
 const ipDistinctUserAgents5m = new RollingDistinctCounter();
 const ipDistinctHosts60s = new RollingDistinctCounter();
 
-const cohortBrowserVersions60s = new BucketedDistributionCounter();
+const cohortBrowserVersions1h = new BucketedDistributionCounter();
 
 const actorEvents1d = new BucketedCounter();
+const siteEvents10m = new BucketedCounter();
+const cohortEvents10m = new BucketedCounter();
+const cohortDirectEvents10m = new BucketedCounter();
+const siteDistinctActors10m = new BucketedDistinctCounter();
+const cohortDistinctActors10m = new BucketedDistinctCounter();
 const enumerationEvents15m = new BucketedCounter();
 const enumerationDirectEvents15m = new BucketedCounter();
 const enumerationDistinctPaths15m = new BucketedDistinctCounter();
 const enumerationDistinctActors15m = new BucketedDistinctCounter();
+const hostingRangeEvents1d = new BucketedCounter();
+const hostingRangeInteractions1d = new BucketedCounter();
+const hostingRangeScreens1d = new BucketedDistinctCounter();
+const cohortVersions1d = new BucketedDistributionCounter();
+const cohortDistinctActors1d = new BucketedDistinctCounter();
+const cohortDirectPageviews1d = new BucketedCounter();
+const cohortDistinctAsns1d = new BucketedDistinctCounter();
 
 let lastCleanupMs = 0;
 
@@ -492,12 +719,24 @@ function maybeCleanup(nowMs: number) {
   tupleDistinctPaths60s.cleanup(nowMs, MINUTE);
   ipDistinctUserAgents5m.cleanup(nowMs, 5 * MINUTE);
   ipDistinctHosts60s.cleanup(nowMs, MINUTE);
-  cohortBrowserVersions60s.cleanup(nowMs, MINUTE);
+  cohortBrowserVersions1h.cleanup(nowMs, HOUR);
   actorEvents1d.cleanup(nowMs, DAY);
+  siteEvents10m.cleanup(nowMs, TEN_MINUTES);
+  cohortEvents10m.cleanup(nowMs, TEN_MINUTES);
+  cohortDirectEvents10m.cleanup(nowMs, TEN_MINUTES);
+  siteDistinctActors10m.cleanup(nowMs, TEN_MINUTES);
+  cohortDistinctActors10m.cleanup(nowMs, TEN_MINUTES);
   enumerationEvents15m.cleanup(nowMs, ENUMERATION_BUCKET_MS);
   enumerationDirectEvents15m.cleanup(nowMs, ENUMERATION_BUCKET_MS);
   enumerationDistinctPaths15m.cleanup(nowMs, ENUMERATION_BUCKET_MS);
   enumerationDistinctActors15m.cleanup(nowMs, ENUMERATION_BUCKET_MS);
+  hostingRangeEvents1d.cleanup(nowMs, DAY);
+  hostingRangeInteractions1d.cleanup(nowMs, DAY);
+  hostingRangeScreens1d.cleanup(nowMs, DAY);
+  cohortVersions1d.cleanup(nowMs, DAY);
+  cohortDistinctActors1d.cleanup(nowMs, DAY);
+  cohortDirectPageviews1d.cleanup(nowMs, DAY);
+  cohortDistinctAsns1d.cleanup(nowMs, DAY);
 }
 
 // A single counter described once for both backends: its Redis key/member and an
@@ -507,6 +746,11 @@ interface CounterPlan {
   name: keyof AnomalyCounters;
   enabled: boolean;
   kind?: AnomalyCounterSpec["kind"];
+  /**
+   * Read the bucket without adding this event to it. `observeLocal` must make
+   * the same choice, so the two backends agree on what was counted.
+   */
+  readOnly?: boolean;
   redisKey: string;
   member: string;
   windowMs: number;
@@ -540,6 +784,8 @@ interface EnumerationPlan {
 interface AnomalyPlan {
   counters: CounterPlan[];
   enumeration: EnumerationPlan | null;
+  /** Whether this hit arrived with no referrer, judged on the raw value. */
+  isDirect: boolean;
 }
 
 function buildCounterPlan(input: AnomalyInput, nowMs: number): AnomalyPlan {
@@ -578,7 +824,9 @@ function buildCounterPlan(input: AnomalyInput, nowMs: number): AnomalyPlan {
     input.screenWidth > 0 &&
     input.screenHeight > 0;
   const cohortKey = `${siteId}:${input.screenWidth}x${input.screenHeight}:${language}:${browserFamily}`;
-  const cohortBucket = Math.floor(nowMs / MINUTE);
+  const cohortBucket = Math.floor(nowMs / HOUR);
+  const floodBucket = Math.floor(nowMs / TEN_MINUTES);
+  const siteKey = String(siteId);
 
   // Enumeration shape is measured over the same cohort, on a much longer bucket:
   // a crawler paced at one hit per identity produces nothing legible in a
@@ -587,6 +835,34 @@ function buildCounterPlan(input: AnomalyInput, nowMs: number): AnomalyPlan {
   const enumerationBucket = Math.floor(nowMs / ENUMERATION_BUCKET_MS);
   const isDirect = normalizeDimension(input.referrer) === "";
   const dayBucket = Math.floor(nowMs / DAY);
+
+  // Hosting range actor: the range plus the version-stripped user agent. Only
+  // hosting addresses are counted at all, so these keys cost nothing for
+  // ordinary traffic, and relay and SASE networks — never judged by range — are
+  // not counted either.
+  const hostingRangeEligible =
+    input.isHostingAsn === true &&
+    !(input.asn !== undefined && (SASE_EGRESS_ASNS.has(input.asn) || RELAY_EGRESS_ASNS.has(input.asn)));
+  const hasKnownScreen =
+    typeof input.screenWidth === "number" &&
+    typeof input.screenHeight === "number" &&
+    input.screenWidth > 0 &&
+    input.screenHeight > 0;
+  // Day keys carry their UTC day in the name, so they need to live only until
+  // it ends. A full-day TTL refreshed on every write would keep yesterday's keys
+  // for most of today.
+  const dayKeyTtlMs = (dayBucket + 1) * DAY - nowMs + DAY_KEY_GRACE_MS;
+  const hostingRangeKey = `${siteId}:${toIpRange(ipAddress)}:${hashValue(normalizeUserAgentForIdentity(input.userAgent || ""))}`;
+  const isHumanInteraction = HUMAN_INTERACTION_EVENT_TYPES.has(input.eventType ?? "");
+  const screenMember = `${input.screenWidth ?? 0}x${input.screenHeight ?? 0}`;
+
+  // One-shot cohort, by day: desktop pageviews only. Every other event type
+  // reads the same buckets without adding to them, so a fleet's vitals events
+  // are judged by the cohort its pageviews built.
+  const hasOneshotCohort = hasCohort && isDesktopUserAgent(input.userAgent || "");
+  const isPageview = (input.eventType ?? "pageview") === "pageview";
+  const oneshotCohortKey = `${cohortKey}:${dayBucket}`;
+  const asnMember = input.asn === undefined ? "" : String(input.asn);
 
   const counters: CounterPlan[] = [
     {
@@ -671,18 +947,18 @@ function buildCounterPlan(input: AnomalyInput, nowMs: number): AnomalyPlan {
       observeLocal: now => missingClientScore60s.observe(tupleKey, now, MINUTE),
     },
     {
-      name: "cohortEvents60s",
+      name: "cohortEvents1h",
       enabled: hasCohort,
       kind: "distribution",
       redisKey: `bot:a:cbv:${cohortKey}:${cohortBucket}`,
       member: browserMajorVersion,
-      windowMs: 2 * MINUTE,
+      windowMs: 2 * HOUR,
       maxSize: MAX_DISTRIBUTION_FIELDS,
       observeLocal: () => 0,
-      topCounterName: "cohortTopVersionEvents60s",
-      distinctCounterName: "cohortDistinctVersions60s",
+      topCounterName: "cohortTopVersionEvents1h",
+      distinctCounterName: "cohortDistinctVersions1h",
       observeLocalDistribution: now =>
-        cohortBrowserVersions60s.observe(cohortKey, browserMajorVersion, now, MINUTE, MAX_DISTRIBUTION_FIELDS),
+        cohortBrowserVersions1h.observe(cohortKey, browserMajorVersion, now, HOUR, MAX_DISTRIBUTION_FIELDS),
     },
     {
       name: "actorEvents1d",
@@ -693,6 +969,60 @@ function buildCounterPlan(input: AnomalyInput, nowMs: number): AnomalyPlan {
       windowMs: DAY,
       maxSize: 0,
       observeLocal: now => actorEvents1d.observe(ipKey, now, DAY, MAX_LOCAL_COUNTER_KEYS),
+    },
+    // Site-flood counters, all on one fixed 10-minute bucket. The actor here is
+    // the visitor tuple (ip + user agent), the identity a fleet mints per hit.
+    {
+      name: "siteEvents10m",
+      enabled: true,
+      kind: "counter",
+      redisKey: `bot:f:se:${siteKey}:${floodBucket}`,
+      member: "",
+      windowMs: 2 * TEN_MINUTES,
+      maxSize: 0,
+      observeLocal: now => siteEvents10m.observe(siteKey, now, TEN_MINUTES, MAX_LOCAL_COUNTER_KEYS),
+    },
+    {
+      name: "siteDistinctActors10m",
+      enabled: true,
+      kind: "cardinality",
+      redisKey: `bot:f:sa:${siteKey}:${floodBucket}`,
+      member: tupleKey,
+      windowMs: 2 * TEN_MINUTES,
+      maxSize: 0,
+      observeLocal: now =>
+        siteDistinctActors10m.observe(siteKey, tupleKey, now, TEN_MINUTES, MAX_LOCAL_DISTINCT_VALUES),
+    },
+    {
+      name: "cohortEvents10m",
+      enabled: hasCohort,
+      kind: "counter",
+      redisKey: `bot:f:ce:${cohortKey}:${floodBucket}`,
+      member: "",
+      windowMs: 2 * TEN_MINUTES,
+      maxSize: 0,
+      observeLocal: now => cohortEvents10m.observe(cohortKey, now, TEN_MINUTES, MAX_LOCAL_COUNTER_KEYS),
+    },
+    {
+      name: "cohortDistinctActors10m",
+      enabled: hasCohort,
+      kind: "cardinality",
+      redisKey: `bot:f:ca:${cohortKey}:${floodBucket}`,
+      member: tupleKey,
+      windowMs: 2 * TEN_MINUTES,
+      maxSize: 0,
+      observeLocal: now =>
+        cohortDistinctActors10m.observe(cohortKey, tupleKey, now, TEN_MINUTES, MAX_LOCAL_DISTINCT_VALUES),
+    },
+    {
+      name: "cohortDirectEvents10m",
+      enabled: hasCohort && isDirect,
+      kind: "counter",
+      redisKey: `bot:f:cd:${cohortKey}:${floodBucket}`,
+      member: "",
+      windowMs: 2 * TEN_MINUTES,
+      maxSize: 0,
+      observeLocal: now => cohortDirectEvents10m.observe(cohortKey, now, TEN_MINUTES, MAX_LOCAL_COUNTER_KEYS),
     },
     {
       name: "enumerationEvents15m",
@@ -727,7 +1057,13 @@ function buildCounterPlan(input: AnomalyInput, nowMs: number): AnomalyPlan {
       windowMs: ENUMERATION_BUCKET_MS,
       maxSize: 0,
       observeLocal: now =>
-        enumerationDistinctActors15m.observe(cohortKey, ipAddress, now, ENUMERATION_BUCKET_MS, MAX_LOCAL_DISTINCT_VALUES),
+        enumerationDistinctActors15m.observe(
+          cohortKey,
+          ipAddress,
+          now,
+          ENUMERATION_BUCKET_MS,
+          MAX_LOCAL_DISTINCT_VALUES
+        ),
     },
     {
       name: "enumerationDirectEvents15m",
@@ -737,13 +1073,132 @@ function buildCounterPlan(input: AnomalyInput, nowMs: number): AnomalyPlan {
       member: "",
       windowMs: ENUMERATION_BUCKET_MS,
       maxSize: 0,
-      observeLocal: now => enumerationDirectEvents15m.observe(cohortKey, now, ENUMERATION_BUCKET_MS, MAX_LOCAL_COUNTER_KEYS),
+      observeLocal: now =>
+        enumerationDirectEvents15m.observe(cohortKey, now, ENUMERATION_BUCKET_MS, MAX_LOCAL_COUNTER_KEYS),
+    },
+    {
+      name: "hostingRangeEvents1d",
+      enabled: hostingRangeEligible,
+      kind: "counter",
+      redisKey: `bot:a:hre:${hostingRangeKey}:${dayBucket}`,
+      member: "",
+      windowMs: dayKeyTtlMs,
+      maxSize: 0,
+      observeLocal: now => hostingRangeEvents1d.observe(hostingRangeKey, now, DAY, MAX_LOCAL_COUNTER_KEYS),
+    },
+    {
+      // Counted on a human interaction, read on everything else: the question is
+      // whether this actor has interacted today, asked on every hit.
+      name: "hostingRangeInteractions1d",
+      enabled: hostingRangeEligible,
+      kind: "counter",
+      readOnly: !isHumanInteraction,
+      redisKey: `bot:a:hri:${hostingRangeKey}:${dayBucket}`,
+      member: "",
+      windowMs: dayKeyTtlMs,
+      maxSize: 0,
+      observeLocal: now =>
+        isHumanInteraction
+          ? hostingRangeInteractions1d.observe(hostingRangeKey, now, DAY, MAX_LOCAL_COUNTER_KEYS)
+          : hostingRangeInteractions1d.peek(hostingRangeKey, now, DAY),
+    },
+    {
+      // A hit without a screen size reads the set instead of adding "0x0" to it.
+      name: "hostingRangeScreens1d",
+      enabled: hostingRangeEligible,
+      kind: "cardinality",
+      readOnly: !hasKnownScreen,
+      redisKey: `bot:a:hrs:${hostingRangeKey}:${dayBucket}`,
+      member: screenMember,
+      windowMs: dayKeyTtlMs,
+      maxSize: 0,
+      observeLocal: now =>
+        hasKnownScreen
+          ? hostingRangeScreens1d.observe(hostingRangeKey, screenMember, now, DAY, MAX_LOCAL_DISTINCT_VALUES)
+          : hostingRangeScreens1d.peek(hostingRangeKey, now, DAY),
+    },
+    {
+      // Whether today's counters can be trusted to hold every interaction. A
+      // worker that fell back to its in-process counters today marks the day
+      // here once Redis answers again, and every worker reads the mark.
+      name: "counterHistoryGap1d",
+      enabled: hostingRangeEligible,
+      kind: "counter",
+      readOnly: redisCounterGapDay !== dayBucket,
+      redisKey: `bot:a:gap:${dayBucket}`,
+      member: "",
+      windowMs: dayKeyTtlMs,
+      maxSize: 0,
+      // In-process, the gap is this worker's own fallback, or an interaction map
+      // too full to have admitted this range's clicks.
+      observeLocal: () =>
+        redisCounterGapDay === dayBucket || hostingRangeInteractions1d.size >= MAX_LOCAL_COUNTER_KEYS ? 1 : 0,
+    },
+    {
+      name: "cohortPageviews1d",
+      enabled: hasOneshotCohort,
+      kind: "distribution",
+      readOnly: !isPageview,
+      redisKey: `bot:o:v:${oneshotCohortKey}`,
+      member: browserMajorVersion,
+      windowMs: dayKeyTtlMs,
+      maxSize: MAX_DISTRIBUTION_FIELDS,
+      observeLocal: () => 0,
+      topCounterName: "cohortTopVersionPageviews1d",
+      distinctCounterName: "cohortDistinctVersions1d",
+      observeLocalDistribution: now =>
+        isPageview
+          ? cohortVersions1d.observe(cohortKey, browserMajorVersion, now, DAY, MAX_DISTRIBUTION_FIELDS)
+          : cohortVersions1d.peek(cohortKey, now, DAY),
+    },
+    {
+      name: "cohortDistinctActors1d",
+      enabled: hasOneshotCohort,
+      kind: "cardinality",
+      readOnly: !isPageview,
+      redisKey: `bot:o:a:${oneshotCohortKey}`,
+      member: tupleKey,
+      windowMs: dayKeyTtlMs,
+      maxSize: 0,
+      observeLocal: now =>
+        isPageview
+          ? cohortDistinctActors1d.observe(cohortKey, tupleKey, now, DAY, MAX_LOCAL_DISTINCT_VALUES)
+          : cohortDistinctActors1d.peek(cohortKey, now, DAY),
+    },
+    {
+      name: "cohortDirectPageviews1d",
+      enabled: hasOneshotCohort,
+      kind: "counter",
+      readOnly: !(isPageview && isDirect),
+      redisKey: `bot:o:d:${oneshotCohortKey}`,
+      member: "",
+      windowMs: dayKeyTtlMs,
+      maxSize: 0,
+      observeLocal: now =>
+        isPageview && isDirect
+          ? cohortDirectPageviews1d.observe(cohortKey, now, DAY, MAX_LOCAL_COUNTER_KEYS)
+          : cohortDirectPageviews1d.peek(cohortKey, now, DAY),
+    },
+    {
+      name: "cohortDistinctAsns1d",
+      enabled: hasOneshotCohort,
+      kind: "cardinality",
+      readOnly: !(isPageview && asnMember !== ""),
+      redisKey: `bot:o:n:${oneshotCohortKey}`,
+      member: asnMember,
+      windowMs: dayKeyTtlMs,
+      maxSize: 0,
+      observeLocal: now =>
+        isPageview && asnMember !== ""
+          ? cohortDistinctAsns1d.observe(cohortKey, asnMember, now, DAY, MAX_LOCAL_DISTINCT_VALUES)
+          : cohortDistinctAsns1d.peek(cohortKey, now, DAY),
     },
   ];
 
   return {
     counters,
     enumeration: hasEnumerationCohort ? { cohortKey, bucket: enumerationBucket, isDirect } : null,
+    isDirect,
   };
 }
 
@@ -758,14 +1213,29 @@ function emptyCounters(): AnomalyCounters {
     ipDistinctHosts60s: 0,
     siteUserAgentEvents60s: 0,
     missingClientScore60s: 0,
-    cohortEvents60s: 0,
-    cohortTopVersionEvents60s: 0,
-    cohortDistinctVersions60s: 0,
+    cohortEvents1h: 0,
+    cohortTopVersionEvents1h: 0,
+    cohortDistinctVersions1h: 0,
     actorEvents1d: 0,
+    siteEvents10m: 0,
+    siteDistinctActors10m: 0,
+    cohortEvents10m: 0,
+    cohortDistinctActors10m: 0,
+    cohortDirectEvents10m: 0,
     enumerationEvents15m: 0,
     enumerationDistinctPaths15m: 0,
     enumerationDistinctActors15m: 0,
     enumerationDirectEvents15m: 0,
+    hostingRangeEvents1d: 0,
+    hostingRangeInteractions1d: 0,
+    hostingRangeScreens1d: 0,
+    counterHistoryGap1d: 0,
+    cohortPageviews1d: 0,
+    cohortTopVersionPageviews1d: 0,
+    cohortDistinctVersions1d: 0,
+    cohortDistinctActors1d: 0,
+    cohortDirectPageviews1d: 0,
+    cohortDistinctAsns1d: 0,
   };
 }
 
@@ -774,6 +1244,7 @@ async function observeViaRedis(plan: CounterPlan[], nowMs: number): Promise<Anom
   const specs: AnomalyCounterSpec[] = enabled.map(entry => ({
     key: entry.redisKey,
     kind: entry.kind,
+    readOnly: entry.readOnly,
     member: entry.member,
     windowMs: entry.windowMs,
     maxSize: entry.maxSize,
@@ -818,7 +1289,28 @@ function observeViaLocal(plan: CounterPlan[], nowMs: number): AnomalyCounters {
   return counters;
 }
 
-function computeAnomalyResult(counters: AnomalyCounters): AnomalyResult {
+interface AnomalyContext {
+  siteBaseline: SiteBaseline | undefined;
+  isHostingAsn: boolean;
+  asn: number | undefined;
+  /** Whether this hit arrived with no referrer, judged on the raw value. */
+  isDirect: boolean;
+  capturesHumanInteractions: boolean;
+}
+
+/**
+ * Whether the site is currently in flood: its 10-minute volume is at least
+ * FLOOD_MULTIPLE times its own padded weekly median and at least
+ * FLOOD_MIN_EVENTS_10M. A site with no baseline, or one too young for its
+ * baseline to mean anything, is never in flood.
+ */
+function isSiteInFlood(counters: AnomalyCounters, baseline: SiteBaseline | undefined): boolean {
+  if (!baseline || !baseline.eligible) return false;
+  const gate = Math.max(FLOOD_MULTIPLE * baseline.events10m, FLOOD_MIN_EVENTS_10M);
+  return counters.siteEvents10m >= gate;
+}
+
+function computeAnomalyResult(counters: AnomalyCounters, context: AnomalyContext): AnomalyResult {
   // Convicting rules are keyed on (site, ip, ua) — they describe a single actor
   // and may convict on their own. The interaction-burst threshold is set beyond
   // human clicking speed (10/s sustained); ordinary widget bursts stay below it.
@@ -836,17 +1328,123 @@ function computeAnomalyResult(counters: AnomalyCounters): AnomalyResult {
   // one. It convicts because the alternative is not convicting at all: a paced
   // distributed crawler leaves no per-identity evidence to corroborate.
   if (
-    counters.cohortEvents60s >= COHORT_MIN_EVENTS_60S &&
-    counters.cohortDistinctVersions60s >= COHORT_MIN_DISTINCT_VERSIONS &&
-    counters.cohortTopVersionEvents60s < counters.cohortEvents60s * COHORT_MAX_MODAL_SHARE
+    counters.cohortEvents1h >= COHORT_MIN_EVENTS_1H &&
+    counters.cohortDistinctVersions1h >= COHORT_MIN_DISTINCT_VERSIONS &&
+    counters.cohortTopVersionEvents1h < counters.cohortEvents1h * COHORT_MAX_MODAL_SHARE
   ) {
     convictingReasons.push({
-      rule: "cohort_version_uniformity_60s",
+      rule: "cohort_version_uniformity_1h",
       score: 4,
-      value: Math.round((counters.cohortTopVersionEvents60s / counters.cohortEvents60s) * 100),
+      value: Math.round((counters.cohortTopVersionEvents1h / counters.cohortEvents1h) * 100),
       threshold: COHORT_MAX_MODAL_SHARE * 100,
-      windowSeconds: 60,
+      windowSeconds: 3600,
     });
+  }
+
+  const sharedEgressGuard = counters.ipDistinctUserAgents5m <= PROXY_MERGE_MAX_USER_AGENTS;
+  const saseExempt = context.asn !== undefined && SASE_EGRESS_ASNS.has(context.asn);
+
+  // Site flood. See the constants' comment for the design; in short, the gate
+  // is the site against its own baseline, and the conviction is a cohort or an
+  // actor inside the flood showing a shape an organic surge does not.
+  if (isSiteInFlood(counters, context.siteBaseline)) {
+    const cohortEvents = counters.cohortEvents10m;
+    if (
+      cohortEvents >= FLOOD_COHORT_MIN_EVENTS_10M &&
+      counters.cohortDistinctActors10m >= cohortEvents * FLOOD_COHORT_MIN_ACTOR_RATIO &&
+      counters.cohortDirectEvents10m >= cohortEvents * FLOOD_COHORT_MIN_DIRECT_SHARE &&
+      cohortEvents >= counters.siteEvents10m * FLOOD_COHORT_MIN_SITE_SHARE
+    ) {
+      convictingReasons.push({
+        rule: "site_flood_oneshot_cohort_10m",
+        score: 4,
+        value: Math.round((counters.cohortDistinctActors10m / cohortEvents) * 100),
+        threshold: FLOOD_COHORT_MIN_ACTOR_RATIO * 100,
+        windowSeconds: 600,
+      });
+    }
+
+    if (context.isHostingAsn && sharedEgressGuard && !saseExempt) {
+      addReason(
+        convictingReasons,
+        "site_flood_actor_1d",
+        4,
+        counters.actorEvents1d,
+        FLOOD_ACTOR_EVENTS_1D_HOSTING,
+        86400
+      );
+    }
+  }
+
+  // Hosting-address volume convicts outside a flood too; see the constant.
+  if (context.isHostingAsn && sharedEgressGuard && !saseExempt) {
+    addReason(
+      convictingReasons,
+      "hosting_actor_events_1d",
+      4,
+      counters.actorEvents1d,
+      HOSTING_ACTOR_EVENTS_1D_THRESHOLD,
+      86400
+    );
+  }
+
+  // Rules under evaluation: recorded, never scored. See the constants.
+  const shadowReasons: AnomalyReason[] = [];
+
+  // The hosting volume test on the range the address sits in, for a scraper
+  // that rotates inside a rented block.
+  if (
+    context.isHostingAsn &&
+    !saseExempt &&
+    !(context.asn !== undefined && RELAY_EGRESS_ASNS.has(context.asn)) &&
+    context.capturesHumanInteractions &&
+    counters.counterHistoryGap1d === 0 &&
+    counters.hostingRangeInteractions1d === 0 &&
+    counters.hostingRangeScreens1d >= 1 &&
+    counters.hostingRangeScreens1d <= HOSTING_RANGE_MAX_SCREENS
+  ) {
+    addReason(
+      shadowReasons,
+      "hosting_range_events_1d",
+      0,
+      counters.hostingRangeEvents1d,
+      HOSTING_RANGE_EVENTS_1D_THRESHOLD,
+      86400
+    );
+  }
+
+  // One-shot cohort, by day: the shape, and the shape with a flat version
+  // distribution. A histogram at its field cap undercounts the cohort and is
+  // not judged.
+  const cohortPageviews = counters.cohortPageviews1d;
+  if (
+    context.isDirect &&
+    counters.cohortDistinctVersions1d < MAX_DISTRIBUTION_FIELDS &&
+    cohortPageviews >= ONESHOT_COHORT_MIN_PAGEVIEWS_1D &&
+    counters.cohortDistinctActors1d >= cohortPageviews * ONESHOT_COHORT_MIN_ACTOR_RATIO &&
+    counters.cohortDirectPageviews1d >= cohortPageviews * ONESHOT_COHORT_MIN_DIRECT_SHARE &&
+    counters.cohortDistinctAsns1d >= ONESHOT_COHORT_MIN_ASNS
+  ) {
+    shadowReasons.push({
+      rule: "cohort_oneshot_direct_1d",
+      score: 0,
+      value: Math.round((counters.cohortDistinctActors1d / cohortPageviews) * 100),
+      threshold: ONESHOT_COHORT_MIN_ACTOR_RATIO * 100,
+      windowSeconds: 86400,
+    });
+
+    if (
+      counters.cohortDistinctVersions1d >= ONESHOT_COHORT_MIN_DISTINCT_VERSIONS &&
+      counters.cohortTopVersionPageviews1d < cohortPageviews * ONESHOT_COHORT_MAX_MODAL_SHARE
+    ) {
+      shadowReasons.push({
+        rule: "cohort_oneshot_flat_versions_1d",
+        score: 0,
+        value: Math.round((counters.cohortTopVersionPageviews1d / cohortPageviews) * 100),
+        threshold: ONESHOT_COHORT_MAX_MODAL_SHARE * 100,
+        windowSeconds: 86400,
+      });
+    }
   }
 
   // Supporting rules are keyed on shared dimensions (ip, site+ua) that many real
@@ -864,7 +1462,7 @@ function computeAnomalyResult(counters: AnomalyCounters): AnomalyResult {
   // where one address is hundreds of real people and a four-figure daily count
   // is unremarkable. A single scraper presents one user agent, so the guard
   // costs nothing against the traffic this rule exists for.
-  if (counters.ipDistinctUserAgents5m <= PROXY_MERGE_MAX_USER_AGENTS) {
+  if (sharedEgressGuard) {
     addReason(
       supportingReasons,
       "actor_events_1d",
@@ -889,9 +1487,17 @@ function computeAnomalyResult(counters: AnomalyCounters): AnomalyResult {
     convictingReasons,
     supportingReasons,
     reasons: [...convictingReasons, ...supportingReasons],
+    shadowReasons,
     counters,
   };
 }
+
+/**
+ * The UTC day on which this worker last fell back from Redis to its in-process
+ * counters. Rules that rely on a counter proving something did NOT happen go
+ * quiet for the rest of that day; see `counterHistoryGap1d`.
+ */
+let redisCounterGapDay = -1;
 
 export async function observeTrackingAnomaly(input: AnomalyInput): Promise<AnomalyResult> {
   const nowMs = input.nowMs ?? Date.now();
@@ -904,6 +1510,8 @@ export async function observeTrackingAnomaly(input: AnomalyInput): Promise<Anoma
       counters = await observeViaRedis(plan.counters, nowMs);
     } catch (error) {
       usedLocalCounters = true;
+      // Today's Redis counters now miss whatever this outage swallowed.
+      redisCounterGapDay = Math.floor(nowMs / DAY);
       // A Redis blip must never break ingestion. Fall back to the in-process
       // counters — accuracy degrades under clustering, but detection keeps working
       // and recovers automatically once Redis is back.
@@ -914,7 +1522,13 @@ export async function observeTrackingAnomaly(input: AnomalyInput): Promise<Anoma
     counters = observeViaLocal(plan.counters, nowMs);
   }
 
-  const result = computeAnomalyResult(counters);
+  const result = computeAnomalyResult(counters, {
+    siteBaseline: input.siteBaseline === undefined ? getSiteBaseline(input.siteId) : (input.siteBaseline ?? undefined),
+    isHostingAsn: input.isHostingAsn === true,
+    asn: input.asn,
+    isDirect: plan.isDirect,
+    capturesHumanInteractions: input.capturesHumanInteractions === true,
+  });
 
   // Only a direct hit can read a meaningful direct share, since only a direct
   // hit incremented that counter. The observation is attached to the result and
@@ -944,6 +1558,7 @@ export async function observeTrackingAnomaly(input: AnomalyInput): Promise<Anoma
 }
 
 export function resetAnomalyScorerForTests() {
+  redisCounterGapDay = -1;
   tupleEvents10s.clear();
   tupleEvents60s.clear();
   tupleInteractionEvents10s.clear();
@@ -953,12 +1568,24 @@ export function resetAnomalyScorerForTests() {
   tupleDistinctPaths60s.clear();
   ipDistinctUserAgents5m.clear();
   ipDistinctHosts60s.clear();
-  cohortBrowserVersions60s.clear();
+  cohortBrowserVersions1h.clear();
   actorEvents1d.clear();
+  siteEvents10m.clear();
+  cohortEvents10m.clear();
+  cohortDirectEvents10m.clear();
+  siteDistinctActors10m.clear();
+  cohortDistinctActors10m.clear();
   enumerationEvents15m.clear();
   enumerationDirectEvents15m.clear();
   enumerationDistinctPaths15m.clear();
   enumerationDistinctActors15m.clear();
+  hostingRangeEvents1d.clear();
+  hostingRangeInteractions1d.clear();
+  hostingRangeScreens1d.clear();
+  cohortVersions1d.clear();
+  cohortDistinctActors1d.clear();
+  cohortDirectPageviews1d.clear();
+  cohortDistinctAsns1d.clear();
   resetEnumerationObserverForTests();
   lastCleanupMs = 0;
   eventSeq = 0;

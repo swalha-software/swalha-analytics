@@ -1,7 +1,9 @@
 ---
-title: "The 9 Best Google Analytics Alternatives in 2026 (Free & Paid)"
-description: "Looking for a Google Analytics alternative? We compare 9 GA4 alternatives on pricing, privacy, features, and self-hosting, including free and open-source options."
+title: "9 Best Google Analytics Alternatives in 2026 (Free & Paid)"
+description: "Nine Google Analytics alternatives compared on pricing, privacy, features and self-hosting, including free and open-source options. Pricing verified in 2026."
+keyword: "google analytics alternatives"
 date: 2026-07-19
+updated: 2026-09-28
 tags: ["analytics", "privacy", "comparisons"]
 author: Rybbit Team
 ---
@@ -10,7 +12,7 @@ Google Analytics is still the default, and still the tool people most want to le
 
 The good news is that the alternatives in 2026 aren't compromises anymore. Several of them ship features GA4 has never had (session replay, error tracking, uncomplicated funnels) while staying cookie-free and consent-banner-free.
 
-Full disclosure up front: we build [Rybbit](https://rybbit.com), the first tool on this list. We've kept every claim about the other tools factual (pricing and limits below come from each vendor's own published pages as of July 2026), and we'll tell you honestly when another tool is the better fit.
+Full disclosure up front: we build [Rybbit](https://rybbit.com), the first tool on this list. We've kept every claim about the other tools factual (pricing and limits below come from each vendor's own published pages as of July 2026), and we'll tell you when another tool is the better fit.
 
 ## Quick comparison
 
@@ -39,15 +41,19 @@ If you searched for a **GA4 alternative** specifically because of one of these, 
 
 ## 1. Rybbit
 
+![Rybbit dashboard (public demo, September 2026)](/blog/tools/rybbit.webp)
+
 **Best for: teams that want GA4-level depth (funnels, session replay, error tracking) without GA4's complexity or cookie banners.**
 
 [Rybbit](https://rybbit.com) is an open-source, cookie-free analytics platform that deliberately sits between the "simple stats" tools and the heavyweight product-analytics suites. The dashboard reads like Plausible (one page, instantly legible), but underneath it ships the features that usually force teams back to Google: [funnels](/features/funnels), [user journeys](/features/user-journeys), [session replay](/features/session-replay), [error tracking](/features/error-tracking), [Web Vitals](/features/web-vitals), user profiles, and custom events with attributes.
 
 Because it's cookie-free with daily-rotating visitor hashes, you don't need a consent banner, and you see every visitor, including the ones GA4's banner was hiding from you. There's no sampling at any traffic level. Independent reviewers have come to the same conclusion: Travis of travis.media called Rybbit [the best Google Analytics alternative](https://travis.media/blog/rybbit-best-google-analytics-alternative/) after testing it against the field.
 
-[Pricing](/pricing) starts at $19/month for 100k events with a 7-day free trial; every feature is on every plan, and [session replay](/features/session-replay) comes with Pro. It's also fully open source and [free to self-host](/docs/self-hosting) with Docker. The main limitation is that there's no historical import from GA4, but nobody has this: Google only exports to BigQuery. Importers exist for Plausible, Umami, and Simple Analytics. Rybbit is also younger than Matomo or Plausible, though it ships features neither has.
+[Pricing](/pricing) starts at $19/month for 100k events with a 7-day free trial; [session replay](/features/session-replay) and unlimited sites come with Pro, from $39/month. It's also fully open source and [free to self-host](/docs/self-hosting) with Docker. The main limitation is that there's no historical import from GA4 (Plausible, for one, [offers a GA importer](https://plausible.io/docs/google-analytics-import)); Rybbit's importers cover Plausible, Umami, and Simple Analytics. Rybbit is also younger than Matomo or Plausible, though it ships things Plausible lacks, such as session replay and error tracking.
 
 ## 2. Plausible
+
+![Plausible dashboard (public demo, September 2026)](/blog/tools/plausible.webp)
 
 **Best for: simple, lightweight traffic stats with the longest track record among privacy tools.**
 
@@ -61,17 +67,23 @@ See our detailed [Rybbit vs Plausible](/compare/plausible) comparison.
 
 ## 3. Matomo
 
+![Matomo dashboard (public demo, September 2026)](/blog/tools/matomo.webp)
+
 **Best for: teams that want the closest thing to old Universal Analytics, or a mature free self-hosted option.**
 
 Matomo (formerly Piwik) is the veteran of this list, nearly two decades old, with the largest feature surface of any GA alternative: heatmaps, A/B testing, tag manager, and hundreds of plugins. Its free on-premise Community Edition has no hit limits, which has made it the default for public-sector and compliance-heavy deployments.
 
-The honest downside is age: the interface feels like the era it came from, and the full feature set on-premise means assembling paid plugin bundles (Team bundles from €275). Cloud pricing is hit-based and EU-hosted (Frankfurt) with no data sampling.
+The downside is age: the interface feels like the era it came from, and the full feature set on-premise means assembling paid plugin bundles (Team bundles from €275). Cloud pricing is hit-based and EU-hosted (Frankfurt) with no data sampling.
 
 Cloud starts at €29/month for 50k hits with a no-card free trial, while the on-premise Community Edition is free forever, and it's the most battle-tested self-hosted analytics there is. Weigh that against the dated UX, plugin-based pricing complexity, and a heavier footprint to run than newer tools.
 
 See [Rybbit vs Matomo](/compare/matomo).
 
+For a head-to-head with GA4, see [Matomo vs Google Analytics](/compare/matomo-vs-google-analytics).
+
 ## 4. Fathom Analytics
+
+![Fathom Analytics dashboard (public demo, September 2026)](/blog/tools/fathom.webp)
 
 **Best for: set-and-forget simple stats from a long-running independent company.**
 
@@ -83,9 +95,11 @@ See [Rybbit vs Fathom](/compare/fathom).
 
 ## 5. Umami
 
+![Umami dashboard (public demo, September 2026)](/blog/tools/umami.webp)
+
 **Best for: developers and hobby projects that want free, minimal, MIT-licensed analytics.**
 
-Umami is a lightweight open-source analytics tool that developers love: trivial to self-host, MIT-licensed, and its cloud has a genuinely free Hobby plan. The product covers pageviews, referrers, custom events, and basic reports, and stops there.
+Umami is a lightweight open-source analytics tool that developers love: trivial to self-host, MIT-licensed, and its cloud has a free Hobby plan. The product covers pageviews, referrers, custom events, and basic reports, and stops there.
 
 The Hobby cloud plan is free forever; Pro is $20/month for 1M events, with a 14-day trial on paid plans. Self-hosting is free and among the easiest to run (a small Node app plus a database). Keep expectations in check, though: reporting depth is minimal, the team behind it is small, and most of its adoption is the free tier.
 
@@ -104,6 +118,8 @@ You get 1M events/month free, then usage-based billing, with a card only needed 
 See [Rybbit vs PostHog](/compare/posthog).
 
 ## 7. Simple Analytics
+
+![Simple Analytics dashboard (public demo, September 2026)](/blog/tools/simpleanalytics.webp)
 
 **Best for: EU-based companies that want the most privacy-conservative option.**
 
@@ -134,7 +150,7 @@ The price is free. The limitations are the point: sampled reporting, ~30-day ret
 - Depth without the pain (funnels, replay, errors, and a dashboard anyone can read): **[Rybbit](/pricing)**. That's the exact gap we built it for.
 - The simplest possible stats page: **Plausible**, **Fathom**, or **Pirsch** (cheapest), in roughly that order of polish.
 - Maximum features, and you don't mind the learning curve: **PostHog** (modern, product-focused) or **Matomo** (mature, UA-like).
-- Free forever: **Umami's** Hobby cloud tier, or self-host **Rybbit**, **Umami**, **Plausible CE**, or **Matomo**, all [genuinely free to run yourself](/docs/self-hosting).
+- Free forever: **Umami's** Hobby cloud tier, or self-host **Rybbit**, **Umami**, **Plausible CE**, or **Matomo**, all [free to run yourself](/docs/self-hosting).
 - Zero budget and zero setup: **Cloudflare**, eyes open about sampling.
 
 ## FAQ

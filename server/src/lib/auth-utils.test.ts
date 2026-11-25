@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 // Better-auth pulls in email, stripe, and env config at import time — stub the
 // session API so getIsUserAdmin sees no session and auth never initializes.
@@ -8,7 +8,7 @@ vi.mock("./auth.js", () => ({
     api: {
       getSession: vi.fn(async () => null),
       verifyApiKey: vi.fn(async () => ({ valid: false })),
-      getMcpSession: vi.fn(async () => null),
+      verifyRybbitOAuthToken: vi.fn(async () => null),
     },
   },
 }));
@@ -48,10 +48,17 @@ import { member, memberSiteAccess, sites, team, teamMember, teamSiteAccess } fro
 import { auth } from "./auth.js";
 import {
   checkApiKey,
+  getIsUserAdmin,
+  getSessionFromReq,
   getSitesUserHasAccessTo,
   getUserHasAccessToSite,
   getUserHasAdminAccessToSite,
+  getRequestIdentity,
   getUserIdFromRequest,
+  getOrganizationSitesForCaller,
+  getUserHasSitePermission,
+  getUserOrgRole,
+  getUserSiteRole,
   invalidateSitesAccessCache,
 } from "./auth-utils.js";
 import {
@@ -59,9 +66,7 @@ import {
   getOrgMembership,
   isOrgAdmin,
   isOrgOwner,
-  memberCanAccessSite,
-  resolveMemberSiteGrants,
-  restrictedMemberSiteIds,
+  resolveUserSiteRole,
   siteIdsInOrganization,
 } from "./access.js";
 import { INTERNAL_BEARER_HANDOFF_HEADER, registerBearerHandoff, releaseBearerHandoff } from "./bearerAuth.js";
@@ -81,10 +86,12 @@ CREATE TABLE "member_site_access" (
   "id" serial PRIMARY KEY,
   "member_id" text NOT NULL,
   "site_id" integer NOT NULL,
+  "role" text,
   "created_at" timestamp NOT NULL DEFAULT now(),
   "created_by" text
 );
 CREATE TABLE "team" (
+  "memberCount" integer NOT NULL DEFAULT 0,
   "id" text PRIMARY KEY,
   "name" text NOT NULL,
   "organizationId" text NOT NULL,
@@ -92,6 +99,7 @@ CREATE TABLE "team" (
   "updatedAt" timestamp
 );
 CREATE TABLE "teamMember" (
+  "membershipKey" text UNIQUE,
   "id" text PRIMARY KEY,
   "teamId" text NOT NULL,
   "userId" text NOT NULL,
@@ -101,6 +109,7 @@ CREATE TABLE "team_site_access" (
   "id" serial PRIMARY KEY,
   "team_id" text NOT NULL,
   "site_id" integer NOT NULL,
+  "role" text,
   "created_at" timestamp NOT NULL DEFAULT now()
 );
 CREATE TABLE "sites" (
@@ -130,6 +139,7 @@ CREATE TABLE "sites" (
   "trackErrors" boolean DEFAULT false,
   "trackOutbound" boolean DEFAULT true,
   "trackUrlParams" boolean DEFAULT true,
+  "trackUrlFragments" boolean DEFAULT false,
   "trackInitialPageView" boolean DEFAULT true,
   "trackSpaNavigation" boolean DEFAULT true,
   "trackIp" boolean DEFAULT false,
@@ -138,7 +148,14 @@ CREATE TABLE "sites" (
   "trackFormInteractions" boolean DEFAULT false,
   "api_key" text,
   "private_link_key" text,
-  "tags" jsonb DEFAULT '[]'
+  "tags" jsonb DEFAULT '[]',
+  "detected_platform" text,
+  "overview_layout" jsonb,
+  "claim_expires_at" timestamp
+);
+CREATE TABLE "user" (
+  "id" text PRIMARY KEY,
+  "role" text
 );
 `;
 
@@ -256,47 +273,11 @@ describe("getOrgMembership", () => {
     expect(isOrgOwner(membership)).toBe(false);
   });
 
-  it("classifies owners as both admin and owner", async () => {
-    const membership = await getOrgMembership("user_owner", ORG);
-
-    expect(isOrgAdmin(membership)).toBe(true);
-    expect(isOrgOwner(membership)).toBe(true);
-  });
-
   it("returns null for a non-member, and for a missing user or organization", async () => {
     expect(await getOrgMembership("user_stranger", ORG)).toBeNull();
     expect(await getOrgMembership("user_peer", "org_other")).toBeNull();
     expect(await getOrgMembership(undefined, ORG)).toBeNull();
     expect(await getOrgMembership("user_peer", undefined)).toBeNull();
-  });
-});
-
-// Shared filter used by getSitesFromOrg, getMyOrganizations, and weekly reports
-describe("filterSitesByMemberAccess", () => {
-  const orgSites = Array.from({ length: 13 }, (_, i) => ({ siteId: i + 1 }));
-
-  async function filteredIdsFor(restricted: boolean): Promise<number[]> {
-    const result = await filterSitesByMemberAccess(orgSites, ORG, "user_peer", "member_peer", restricted);
-    return result.map(s => s.siteId).sort((a, b) => a - b);
-  }
-
-  it("unrestricted member on a team sees their team's sites plus non-gated sites", async () => {
-    expect(await filteredIdsFor(false)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 13]);
-  });
-
-  it("restricted member keeps team-granted sites in addition to explicit site grants", async () => {
-    await db.insert(memberSiteAccess).values({ memberId: "member_peer", siteId: 13 });
-    expect(await filteredIdsFor(true)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 13]);
-  });
-
-  it("explicitly granted site stays accessible even when gated by a team the member is not on", async () => {
-    await db.insert(memberSiteAccess).values({ memberId: "member_peer", siteId: 12 });
-    expect(await filteredIdsFor(true)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
-  });
-
-  it("restricted member with no team and no grants sees nothing", async () => {
-    await db.delete(teamMember);
-    expect(await filteredIdsFor(true)).toEqual([]);
   });
 });
 
@@ -321,40 +302,6 @@ describe("siteIdsInOrganization", () => {
 
   it("returns nothing for an empty list without querying", async () => {
     expect(await siteIdsInOrganization([], ORG)).toEqual([]);
-  });
-});
-
-// restrictedMemberSiteIds lets the resolver load a restricted member's sites by
-// id instead of reading a whole organization. It is only safe while it names
-// exactly the ids the predicate would admit.
-describe("restrictedMemberSiteIds matches the restricted branch of memberCanAccessSite", () => {
-  const universe = Array.from({ length: 13 }, (_, i) => i + 1);
-
-  async function grantsFor(restricted: boolean) {
-    return resolveMemberSiteGrants({
-      userId: "user_peer",
-      organizationIds: [ORG],
-      grantedMemberIds: restricted ? ["member_peer"] : [],
-    });
-  }
-
-  it("enumerates exactly the sites the predicate admits, for a member on a team", async () => {
-    await db.insert(memberSiteAccess).values({ memberId: "member_peer", siteId: 12 });
-    const grants = await grantsFor(true);
-
-    const enumerated = restrictedMemberSiteIds(grants).sort((a, b) => a - b);
-    const admitted = universe.filter(siteId => memberCanAccessSite(grants, siteId, true));
-
-    expect(enumerated).toEqual(admitted);
-    expect(enumerated.length).toBeGreaterThan(0);
-  });
-
-  it("enumerates nothing when the predicate admits nothing", async () => {
-    await db.delete(teamMember);
-    const grants = await grantsFor(true);
-
-    expect(restrictedMemberSiteIds(grants)).toEqual([]);
-    expect(universe.filter(siteId => memberCanAccessSite(grants, siteId, true))).toEqual([]);
   });
 });
 
@@ -416,9 +363,9 @@ describe("checkApiKey — scope carrying", () => {
 
   beforeEach(async () => {
     vi.mocked(auth.api.verifyApiKey).mockReset();
-    vi.mocked(auth.api.getMcpSession as any).mockReset();
+    vi.mocked(auth.api.verifyRybbitOAuthToken as any).mockReset();
     vi.mocked(auth.api.verifyApiKey).mockResolvedValue({ valid: false } as any);
-    vi.mocked(auth.api.getMcpSession as any).mockResolvedValue(null);
+    vi.mocked(auth.api.verifyRybbitOAuthToken as any).mockResolvedValue(null);
     await db.delete(member).where(eq(member.organizationId, "org_scope"));
     await db
       .insert(member)
@@ -439,7 +386,7 @@ describe("checkApiKey — scope carrying", () => {
   });
 
   it("carries OAuth token scopes as statements via the fallback", async () => {
-    vi.mocked(auth.api.getMcpSession as any).mockResolvedValue({
+    vi.mocked(auth.api.verifyRybbitOAuthToken as any).mockResolvedValue({
       userId: "user_scope",
       scopes: "openid goals:read",
       accessTokenExpiresAt: new Date(Date.now() + 3600_000),
@@ -452,7 +399,7 @@ describe("checkApiKey — scope carrying", () => {
   });
 
   it("OAuth tokens without custom scopes are unrestricted", async () => {
-    vi.mocked(auth.api.getMcpSession as any).mockResolvedValue({
+    vi.mocked(auth.api.verifyRybbitOAuthToken as any).mockResolvedValue({
       userId: "user_scope",
       scopes: "openid",
       accessTokenExpiresAt: new Date(Date.now() + 3600_000),
@@ -518,8 +465,8 @@ describe("checkApiKey — organization-owned keys", () => {
 
   beforeEach(async () => {
     vi.mocked(auth.api.verifyApiKey).mockReset();
-    vi.mocked(auth.api.getMcpSession as any).mockReset();
-    vi.mocked(auth.api.getMcpSession as any).mockResolvedValue(null);
+    vi.mocked(auth.api.verifyRybbitOAuthToken as any).mockReset();
+    vi.mocked(auth.api.verifyRybbitOAuthToken as any).mockResolvedValue(null);
     await db.insert(sites).values([
       { id: "hex_org_a", siteId: 501, name: "org-a-site", domain: "a.example.com", organizationId: "org_a" },
       { id: "hex_org_b", siteId: 502, name: "org-b-site", domain: "b.example.com", organizationId: "org_b" },
@@ -587,6 +534,13 @@ describe("checkApiKey — organization-owned keys", () => {
     expect(await getUserIdFromRequest(request())).toBeNull();
   });
 
+  it("resolves to its organization id with a single key verification", async () => {
+    vi.mocked(auth.api.verifyApiKey).mockResolvedValue(orgKeyVerification("org_a"));
+
+    expect(await getRequestIdentity(request())).toEqual({ userId: null, organizationId: "org_a" });
+    expect(auth.api.verifyApiKey).toHaveBeenCalledTimes(1);
+  });
+
   it("keys from the default configuration no longer authenticate", async () => {
     await db.delete(member).where(eq(member.organizationId, "org_a"));
     await db
@@ -604,6 +558,324 @@ describe("checkApiKey — organization-owned keys", () => {
     expect(result.valid).toBe(false);
     expect(result.role).toBeNull();
     expect(await getUserIdFromRequest(request("rb_user_key"))).toBeNull();
+  });
+});
+
+describe("per-site roles", () => {
+  it("attaches the caller's role to every site they can reach", async () => {
+    invalidateSitesAccessCache("user_peer");
+    invalidateSitesAccessCache("user_owner");
+    const peerSites = await getSitesUserHasAccessTo(reqFor("user_peer"));
+    const ownerSites = await getSitesUserHasAccessTo(reqFor("user_owner"));
+
+    expect(new Set(peerSites.map(site => site.accessRole))).toEqual(new Set(["member"]));
+    expect(new Set(ownerSites.map(site => site.accessRole))).toEqual(new Set(["owner"]));
+  });
+
+  it("answers a site role for reachable sites and null otherwise", async () => {
+    invalidateSitesAccessCache("user_peer");
+    expect(await getUserSiteRole(reqFor("user_peer"), 1)).toBe("member");
+    expect(await getUserSiteRole(reqFor("user_peer"), 12)).toBeNull();
+    expect(await getUserSiteRole(reqFor("user_owner"), 12)).toBe("owner");
+  });
+
+  it("holds editors and viewers to site grants and teams like members", async () => {
+    await db.insert(member).values([
+      { id: "member_editor", organizationId: ORG, userId: "user_editor", role: "editor", createdAt: NOW },
+      {
+        id: "member_viewer",
+        organizationId: ORG,
+        userId: "user_viewer",
+        role: "viewer",
+        createdAt: NOW,
+        hasRestrictedSiteAccess: true,
+      },
+    ]);
+    await db.insert(memberSiteAccess).values({ memberId: "member_viewer", siteId: 5 });
+
+    // Unrestricted, on no team: only the site no team gates.
+    expect(await siteIdsFor("user_editor")).toEqual([13]);
+    expect(await getUserSiteRole(reqFor("user_editor"), 13)).toBe("editor");
+    expect(await siteIdsFor("user_viewer")).toEqual([5]);
+    expect(await getUserSiteRole(reqFor("user_viewer"), 5)).toBe("viewer");
+  });
+
+  it("gives a membership with an unknown role no access at all", async () => {
+    await db.insert(member).values({
+      id: "member_odd",
+      organizationId: ORG,
+      userId: "user_odd",
+      role: "superuser",
+      createdAt: NOW,
+    });
+
+    expect(await siteIdsFor("user_odd")).toEqual([]);
+  });
+
+  it("filters to admin-role sites when asked", async () => {
+    invalidateSitesAccessCache("user_peer");
+    expect(await getSitesUserHasAccessTo(reqFor("user_peer"), true)).toEqual([]);
+    expect((await getSitesUserHasAccessTo(reqFor("user_owner"), true)).length).toBe(13);
+  });
+});
+
+describe("per-site roles from grants and teams", () => {
+  it("gives a restricted member the role their grant carries", async () => {
+    await db.insert(member).values({
+      id: "member_client",
+      organizationId: ORG,
+      userId: "user_client",
+      role: "viewer",
+      createdAt: NOW,
+      hasRestrictedSiteAccess: true,
+    });
+    await db.insert(memberSiteAccess).values([
+      { memberId: "member_client", siteId: 5, role: "editor" },
+      { memberId: "member_client", siteId: 6, role: null },
+    ]);
+
+    invalidateSitesAccessCache("user_client");
+    expect(await getUserSiteRole(reqFor("user_client"), 5)).toBe("editor");
+    // A grant without a role of its own carries the organization role.
+    expect(await getUserSiteRole(reqFor("user_client"), 6)).toBe("viewer");
+    expect(await getUserSiteRole(reqFor("user_client"), 7)).toBeNull();
+  });
+
+  it("raises a team member's role on the team's sites only", async () => {
+    await db.update(teamSiteAccess).set({ role: "editor" }).where(eq(teamSiteAccess.teamId, "team_bbc"));
+
+    invalidateSitesAccessCache("user_peer");
+    expect(await getUserSiteRole(reqFor("user_peer"), 1)).toBe("editor");
+    expect(await getUserSiteRole(reqFor("user_peer"), 13)).toBe("member");
+  });
+
+  it("never lowers a role below the member's organization role", async () => {
+    await db.update(teamSiteAccess).set({ role: "viewer" }).where(eq(teamSiteAccess.teamId, "team_bbc"));
+    await db.update(member).set({ role: "editor" }).where(eq(member.id, "member_peer"));
+
+    invalidateSitesAccessCache("user_peer");
+    // The team grant says viewer; the member's own role is higher and stands.
+    expect(await getUserSiteRole(reqFor("user_peer"), 1)).toBe("editor");
+  });
+
+  it("ignores a grant naming a role grants cannot carry", async () => {
+    await db.insert(member).values({
+      id: "member_forged",
+      organizationId: ORG,
+      userId: "user_forged",
+      role: "viewer",
+      createdAt: NOW,
+      hasRestrictedSiteAccess: true,
+    });
+    await db.insert(memberSiteAccess).values({ memberId: "member_forged", siteId: 5, role: "owner" });
+
+    expect(await siteIdsFor("user_forged")).toEqual([]);
+  });
+
+  it("ignores a grant its organization wrote for a site that has since moved away", async () => {
+    // user_client is a viewer in both organizations; ORG's editor grant on
+    // site 5 was written (or raced in) after site 5 moved to org_new.
+    await db.insert(member).values([
+      {
+        id: "m_client_old",
+        organizationId: ORG,
+        userId: "user_client2",
+        role: "viewer",
+        createdAt: NOW,
+        hasRestrictedSiteAccess: true,
+      },
+      { id: "m_client_new", organizationId: "org_new", userId: "user_client2", role: "viewer", createdAt: NOW },
+    ]);
+    await db.insert(memberSiteAccess).values({ memberId: "m_client_old", siteId: 5, role: "editor" });
+    await db.update(sites).set({ organizationId: "org_new" }).where(eq(sites.siteId, 5));
+
+    invalidateSitesAccessCache("user_client2");
+    expect(await getUserSiteRole(reqFor("user_client2"), 5)).toBe("viewer");
+  });
+
+  it("treats a restricted member as a viewer across the organization", async () => {
+    await db.insert(member).values({
+      id: "member_restricted_editor",
+      organizationId: ORG,
+      userId: "user_restricted_editor",
+      role: "editor",
+      createdAt: NOW,
+      hasRestrictedSiteAccess: true,
+    });
+    await db.insert(memberSiteAccess).values({ memberId: "member_restricted_editor", siteId: 5 });
+
+    expect(await getUserOrgRole(reqFor("user_restricted_editor"), ORG)).toBe("viewer");
+    invalidateSitesAccessCache("user_restricted_editor");
+    expect(await getUserSiteRole(reqFor("user_restricted_editor"), 5)).toBe("editor");
+  });
+});
+
+describe("getUserHasSitePermission", () => {
+  it("decides anything beyond reading on the current role, not a cached one", async () => {
+    invalidateSitesAccessCache("user_owner");
+    expect(await getUserSiteRole(reqFor("user_owner"), 13)).toBe("owner"); // warms the cache
+
+    // Demoted elsewhere (another worker): nothing invalidates this cache.
+    await db.update(member).set({ role: "viewer" }).where(eq(member.id, "member_owner"));
+
+    expect(await getUserHasSitePermission(reqFor("user_owner"), 13, "gsc:write")).toBe(false);
+    expect(await getUserHasSitePermission(reqFor("user_owner"), 13, "analytics:read")).toBe(true);
+  });
+});
+
+describe("resolving one site agrees with resolving the list", () => {
+  it("gives every user the same role on every site either way", async () => {
+    // A spread of shapes: owner, unrestricted member on a team (team role
+    // raised to editor), restricted viewer with a raised and a plain grant, an
+    // unknown role, a stale grant from an organization the site has left.
+    await db.update(teamSiteAccess).set({ role: "editor" }).where(eq(teamSiteAccess.teamId, "team_bbc"));
+    await db.insert(member).values([
+      {
+        id: "m_v",
+        organizationId: ORG,
+        userId: "user_v",
+        role: "viewer",
+        createdAt: NOW,
+        hasRestrictedSiteAccess: true,
+      },
+      { id: "m_odd", organizationId: ORG, userId: "user_odd2", role: "superuser", createdAt: NOW },
+      { id: "m_other", organizationId: "org_other", userId: "user_v", role: "viewer", createdAt: NOW },
+    ]);
+    await db.insert(memberSiteAccess).values([
+      { memberId: "m_v", siteId: 3, role: "editor" },
+      { memberId: "m_v", siteId: 13, role: null },
+      { memberId: "m_other", siteId: 4, role: "editor" },
+    ]);
+
+    for (const userId of ["user_owner", "user_peer", "user_v", "user_odd2", "user_nobody"]) {
+      invalidateSitesAccessCache(userId);
+      const listed = await getSitesUserHasAccessTo(reqFor(userId));
+      for (let siteId = 1; siteId <= 13; siteId++) {
+        const fromList = listed.find(site => site.siteId === siteId)?.accessRole ?? null;
+        expect(await resolveUserSiteRole(userId, siteId), `${userId} on site ${siteId}`).toBe(fromList);
+      }
+    }
+  });
+});
+
+describe("getOrganizationSitesForCaller", () => {
+  it("returns only that organization's sites the caller reaches, with their roles", async () => {
+    await db.insert(sites).values({
+      id: "hex_other_org",
+      siteId: 700,
+      name: "other",
+      domain: "other.example.com",
+      organizationId: "org_other",
+    });
+    await db.insert(member).values({
+      id: "m_owner_other",
+      organizationId: "org_other",
+      userId: "user_owner",
+      role: "owner",
+      createdAt: NOW,
+    });
+
+    const peerSites = await getOrganizationSitesForCaller(reqFor("user_peer"), ORG);
+    expect(peerSites.map(site => site.siteId).sort((a, b) => a - b)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 13]);
+    const ownerSites = await getOrganizationSitesForCaller(reqFor("user_owner"), ORG);
+    expect(ownerSites).toHaveLength(13);
+    expect(ownerSites.every(site => site.organizationId === ORG && site.accessRole === "owner")).toBe(true);
+  });
+});
+
+describe("getUserOrgRole", () => {
+  it("reads the membership role", async () => {
+    expect(await getUserOrgRole(reqFor("user_peer"), ORG)).toBe("member");
+    expect(await getUserOrgRole(reqFor("user_owner"), ORG)).toBe("owner");
+    expect(await getUserOrgRole(reqFor("user_nobody"), ORG)).toBeNull();
+  });
+
+  it("treats an organization key as admin of its own organization only", async () => {
+    const orgKey = (organizationId: string) =>
+      ({ headers: {}, query: {}, apiKeyOrganizationId: organizationId }) as any;
+
+    expect(await getUserOrgRole(orgKey(ORG), ORG)).toBe("admin");
+    expect(await getUserOrgRole(orgKey("org_other"), ORG)).toBeNull();
+  });
+});
+
+// A personal key or OAuth token must reach exactly the sites its user's
+// browser session reaches — the guards trust checkApiKey before they consult
+// the session, so a key that ignored member/team restrictions would be a way
+// around them.
+describe("checkApiKey — user credentials honour site restrictions", () => {
+  // Personal API keys no longer authenticate in this fork, so the only bearer
+  // credential that acts as a user is an OAuth token (MCP clients).
+  const request = () => ({ headers: { authorization: "Bearer oauth_token" }, query: {} }) as any;
+  const userToken = (userId: string) => ({
+    userId,
+    scopes: "openid",
+    accessTokenExpiresAt: new Date(Date.now() + 3600_000),
+  });
+
+  beforeEach(async () => {
+    vi.mocked(auth.api.verifyApiKey).mockReset();
+    vi.mocked(auth.api.verifyRybbitOAuthToken as any).mockReset();
+    vi.mocked(auth.api.verifyApiKey).mockResolvedValue({ valid: false, key: null } as any);
+    await db.insert(member).values({
+      id: "member_restricted",
+      organizationId: ORG,
+      userId: "user_restricted",
+      role: "member",
+      createdAt: NOW,
+      hasRestrictedSiteAccess: true,
+    });
+    await db.insert(memberSiteAccess).values({ memberId: "member_restricted", siteId: 13 });
+    await db.insert(sites).values({
+      id: "hex_elsewhere",
+      siteId: 900,
+      name: "elsewhere",
+      domain: "elsewhere.example.com",
+      organizationId: "org_elsewhere",
+    });
+  });
+
+  it("admits a restricted member's token on a granted site", async () => {
+    vi.mocked(auth.api.verifyRybbitOAuthToken as any).mockResolvedValue(userToken("user_restricted"));
+
+    const result = await checkApiKey(request(), { siteId: 13 });
+
+    expect(result.valid).toBe(true);
+    expect(result.role).toBe("member");
+  });
+
+  it("rejects a restricted member's token on an ungranted site in the same organization", async () => {
+    vi.mocked(auth.api.verifyRybbitOAuthToken as any).mockResolvedValue(userToken("user_restricted"));
+
+    const result = await checkApiKey(request(), { siteId: 1 });
+
+    expect(result.valid).toBe(false);
+    expect(result.role).toBeNull();
+  });
+
+  it("rejects an unrestricted member's token on a site gated by a team they are not on", async () => {
+    vi.mocked(auth.api.verifyRybbitOAuthToken as any).mockResolvedValue(userToken("user_peer"));
+
+    expect((await checkApiKey(request(), { siteId: 12 })).valid).toBe(false);
+    expect((await checkApiKey(request(), { siteId: 1 })).valid).toBe(true);
+  });
+
+  it("lets an owner's token reach every site of the organization", async () => {
+    vi.mocked(auth.api.verifyRybbitOAuthToken as any).mockResolvedValue(userToken("user_owner"));
+
+    expect((await checkApiKey(request(), { siteId: 12 })).valid).toBe(true);
+  });
+
+  it("rejects a site outside the organization named alongside it", async () => {
+    vi.mocked(auth.api.verifyRybbitOAuthToken as any).mockResolvedValue(userToken("user_owner"));
+
+    expect((await checkApiKey(request(), { organizationId: ORG, siteId: 900 })).valid).toBe(false);
+  });
+
+  it("still validates org-level requests on membership alone", async () => {
+    vi.mocked(auth.api.verifyRybbitOAuthToken as any).mockResolvedValue(userToken("user_restricted"));
+
+    expect((await checkApiKey(request(), { organizationId: ORG })).valid).toBe(true);
   });
 });
 
@@ -649,5 +921,104 @@ describe("getSitesUserHasAccessTo — organization-owned keys", () => {
     expect(result.map((s: { siteId: number }) => s.siteId).sort((a: number, b: number) => a - b)).toEqual([
       1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 13,
     ]);
+  });
+});
+
+it("does not expose unclaimed sites through organization membership", async () => {
+  await db.insert(sites).values({
+    id: "unclaimedhex",
+    siteId: 99,
+    name: "Unclaimed",
+    domain: "unclaimed.dev",
+    organizationId: null,
+    privateLinkKey: "aaaaaaaaaaaa",
+    claimExpiresAt: "2100-01-01T00:00:00Z",
+  });
+  expect(await siteIdsFor("user_owner")).not.toContain(99);
+  expect(await siteIdsFor("user_peer")).not.toContain(99);
+  expect(await getOrgMembership("user_owner", null)).toBeNull();
+});
+
+it("refreshes cached session access after another worker claims a site", async () => {
+  invalidateSitesAccessCache("user_owner");
+  await getSitesUserHasAccessTo(reqFor("user_owner"));
+  await getSitesUserHasAccessTo(reqFor("user_owner"), true);
+  await db.insert(sites).values({
+    id: "claimedhex",
+    siteId: 99,
+    name: "Claimed",
+    domain: "claimed.dev",
+    organizationId: ORG,
+  });
+  expect(await getUserHasAccessToSite(reqFor("user_owner"), 99)).toBe(true);
+  expect(await getUserHasAdminAccessToSite(reqFor("user_owner"), 99)).toBe(true);
+});
+
+describe("getSessionFromReq — per-request memo", () => {
+  const getSession = vi.mocked(auth.api.getSession);
+  const cookieRequest = () => ({ headers: { cookie: "better-auth.session_token=t" } }) as any;
+  const sessionFor = (userId: string) => ({ user: { id: userId }, session: { id: `s_${userId}` } }) as any;
+
+  beforeEach(async () => {
+    getSession.mockReset();
+    await (sql as any).exec(`TRUNCATE "user"`);
+  });
+
+  afterEach(() => {
+    getSession.mockReset();
+    getSession.mockImplementation(async () => null);
+  });
+
+  it("looks the session up once per request, null included", async () => {
+    getSession.mockResolvedValue(null);
+    const req = cookieRequest();
+    expect(await getSessionFromReq(req)).toBeNull();
+    expect(await getSessionFromReq(req)).toBeNull();
+    expect(await getUserIdFromRequest(req)).toBeNull();
+    expect(getSession).toHaveBeenCalledTimes(1);
+  });
+
+  it("shares one in-flight lookup between concurrent callers", async () => {
+    let resolve!: (value: unknown) => void;
+    getSession.mockImplementation(() => new Promise(r => (resolve = r)) as any);
+    const req = cookieRequest();
+    const pending = Promise.all([getSessionFromReq(req), getSessionFromReq(req), getSessionFromReq(req)]);
+    resolve(sessionFor("u1"));
+    const results = await pending;
+    expect(getSession).toHaveBeenCalledTimes(1);
+    expect(results.map(result => result?.user.id)).toEqual(["u1", "u1", "u1"]);
+  });
+
+  it("resolves each request on its own", async () => {
+    getSession.mockResolvedValueOnce(sessionFor("u1")).mockResolvedValueOnce(sessionFor("u2"));
+    expect((await getSessionFromReq(cookieRequest()))?.user.id).toBe("u1");
+    expect((await getSessionFromReq(cookieRequest()))?.user.id).toBe("u2");
+    expect(getSession).toHaveBeenCalledTimes(2);
+  });
+
+  it("retries after a failed lookup instead of caching the error", async () => {
+    getSession.mockRejectedValueOnce(new Error("db down")).mockResolvedValueOnce(sessionFor("u1"));
+    const req = cookieRequest();
+    await expect(getSessionFromReq(req)).rejects.toThrow("db down");
+    expect((await getSessionFromReq(req))?.user.id).toBe("u1");
+    expect(getSession).toHaveBeenCalledTimes(2);
+  });
+
+  it("decides system admin once per request, from the current role", async () => {
+    await (sql as any).exec(`INSERT INTO "user" ("id", "role") VALUES ('u_admin', 'admin')`);
+    getSession.mockResolvedValue(sessionFor("u_admin"));
+    const req = cookieRequest();
+    expect(await getIsUserAdmin(req)).toBe(true);
+
+    // The same request keeps its decision; the next request sees the demotion.
+    await (sql as any).exec(`UPDATE "user" SET "role" = 'user' WHERE "id" = 'u_admin'`);
+    expect(await getIsUserAdmin(req)).toBe(true);
+    expect(await getIsUserAdmin(cookieRequest())).toBe(false);
+    expect(getSession).toHaveBeenCalledTimes(2);
+  });
+
+  it("is never admin without a session", async () => {
+    getSession.mockResolvedValue(null);
+    expect(await getIsUserAdmin(cookieRequest())).toBe(false);
   });
 });

@@ -34,7 +34,9 @@ export async function getAdminSites(request: FastifyRequest, reply: FastifyReply
   const orgSubscriptionMap = await getOrganizationSubscriptions(organizationsData, false);
 
   // Get event counts for the past 24 hours and 30 days from Clickhouse
-  const now = DateTime.now();
+  // Bounds are rendered and parsed in UTC so neither Node's nor ClickHouse's
+  // timezone shifts the window.
+  const now = DateTime.utc();
   const yesterday = now.minus({ hours: 24 });
   const thirtyDaysAgo = now.minus({ days: 30 });
 

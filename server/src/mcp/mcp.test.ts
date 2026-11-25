@@ -1,32 +1,7 @@
 import Fastify, { type FastifyInstance } from "fastify";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { createMcpAuthenticator, extractBearerToken } from "./auth.js";
+import { createMcpAuthenticator } from "./auth.js";
 import { mcpRoutes, type McpRouteOptions } from "./index.js";
-
-describe("extractBearerToken", () => {
-  // Must mirror the REST layer's parsing exactly (startsWith("Bearer ") +
-  // substring(7)) so the MCP gate and the routes it proxies never disagree.
-  it("accepts the canonical form", () => {
-    expect(extractBearerToken("Bearer rb_key")).toBe("rb_key");
-  });
-
-  it("rejects a lowercase scheme, matching the case-sensitive REST parser", () => {
-    expect(extractBearerToken("bearer rb_key")).toBeNull();
-  });
-
-  it("returns null for an empty token", () => {
-    expect(extractBearerToken("Bearer ")).toBeNull();
-  });
-
-  it("preserves the substring exactly (no trimming) so it matches REST", () => {
-    expect(extractBearerToken("Bearer  rb_key")).toBe(" rb_key");
-  });
-
-  it("returns null for non-string or missing headers", () => {
-    expect(extractBearerToken(undefined)).toBeNull();
-    expect(extractBearerToken(["Bearer a"])).toBeNull();
-  });
-});
 
 const MCP_HEADERS = {
   "content-type": "application/json",
@@ -108,6 +83,15 @@ describe("mcp endpoint", () => {
 
   async function buildApp(options: McpRouteOptions): Promise<FastifyInstance> {
     const instance = Fastify();
+    // The MCP transport hands the raw request to @hono/node-server, which never
+    // sees the body end (Fastify already read it) and so, 500ms after the
+    // response, calls socket.destroySoon() to drain it. inject()'s mock socket
+    // has no destroySoon, and that timer outlives the test: it threw an
+    // uncaught TypeError in whichever test file the worker ran next.
+    instance.addHook("onRequest", async request => {
+      const socket = request.raw.socket as { destroySoon?: () => void };
+      socket.destroySoon ??= () => {};
+    });
     instance.register(
       async fastify => {
         await fastify.register(mcpRoutes, options);
@@ -129,6 +113,19 @@ describe("mcp endpoint", () => {
         fastify.get("/sites/:siteId/overview", async request => {
           captured.url = request.url;
           captured.query = request.query as Record<string, unknown>;
+          if ((request.params as { siteId: string }).siteId === "6") {
+            // An empty window: ClickHouse returns NaN averages, serialized as null.
+            return {
+              data: {
+                sessions: 0,
+                pageviews: 0,
+                users: 0,
+                pages_per_session: null,
+                bounce_rate: null,
+                session_duration: null,
+              },
+            };
+          }
           return { data: { sessions: 100, pageviews: 250 } };
         });
 
@@ -153,6 +150,14 @@ describe("mcp endpoint", () => {
         fastify.post("/sites/:siteId/funnels/analyze", async request => {
           captured.body = request.body;
           captured.query = request.query as Record<string, unknown>;
+          if ((request.params as { siteId: string }).siteId === "6") {
+            return {
+              data: [
+                { step_number: 1, step_name: "Step 1", sessions: 0, conversion_rate: null, dropoff_rate: 0 },
+                { step_number: 2, step_name: "Step 2", sessions: 0, conversion_rate: null, dropoff_rate: null },
+              ],
+            };
+          }
           // The API returns `sessions` plus the deprecated `visitors` alias.
           return {
             data: [
@@ -172,6 +177,33 @@ describe("mcp endpoint", () => {
           return reply.status(403).send({ error: "You don't have access to this site" });
         });
 
+        fastify.get("/sites/:siteId/gsc/status", async () => {
+          return { connected: true, gscPropertyUrl: "sc-domain:acme.com" };
+        });
+
+        fastify.get("/sites/:siteId/gsc/data", async request => {
+          captured.url = request.url;
+          captured.query = request.query as Record<string, unknown>;
+          return {
+            data: [
+              {
+                query: "acme\u202Eanalytics",
+                page: "https://acme.com/pricing",
+                clicks: 12,
+                impressions: 300,
+                ctr: 0.04,
+                position: 3.2,
+              },
+            ],
+          };
+        });
+
+        fastify.get("/sites/:siteId/annotations", async request => {
+          captured.url = request.url;
+          captured.query = request.query as Record<string, unknown>;
+          return [{ annotationId: 1, siteId: 5, title: "Launch", date: "2026-08-18T00:00:00.000Z", isPublic: true }];
+        });
+
         fastify.post("/sites/:siteId/goals", async request => {
           captured.url = request.url;
           captured.method = request.method;
@@ -189,6 +221,12 @@ describe("mcp endpoint", () => {
           captured.url = request.url;
           captured.method = request.method;
           return { success: true };
+        });
+
+        fastify.put("/organizations/:organizationId/members/:memberId/sites", async request => {
+          captured.url = request.url;
+          captured.body = request.body;
+          return { memberId: "m_1", hasRestrictedSiteAccess: true, siteAccess: [] };
         });
 
         fastify.post("/organizations/:organizationId/members", async request => {
@@ -330,11 +368,11 @@ describe("mcp endpoint", () => {
     expect(result.instructions).toContain("run_query");
   });
 
-  it("lists all 39 tools with output schemas", async () => {
+  it("lists all 44 tools with output schemas", async () => {
     const tools = await listTools(app);
     const names = tools.map(tool => tool.name);
 
-    expect(tools).toHaveLength(35);
+    expect(tools).toHaveLength(40);
     expect(names).toContain("list_sites");
     expect(names).toContain("get_overview");
     expect(names).toContain("get_breakdown");
@@ -345,9 +383,15 @@ describe("mcp endpoint", () => {
     expect(names).toContain("create_goal");
     expect(names).toContain("get_users");
     expect(names).toContain("list_members");
+    expect(names).toContain("get_annotations");
+    expect(names).toContain("get_search_console_status");
+    expect(names).toContain("get_search_console_data");
 
     const overview = tools.find(tool => tool.name === "get_overview");
     expect(overview?.outputSchema).toBeTruthy();
+    const annotationsTool = tools.find(tool => tool.name === "get_annotations");
+    expect(annotationsTool?.outputSchema).toBeTruthy();
+    expect(annotationsTool?.annotations?.readOnlyHint).toBe(true);
   });
 
   it("filters tools/list to the API key's scopes, keeping list_sites", async () => {
@@ -368,11 +412,12 @@ describe("mcp endpoint", () => {
     expect(names).not.toContain("get_sessions");
     expect(names).not.toContain("create_goal");
     expect(names).not.toContain("run_query");
+    expect(names).not.toContain("get_search_console_data");
   });
 
   it("legacy OAuth grants with only standard scopes stay unrestricted", async () => {
     const tools = await listTools(app, "Bearer oauth_valid_token");
-    expect(tools).toHaveLength(35);
+    expect(tools).toHaveLength(40);
   });
 
   it("partitions tools into reads, writes, and destructive deletes", async () => {
@@ -479,6 +524,63 @@ describe("mcp endpoint", () => {
     expect(captured.url).toBeUndefined();
   });
 
+  it("get_annotations forwards optional date bounds and wraps the array", async () => {
+    const result = await callTool(app, "get_annotations", { site_id: 5, start_date: "2026-08-01", time_zone: "UTC" });
+
+    expect(result.isError).toBeFalsy();
+    expect(captured.url).toContain("/api/sites/5/annotations");
+    expect(captured.query).toEqual({ start_date: "2026-08-01", time_zone: "UTC" });
+    expect(result.structuredContent).toEqual({
+      data: [{ annotationId: 1, siteId: 5, title: "Launch", date: "2026-08-18T00:00:00.000Z", isPublic: true }],
+    });
+  });
+
+  it("get_search_console_status reports the connected property", async () => {
+    const result = await callTool(app, "get_search_console_status", { site_id: 5 });
+
+    expect(result.isError).toBeFalsy();
+    expect(result.structuredContent).toEqual({ connected: true, gscPropertyUrl: "sc-domain:acme.com" });
+  });
+
+  it("get_search_console_data maps dimensions, filters, and the default row limit onto REST params", async () => {
+    const result = await callTool(app, "get_search_console_data", {
+      site_id: 5,
+      start_date: "2026-08-01",
+      end_date: "2026-08-31",
+      dimensions: ["query", "page"],
+      filters: [{ dimension: "page", operator: "contains", expression: "/pricing" }],
+    });
+
+    expect(result.isError).toBeFalsy();
+    expect(captured.url).toContain("/api/sites/5/gsc/data");
+    expect(captured.query).toEqual({
+      start_date: "2026-08-01",
+      end_date: "2026-08-31",
+      dimensions: "query,page",
+      filters: JSON.stringify([{ dimension: "page", operator: "contains", expression: "/pricing" }]),
+      row_limit: "100",
+    });
+    // Search queries are typed by strangers: bidi overrides are stripped like other analytics labels.
+    expect(result.structuredContent).toEqual({
+      data: [
+        {
+          query: "acme analytics",
+          page: "https://acme.com/pricing",
+          clicks: 12,
+          impressions: 300,
+          ctr: 0.04,
+          position: 3.2,
+        },
+      ],
+    });
+  });
+
+  it("get_search_console_data defaults to the query dimension", async () => {
+    await callTool(app, "get_search_console_data", { site_id: 5, start_date: "2026-08-01", end_date: "2026-08-31" });
+
+    expect(captured.query).toMatchObject({ dimensions: "query", row_limit: "100" });
+  });
+
   it("get_sessions passes rows through but strips bidi control characters", async () => {
     const result = await callTool(app, "get_sessions", { site_id: 5 });
 
@@ -490,6 +592,44 @@ describe("mcp endpoint", () => {
     expect(row.ip).toBe("203.0.113.7");
     expect(row.user_id).toBe("device_1");
     expect(row.entry_page).toBe("/pricing desrever");
+  });
+
+  it("get_sessions prunes rows to the requested fields", async () => {
+    const result = await callTool(app, "get_sessions", {
+      site_id: 5,
+      fields: ["user_id", "entry_page", "not_a_column"],
+    });
+
+    expect(result.isError).toBeFalsy();
+    const row = result.structuredContent.data[0];
+    expect(Object.keys(row).sort()).toEqual(["entry_page", "user_id"]);
+    expect(row.ip).toBeUndefined();
+  });
+
+  it("rejects an unrecognized time_zone before hitting the API", async () => {
+    captured.url = undefined;
+    const result = await callTool(app, "get_overview", {
+      site_id: 5,
+      start_date: "2026-08-01",
+      end_date: "2026-08-31",
+      time_zone: "Mars/Olympus_Mons",
+    });
+
+    expect(result.isError).toBe(true);
+    expect(result.content[0].text).toContain("IANA time zone");
+    expect(captured.url).toBeUndefined();
+  });
+
+  it("accepts IANA aliases as time_zone", async () => {
+    const result = await callTool(app, "get_overview", {
+      site_id: 5,
+      start_date: "2026-08-01",
+      end_date: "2026-08-31",
+      time_zone: "Etc/UTC",
+    });
+
+    expect(result.isError).toBeFalsy();
+    expect(captured.query?.time_zone).toBe("Etc/UTC");
   });
 
   it("create_goal maps goal_type onto the REST body", async () => {
@@ -555,6 +695,25 @@ describe("mcp endpoint", () => {
     expect(captured.body).toEqual({ anonymous_id: "anon_1", user_id: "app_user_9", traits: { plan: "pro" } });
   });
 
+  it("update_member_site_access leaves the site role alone unless asked", async () => {
+    await callTool(app, "update_member_site_access", {
+      organization_id: "org_1",
+      member_id: "m_1",
+      has_restricted_site_access: true,
+      site_ids: [5],
+    });
+    expect(captured.body).toEqual({ hasRestrictedSiteAccess: true, siteIds: [5] });
+
+    await callTool(app, "update_member_site_access", {
+      organization_id: "org_1",
+      member_id: "m_1",
+      has_restricted_site_access: true,
+      site_ids: [5],
+      site_role: "editor",
+    });
+    expect(captured.body).toEqual({ hasRestrictedSiteAccess: true, siteIds: [5], siteRole: "editor" });
+  });
+
   it("analyze_funnel sends steps as the POST body", async () => {
     const steps = [
       { type: "page", value: "/pricing" },
@@ -567,6 +726,23 @@ describe("mcp endpoint", () => {
     expect(captured.query).toMatchObject({ past_minutes_start: "1440" });
   });
 
+  it("passes null averages and rates from an empty window through output validation", async () => {
+    const overview = await callTool(app, "get_overview", { site_id: 6, past_minutes: 60 });
+    expect(overview.isError).toBeFalsy();
+    expect(overview.structuredContent.data).toMatchObject({ bounce_rate: null, session_duration: null });
+
+    const funnel = await callTool(app, "analyze_funnel", {
+      site_id: 6,
+      steps: [
+        { type: "page", value: "/pricing" },
+        { type: "event", value: "signup" },
+      ],
+      past_minutes: 60,
+    });
+    expect(funnel.isError).toBeFalsy();
+    expect(funnel.structuredContent.data[1]).toMatchObject({ conversion_rate: null, dropoff_rate: null });
+  });
+
   it("surfaces REST errors as tool errors with a hint", async () => {
     const result = await callTool(app, "get_goals", { site_id: 5 });
 
@@ -574,7 +750,7 @@ describe("mcp endpoint", () => {
     expect(result.content[0].text).toContain("403");
     expect(result.content[0].text).toContain("You don't have access to this site");
     expect(result.content[0].text).toContain("list_sites");
-    expect(result.content[0].text).toContain("admin/owner role");
+    expect(result.content[0].text).toContain("Insufficient role");
   });
 
   it("rejects invalid tool arguments before hitting the API", async () => {

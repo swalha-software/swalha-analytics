@@ -42,6 +42,7 @@ export async function listOrganizationMembers(
             .select({
               memberId: memberSiteAccess.memberId,
               siteId: memberSiteAccess.siteId,
+              role: memberSiteAccess.role,
             })
             .from(memberSiteAccess)
             .where(inArray(memberSiteAccess.memberId, memberIds))
@@ -49,11 +50,25 @@ export async function listOrganizationMembers(
 
     // Create a map for quick lookup
     const siteIdsMap = new Map<string, number[]>();
+    const siteGrantsMap = new Map<string, { siteId: number; role: string | null }[]>();
+    const siteRolesMap = new Map<string, Set<string | null>>();
     for (const record of siteAccessRecords) {
       const existing = siteIdsMap.get(record.memberId) || [];
       existing.push(record.siteId);
       siteIdsMap.set(record.memberId, existing);
+      const grants = siteGrantsMap.get(record.memberId) || [];
+      grants.push({ siteId: record.siteId, role: record.role });
+      siteGrantsMap.set(record.memberId, grants);
+      const roles = siteRolesMap.get(record.memberId) || new Set();
+      roles.add(record.role);
+      siteRolesMap.set(record.memberId, roles);
     }
+    // The role every one of a member's grants carries; null when they carry
+    // none (the member's organization role applies) or differ.
+    const sharedSiteRole = (memberId: string) => {
+      const roles = siteRolesMap.get(memberId);
+      return roles?.size === 1 ? [...roles][0] : null;
+    };
 
     // Transform the results to the expected format
     return reply.send({
@@ -72,6 +87,9 @@ export async function listOrganizationMembers(
         siteAccess: {
           hasRestrictedSiteAccess: m.hasRestrictedSiteAccess,
           siteIds: siteIdsMap.get(m.id) || [],
+          siteRole: sharedSiteRole(m.id),
+          // Each grant's own role, for callers that must resolve a member's role per site.
+          siteGrants: siteGrantsMap.get(m.id) || [],
         },
       })),
     });
